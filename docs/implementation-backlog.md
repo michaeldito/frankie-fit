@@ -1,0 +1,384 @@
+# Frankie Fit MVP Implementation Backlog
+
+## Purpose
+
+This document translates the MVP architecture, schema, and product design into a practical implementation backlog. It is organized as vertical slices so we can build Frankie Fit in end-to-end pieces instead of isolated technical layers.
+
+## Working Principle
+
+Build the smallest complete path first, then expand pillar by pillar.
+
+That means:
+
+- get the app shell working
+- get auth and onboarding working
+- get one real Frankie workflow working
+- then deepen the product in slices
+
+## Recommended Build Order
+
+1. Project scaffold and infrastructure
+2. Auth and app shell
+3. Onboarding
+4. Chat plus activity logging
+5. Diet logging
+6. Wellness check-ins
+7. Dashboard summaries
+8. Admin overview
+9. Hardening and polish
+
+## Milestone 0: Project Scaffold and Infrastructure
+
+### Goal
+
+Create the base application and developer workflow.
+
+### Tasks
+
+- initialize Next.js app with App Router and TypeScript
+- add Tailwind CSS
+- add a lightweight UI layer such as shadcn/ui
+- add environment variable loading and validation
+- add Supabase client setup for browser and server usage
+- create base folder structure:
+  - `app/`
+  - `components/`
+  - `lib/`
+  - `types/`
+  - `supabase/`
+- add linting and formatting setup
+- add a basic README development section
+
+### Deliverables
+
+- app runs locally
+- environment variables are documented
+- repo structure matches the architecture doc
+
+### Definition of Done
+
+- `npm run dev` starts a working app
+- marketing homepage route renders
+- shared styling and UI primitives are in place
+
+## Milestone 1: Auth and App Shell
+
+### Goal
+
+Users can sign up, log in, and land in a protected app shell.
+
+### Tasks
+
+- integrate Supabase Auth
+- add signup page
+- add login page
+- add logout flow
+- add protected route handling for `/app/*`
+- add base authenticated shell with:
+  - left nav
+  - Chat nav item
+  - Dashboard nav item
+  - Profile nav item
+- add placeholder admin route protection
+- load and display basic profile context in the shell
+
+### Deliverables
+
+- auth works end to end
+- protected app routes exist
+- user sees the shell after login
+
+### Definition of Done
+
+- unauthenticated users are redirected appropriately
+- authenticated users can access `/app/chat`
+- shell layout matches the wireframe direction
+
+## Milestone 2: Onboarding
+
+### Goal
+
+New users complete the Frankie onboarding flow and produce a usable profile.
+
+### Tasks
+
+- build onboarding route and UI
+- implement Frankie-style onboarding prompts
+- persist onboarding fields into `profiles`
+- store onboarding completion state
+- generate and save onboarding summary
+- redirect completed users to Chat
+- prevent partially onboarded users from bypassing onboarding
+
+### Deliverables
+
+- onboarding flow works from first login
+- profile data is written correctly
+- onboarding summary appears in profile or chat context
+
+### Definition of Done
+
+- a new user can sign up and finish onboarding
+- `profiles.onboarding_completed` is set
+- Chat has access to enough profile context to personalize replies
+
+## Milestone 3: Chat Plus Activity Logging
+
+### Goal
+
+Users can talk to Frankie, persist conversations, and log activity through chat.
+
+### Tasks
+
+- build Chat screen layout
+- create conversation thread creation/loading logic
+- create message persistence
+- wire chat request to OpenAI-backed Frankie response flow
+- implement minimal tool routing for `log_activity`
+- extract structured activity logs from user messages
+- save activity logs and assistant confirmations
+- show quick actions in Chat
+- show current goal and compact next-step context
+
+### Deliverables
+
+- working chat with persistent messages
+- activity logs written from natural language
+- Frankie responds with useful confirmation and guidance
+
+### Definition of Done
+
+- user can type a workout message
+- message is saved
+- activity log row is created
+- Frankie reply is saved and displayed
+
+## Milestone 4: Diet Logging
+
+### Goal
+
+Users can log food in natural language and get lightweight diet guidance.
+
+### Tasks
+
+- implement `log_diet` backend tool path
+- extract diet entries from chat
+- save structured diet logs
+- add meal logging quick action
+- add diet-aware Frankie confirmation copy
+- support simple recent diet context in chat replies
+
+### Deliverables
+
+- diet logs persist end to end
+- Frankie can recognize and respond to food updates
+
+### Definition of Done
+
+- user can enter a meal update
+- structured diet log is saved
+- Frankie acknowledges it in product voice
+
+## Milestone 5: Wellness Check-Ins
+
+### Goal
+
+Users can log wellness signals and Frankie can respond with supportive, non-clinical guidance.
+
+### Tasks
+
+- implement `log_wellness_checkin` backend tool path
+- support wellness quick action
+- capture scores and notes
+- persist structured wellness check-ins
+- add lightweight daily check-in UI entry point
+- support simple follow-up guidance from Frankie
+
+### Deliverables
+
+- wellness logging works
+- Frankie can speak to energy, soreness, stress, and recovery trends
+
+### Definition of Done
+
+- user can submit a check-in
+- structured row is created
+- Frankie responds in the agreed voice and boundaries
+
+## Milestone 6: Dashboard Summaries
+
+### Goal
+
+Users can view the shared dashboard shell and the three pillar tabs.
+
+### Tasks
+
+- build Dashboard shell
+- implement Exercise tab layout
+- implement Diet tab layout
+- implement Wellness tab layout
+- query structured records for each tab
+- compute summary metrics server-side
+- generate simple Frankie insights
+- build compact `Next best step` component
+- support low-data empty states
+
+### Deliverables
+
+- dashboard renders real user data
+- tabs reflect actual logs and check-ins
+- Frankie insight modules appear in each tab
+
+### Definition of Done
+
+- Exercise, Diet, and Wellness tabs all render
+- each tab has:
+  - one main summary area
+  - recent records
+  - one Frankie insight
+  - one next action
+
+## Milestone 7: Profile
+
+### Goal
+
+Users can review and update the context Frankie uses.
+
+### Tasks
+
+- build Profile screen
+- display saved onboarding and coaching data
+- allow editing of goals, preferences, and check-in settings
+- persist profile updates
+- make updated profile context available to Frankie
+
+### Deliverables
+
+- editable coaching profile
+- Frankie uses updated context in future interactions
+
+### Definition of Done
+
+- user can update profile values
+- updates persist and reflect back in the UI
+
+## Milestone 8: Admin Overview
+
+### Goal
+
+Provide the smallest useful admin product-health surface.
+
+### Tasks
+
+- implement admin route protection
+- build admin overview page
+- add KPI cards for:
+  - active users
+  - onboarding completion
+  - retention snapshot
+  - usage by pillar
+- add common request summary
+- add friction summary
+- add test account access view
+- add simple product suggestions view
+
+### Deliverables
+
+- admin can review high-level product health
+- admin can inspect test and synthetic accounts safely
+
+### Definition of Done
+
+- non-admins cannot access admin routes
+- admin overview renders aggregate metrics
+- test account review path exists
+
+## Milestone 9: Hardening and Polish
+
+### Goal
+
+Make the MVP more reliable, safer, and cleaner to demo.
+
+### Tasks
+
+- improve error handling in chat flows
+- improve loading and empty states
+- add audit-friendly admin safeguards
+- review RLS and permissions again after app integration
+- add minimal analytics instrumentation
+- add seed/test users for QA
+- improve recommendation freshness behavior
+- tighten prompt and tool reliability
+
+### Deliverables
+
+- product is more stable
+- internal demo flow is smoother
+- QA can run against seeded accounts
+
+### Definition of Done
+
+- major user paths are testable end to end
+- seeded test accounts exist
+- no obvious auth or ownership holes remain
+
+## Cross-Cutting Technical Tasks
+
+These do not belong to only one slice, but should be handled throughout.
+
+### AI and Prompting
+
+- define Frankie system prompt
+- define tool-selection prompt strategy
+- define structured output formats
+- define summary-generation prompts
+
+### Data Utilities
+
+- add shared TypeScript types for core entities
+- add mapping helpers between DB rows and UI models
+- add server-side query helpers by domain
+
+### Permissions
+
+- centralize admin checks
+- centralize profile-completion checks
+- make test-account review rules explicit in code
+
+### UX Consistency
+
+- keep copy aligned with the Frankie voice doc
+- keep dashboard behavior aligned with the wireframes
+- keep onboarding aligned with the onboarding flow doc
+
+## Suggested Immediate Ticket List
+
+If we want the next truly actionable set of tasks, I would start here:
+
+1. Scaffold Next.js app with TypeScript, Tailwind, and base folders
+2. Add Supabase project wiring and environment config
+3. Create auth pages and protected app shell
+4. Apply the initial Supabase migration
+5. Build onboarding route and profile persistence
+6. Build chat page with thread and message persistence
+7. Add first `log_activity` tool flow
+
+## Scope Guardrails
+
+Avoid pulling these in too early:
+
+- food image upload
+- voice UI
+- native mobile app
+- advanced analytics
+- multi-agent orchestration
+- highly customizable dashboards
+- social features
+
+## Recommended Next Build Artifact
+
+The next strongest artifact after this backlog would be one of:
+
+- a task board broken into tickets
+- the actual app scaffold
+- prompt and tool contract definitions for Frankie
