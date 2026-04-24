@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { signOut } from "@/app/app/actions";
 import { NavLink } from "@/components/app-shell/nav-link";
@@ -9,6 +10,10 @@ export type UserAppShellUser = {
   primaryGoal: string;
   goalDescription: string;
   authConfigured: boolean;
+  nextStepTitle: string;
+  nextStepDescription: string;
+  nextStepHref: string;
+  nextStepCtaLabel: string;
 };
 
 type UserAppShellProps = {
@@ -46,16 +51,19 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
             </p>
           </div>
 
-          <div className="mt-4 rounded-[1.5rem] bg-[var(--brand)] p-4 text-white">
+          <Link
+            className="mt-4 block rounded-[1.5rem] bg-[var(--brand)] p-4 text-white transition hover:bg-[var(--brand-strong)]"
+            href={user.nextStepHref}
+          >
             <p className="text-xs uppercase tracking-[0.2em] text-white/70">
               Next best step
             </p>
-            <p className="mt-3 text-lg font-semibold">Quick recovery check-in</p>
+            <p className="mt-3 text-lg font-semibold">{user.nextStepTitle}</p>
             <p className="mt-2 text-sm leading-6 text-white/80">
-              A short update will help Frankie keep today&apos;s guidance grounded in
-              how the week is actually feeling.
+              {user.nextStepDescription}
             </p>
-          </div>
+            <p className="mt-4 text-sm font-medium text-white/90">{user.nextStepCtaLabel}</p>
+          </Link>
 
           <div className="mt-8 flex items-center gap-3 rounded-[1.5rem] border border-[var(--border)] p-4">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--brand-strong)] text-sm font-semibold text-white">

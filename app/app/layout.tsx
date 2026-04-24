@@ -4,6 +4,7 @@ import {
   UserAppShell,
   type UserAppShellUser
 } from "@/components/app-shell/user-app-shell";
+import { getSuggestedNextStep } from "@/lib/dashboard";
 import {
   getAccountLabel,
   getCurrentAppContext,
@@ -18,7 +19,12 @@ const previewUser: UserAppShellUser = {
   primaryGoal: "Build more consistency",
   goalDescription:
     "Keep movement, meals, and recovery close enough together that Frankie can guide the next step well.",
-  authConfigured: false
+  authConfigured: false,
+  nextStepTitle: "Quick recovery check-in",
+  nextStepDescription:
+    "A short update will help Frankie keep today's guidance grounded in how the week is actually feeling.",
+  nextStepHref: "/app/chat",
+  nextStepCtaLabel: "Open chat"
 };
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -33,6 +39,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const displayName = getDisplayName(context.user, context.profile);
+  const nextStep = await getSuggestedNextStep(context);
   const primaryGoal = context.profile?.primary_goal?.trim()
     ? context.profile.primary_goal
     : context.schemaReady
@@ -52,7 +59,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       : context.schemaReady
         ? "Your onboarding answers will turn this into a more personal coaching read."
         : "Run the Supabase migration to unlock onboarding, saved profiles, and personalized coaching.",
-    authConfigured: true
+    authConfigured: true,
+    nextStepTitle: nextStep.title,
+    nextStepDescription: nextStep.description,
+    nextStepHref: nextStep.href,
+    nextStepCtaLabel: nextStep.ctaLabel
   };
 
   return <UserAppShell user={shellUser}>{children}</UserAppShell>;

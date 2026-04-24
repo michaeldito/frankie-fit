@@ -3,67 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { hasSupabaseEnv } from "@/lib/env";
+import {
+  buildCoachingSummary,
+  getCheckboxValue,
+  getMultiValue,
+  getOptionalInt,
+  getStringValue,
+  parseTextList
+} from "@/lib/profile-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-function getStringValue(formData: FormData, key: string) {
-  const value = formData.get(key);
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function getMultiValue(formData: FormData, key: string) {
-  return formData
-    .getAll(key)
-    .map((value) => (typeof value === "string" ? value.trim() : ""))
-    .filter(Boolean);
-}
-
-function getOptionalInt(formData: FormData, key: string) {
-  const value = getStringValue(formData, key);
-
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Number.parseInt(value, 10);
-  return Number.isNaN(parsed) ? null : parsed;
-}
-
-function getCheckboxValue(formData: FormData, key: string) {
-  return formData.get(key) === "on";
-}
-
-function parseTextList(value: string) {
-  return value
-    .split(/[\n,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
 
 function toErrorRedirect(message: string) {
   return `/app/onboarding?error=${encodeURIComponent(message)}`;
-}
-
-function buildOnboardingSummary(input: {
-  primaryGoal: string;
-  activityLevel: string;
-  preferredActivities: string[];
-  coachingStyle: string;
-  targetTrainingDays: number | null;
-  nutritionGoal: string;
-}) {
-  const activities =
-    input.preferredActivities.length > 0
-      ? input.preferredActivities.slice(0, 2).join(" and ")
-      : "whatever movement fits your life";
-  const trainingDays =
-    input.targetTrainingDays && input.targetTrainingDays > 0
-      ? `${input.targetTrainingDays} day${input.targetTrainingDays === 1 ? "" : "s"} per week`
-      : "a realistic weekly rhythm";
-  const nutritionGoal = input.nutritionGoal
-    ? `keep food guidance pointed at ${input.nutritionGoal.toLowerCase()}`
-    : "keep food guidance practical";
-
-  return `You want to focus on ${input.primaryGoal.toLowerCase()}, you are coming in ${input.activityLevel.toLowerCase()}, and you enjoy ${activities}. I will coach with a ${input.coachingStyle.toLowerCase()} tone, build around ${trainingDays}, and ${nutritionGoal}.`;
 }
 
 export async function saveOnboarding(formData: FormData) {
@@ -156,7 +107,7 @@ export async function saveOnboarding(formData: FormData) {
     preferred_checkin_style: preferredCheckinStyle,
     safety_acknowledged: true,
     onboarding_completed: true,
-    onboarding_summary: buildOnboardingSummary({
+    onboarding_summary: buildCoachingSummary({
       primaryGoal,
       activityLevel,
       preferredActivities,

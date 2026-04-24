@@ -125,6 +125,210 @@ export type Database = {
           }
         ];
       };
+      conversation_threads: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      conversation_messages: {
+        Row: {
+          id: string;
+          thread_id: string;
+          user_id: string;
+          role: "user" | "assistant" | "system";
+          message_type:
+            | "chat"
+            | "onboarding"
+            | "log_confirmation"
+            | "summary"
+            | "recommendation"
+            | "checkin_prompt"
+            | "system_event";
+          content: string;
+          structured_payload: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          thread_id: string;
+          user_id: string;
+          role: "user" | "assistant" | "system";
+          message_type?:
+            | "chat"
+            | "onboarding"
+            | "log_confirmation"
+            | "summary"
+            | "recommendation"
+            | "checkin_prompt"
+            | "system_event";
+          content: string;
+          structured_payload?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          thread_id?: string;
+          user_id?: string;
+          role?: "user" | "assistant" | "system";
+          message_type?:
+            | "chat"
+            | "onboarding"
+            | "log_confirmation"
+            | "summary"
+            | "recommendation"
+            | "checkin_prompt"
+            | "system_event";
+          content?: string;
+          structured_payload?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      activity_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          source_message_id: string | null;
+          activity_type: string;
+          description: string | null;
+          duration_minutes: number | null;
+          intensity: string | null;
+          logged_for_date: string;
+          metadata_json: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          source_message_id?: string | null;
+          activity_type: string;
+          description?: string | null;
+          duration_minutes?: number | null;
+          intensity?: string | null;
+          logged_for_date?: string;
+          metadata_json?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          source_message_id?: string | null;
+          activity_type?: string;
+          description?: string | null;
+          duration_minutes?: number | null;
+          intensity?: string | null;
+          logged_for_date?: string;
+          metadata_json?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      diet_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          source_message_id: string | null;
+          description: string;
+          meal_type: string | null;
+          logged_for_date: string;
+          confidence: number | null;
+          metadata_json: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          source_message_id?: string | null;
+          description: string;
+          meal_type?: string | null;
+          logged_for_date?: string;
+          confidence?: number | null;
+          metadata_json?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          source_message_id?: string | null;
+          description?: string;
+          meal_type?: string | null;
+          logged_for_date?: string;
+          confidence?: number | null;
+          metadata_json?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      wellness_checkins: {
+        Row: {
+          id: string;
+          user_id: string;
+          source_message_id: string | null;
+          energy_score: number | null;
+          soreness_score: number | null;
+          mood_score: number | null;
+          stress_score: number | null;
+          motivation_score: number | null;
+          notes: string | null;
+          logged_for_date: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          source_message_id?: string | null;
+          energy_score?: number | null;
+          soreness_score?: number | null;
+          mood_score?: number | null;
+          stress_score?: number | null;
+          motivation_score?: number | null;
+          notes?: string | null;
+          logged_for_date?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          source_message_id?: string | null;
+          energy_score?: number | null;
+          soreness_score?: number | null;
+          mood_score?: number | null;
+          stress_score?: number | null;
+          motivation_score?: number | null;
+          notes?: string | null;
+          logged_for_date?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

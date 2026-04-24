@@ -4,6 +4,46 @@
 
 This document translates the MVP architecture, schema, and product design into a practical implementation backlog. It is organized as vertical slices so we can build Frankie Fit in end-to-end pieces instead of isolated technical layers.
 
+## Current Progress Snapshot
+
+As of April 24, 2026, the project has moved beyond the planning-only stage.
+
+Completed in the app:
+
+- project scaffold and infrastructure
+- auth and protected app shell
+- onboarding and profile persistence
+- persistent chat threads and messages
+- activity logging from chat
+- diet logging from chat with multi-entry support
+- wellness check-ins from chat with multi-signal support
+
+Now in progress:
+
+- dashboard summaries backed by real saved data instead of placeholder content
+
+## Current Build Notes
+
+These are worth keeping in mind as we keep building.
+
+- Chat logging is currently rule-based and intentionally lightweight. Frankie is not using a full LLM orchestration layer yet.
+- Activity parsing supports multiple activities in one message, but interpretation is still keyword-heavy.
+- Diet parsing supports multiple meals or snacks in one message, but mixed-domain sentences can still confuse it.
+- Wellness parsing supports multiple signals in one message, but response quality should continue improving as we gather real examples.
+- Dashboard summaries in v1 should be computed directly from raw logs first. We do not need `weekly_summaries` to unblock the user experience.
+- Frankie insights and `Next best step` guidance are rule-based in v1. This is good enough for momentum, and we can make them smarter later.
+
+## Future Refinement Notes
+
+These are not blockers for the current MVP, but they are important follow-up areas.
+
+- improve mixed-domain parsing when one message includes activity, diet, and wellness together
+- improve time-aware logging for phrases like `yesterday`, `last night`, and `this morning`
+- improve interpretation of typos, shorthand, run-on sentences, and grammatically messy input
+- add stronger handling for alcohol, hydration, and recovery-adjacent context
+- add cautious cross-signal reasoning so Frankie can suggest possible causes without overstating certainty
+- consider moving dashboard summaries to precomputed aggregates only after raw-log rendering becomes a performance or complexity problem
+
 ## Working Principle
 
 Build the smallest complete path first, then expand pillar by pillar.
@@ -178,6 +218,7 @@ Users can log food in natural language and get lightweight diet guidance.
 - user can enter a meal update
 - structured diet log is saved
 - Frankie acknowledges it in product voice
+- support multi-meal and snack logging in a single message
 
 ## Milestone 5: Wellness Check-Ins
 
@@ -204,6 +245,7 @@ Users can log wellness signals and Frankie can respond with supportive, non-clin
 - user can submit a check-in
 - structured row is created
 - Frankie responds in the agreed voice and boundaries
+- support multiple wellness signals in a single message
 
 ## Milestone 6: Dashboard Summaries
 
@@ -222,6 +264,7 @@ Users can view the shared dashboard shell and the three pillar tabs.
 - generate simple Frankie insights
 - build compact `Next best step` component
 - support low-data empty states
+- keep the first dashboard implementation simple by computing summaries from raw logs rather than introducing aggregate tables too early
 
 ### Deliverables
 
@@ -332,6 +375,10 @@ These do not belong to only one slice, but should be handled throughout.
 - define tool-selection prompt strategy
 - define structured output formats
 - define summary-generation prompts
+- improve Frankie message interpretation for typos, run-on sentences, mixed-domain updates, and grammatically messy user input
+- improve time-aware understanding for phrases like `yesterday`, `last night`, and `this morning`
+- add better domain-specific recognition for items like alcohol, hydration, and recovery-related context
+- add cautious cross-signal reasoning so Frankie can suggest possible connections like sleep, stress, alcohol, or recovery affecting energy and motivation without overstating certainty
 
 ### Data Utilities
 
@@ -350,6 +397,16 @@ These do not belong to only one slice, but should be handled throughout.
 - keep copy aligned with the Frankie voice doc
 - keep dashboard behavior aligned with the wireframes
 - keep onboarding aligned with the onboarding flow doc
+
+### Frankie Intelligence Refinement
+
+This should improve over time, not block the MVP. The goal is to make Frankie steadily better at understanding how real people actually type.
+
+- support messages that blend multiple domains in one sentence
+- handle messy phrasing, shorthand, typos, and run-on updates more gracefully
+- improve clarification behavior when user intent is ambiguous
+- get better at reflective coaching responses after logging, not just confirmation
+- keep inference language careful when Frankie is connecting patterns across days
 
 ## Suggested Immediate Ticket List
 
