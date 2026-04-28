@@ -329,9 +329,76 @@ export type Database = {
         };
         Relationships: [];
       };
+      product_suggestions: {
+        Row: {
+          id: string;
+          suggestion_type: string;
+          title: string;
+          summary: string;
+          evidence_json: Json;
+          status: "proposed" | "under_review" | "approved" | "rejected";
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          reviewed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          suggestion_type: string;
+          title: string;
+          summary: string;
+          evidence_json?: Json;
+          status?: "proposed" | "under_review" | "approved" | "rejected";
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          reviewed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          suggestion_type?: string;
+          title?: string;
+          summary?: string;
+          evidence_json?: Json;
+          status?: "proposed" | "under_review" | "approved" | "rejected";
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          reviewed_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_suggestions_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      admin_friction_summary: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          detail: string;
+          entry_count: number;
+          label: string;
+        }[];
+      };
+      admin_overview_metrics: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      admin_prompt_theme_counts: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          entry_count: number;
+          theme: string;
+        }[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

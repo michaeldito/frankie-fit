@@ -165,6 +165,7 @@ These repo documents are part of the content story and should be mined for futur
 - [database-schema-plan.md](</C:/Users/mcdit/Code/frankie-fit/docs/database-schema-plan.md>)
 - [deployment-strategy.md](</C:/Users/mcdit/Code/frankie-fit/docs/deployment-strategy.md>)
 - [implementation-backlog.md](</C:/Users/mcdit/Code/frankie-fit/docs/implementation-backlog.md>)
+- [seed-data-plan.md](</C:/Users/mcdit/Code/frankie-fit/docs/seed-data-plan.md>)
 
 ### Product Flow Docs
 
@@ -659,12 +660,14 @@ Those details make the content more believable than polished hindsight alone.
 - Product clarity makes implementation quality much better.
 - Rule-based approaches can get far enough to validate product flow before heavier AI orchestration is added.
 - Real user input gets messy fast, which creates strong future opportunities for Frankie intelligence improvements.
+- Seed data is not busywork. If the seeded chat, logs, dashboards, and admin surfaces do not line up, the product immediately feels fake.
 
 ### Current Good One-Liners
 
 - Strong engineering fundamentals do not become obsolete in an AI-native workflow. They become leverage.
 - AI speeds up execution, but it does not remove the need for product and technical judgment.
 - The more real the product gets, the more obvious it becomes where AI helps and where engineering still leads.
+- Good demo data is part of product engineering, not an afterthought.
 
 ### Current Important Reminder
 

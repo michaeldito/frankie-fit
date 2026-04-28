@@ -20,6 +20,7 @@ const previewUser: UserAppShellUser = {
   goalDescription:
     "Keep movement, meals, and recovery close enough together that Frankie can guide the next step well.",
   authConfigured: false,
+  isAdmin: false,
   nextStepTitle: "Quick recovery check-in",
   nextStepDescription:
     "A short update will help Frankie keep today's guidance grounded in how the week is actually feeling.",
@@ -60,6 +61,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         ? "Your onboarding answers will turn this into a more personal coaching read."
         : "Run the Supabase migration to unlock onboarding, saved profiles, and personalized coaching.",
     authConfigured: true,
+    isAdmin: context.profile?.role === "admin",
     nextStepTitle: nextStep.title,
     nextStepDescription: nextStep.description,
     nextStepHref: nextStep.href,

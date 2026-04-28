@@ -10,6 +10,7 @@ export type UserAppShellUser = {
   primaryGoal: string;
   goalDescription: string;
   authConfigured: boolean;
+  isAdmin: boolean;
   nextStepTitle: string;
   nextStepDescription: string;
   nextStepHref: string;
@@ -39,6 +40,7 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
             <NavLink href="/app/chat">Chat</NavLink>
             <NavLink href="/app/dashboard">Dashboard</NavLink>
             <NavLink href="/app/profile">Profile</NavLink>
+            {user.isAdmin ? <NavLink href="/app/admin">Admin</NavLink> : null}
           </nav>
 
           <div className="mt-8 rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface-strong)] p-4">

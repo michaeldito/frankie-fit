@@ -16,6 +16,7 @@ Supporting planning docs:
 - [Low-Fidelity Wireframes](C:/Users/mcdit/Code/frankie-fit/docs/low-fi-wireframes.md)
 - [MVP Technical Architecture](C:/Users/mcdit/Code/frankie-fit/docs/mvp-technical-architecture.md)
 - [Database Schema Plan](C:/Users/mcdit/Code/frankie-fit/docs/database-schema-plan.md)
+- [Seed Data Plan](C:/Users/mcdit/Code/frankie-fit/docs/seed-data-plan.md)
 - [Implementation Backlog](C:/Users/mcdit/Code/frankie-fit/docs/implementation-backlog.md)
 - [Deployment Strategy](C:/Users/mcdit/Code/frankie-fit/docs/deployment-strategy.md)
 
@@ -39,6 +40,28 @@ Verification commands:
 
 - `pnpm lint`
 - `pnpm build`
+
+## Seed Demo Data
+
+The repo includes a rerunnable demo seeding script for 10 reviewable accounts with:
+
+- varied completed profiles
+- one week of activity, diet, and wellness logs
+- matching stored Frankie chat history
+
+Commands:
+
+- `pnpm seed:demo:dry`
+- `pnpm seed:demo`
+
+Required env for real seeding:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Optional:
+
+- `FF_DEMO_ACCOUNT_PASSWORD`
 
 Note:
 The current scripts use `--webpack` for `next dev` and `next build` to avoid a Windows/Turbopack process issue in this environment.

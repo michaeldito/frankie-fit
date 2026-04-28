@@ -17,10 +17,18 @@ Completed in the app:
 - activity logging from chat
 - diet logging from chat with multi-entry support
 - wellness check-ins from chat with multi-signal support
+- dashboard summaries backed by real saved data
+- profile editing for core coaching context
+- LinkedIn/content notes that capture the build story as it evolves
+
+Completed in the repo:
+
+- demo seed-data plan and rerunnable seed script for 10 reviewable accounts
 
 Now in progress:
 
-- dashboard summaries backed by real saved data instead of placeholder content
+- admin overview with aggregate product-health reporting
+- Frankie intelligence refinement planning
 
 ## Current Build Notes
 
@@ -32,6 +40,11 @@ These are worth keeping in mind as we keep building.
 - Wellness parsing supports multiple signals in one message, but response quality should continue improving as we gather real examples.
 - Dashboard summaries in v1 should be computed directly from raw logs first. We do not need `weekly_summaries` to unblock the user experience.
 - Frankie insights and `Next best step` guidance are rule-based in v1. This is good enough for momentum, and we can make them smarter later.
+- The initial admin overview should lean on privacy-safe aggregate functions and explicit role checks rather than broad raw-table access.
+- The current admin overview should include seeded `internal_test` and `synthetic_demo` account usage in aggregate metrics so demos and QA sessions show meaningful product signal.
+- Seed data should favor `internal_test` and `synthetic_demo` accounts so admin review stays privacy-safe and demos stay realistic.
+- Seeded chat history should stay aligned with structured log rows. For Frankie Fit, fake logs without matching messages will make the product feel less believable.
+- The first demo seed pack is intentionally happy-path and complete. Add sparse or messy accounts as a second pack rather than overloading the base dataset.
 
 ## Future Refinement Notes
 
@@ -350,6 +363,7 @@ Make the MVP more reliable, safer, and cleaner to demo.
 - review RLS and permissions again after app integration
 - add minimal analytics instrumentation
 - add seed/test users for QA
+- add a second seed pack for sparse, messy, or edge-case accounts after the base demo pack is in use
 - improve recommendation freshness behavior
 - tighten prompt and tool reliability
 
