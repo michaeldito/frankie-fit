@@ -163,6 +163,7 @@ These repo documents are part of the content story and should be mined for futur
 
 - [mvp-technical-architecture.md](</C:/Users/mcdit/Code/frankie-fit/docs/mvp-technical-architecture.md>)
 - [database-schema-plan.md](</C:/Users/mcdit/Code/frankie-fit/docs/database-schema-plan.md>)
+- [ai-native-architecture-review.md](</C:/Users/mcdit/Code/frankie-fit/docs/ai-native-architecture-review.md>)
 - [deployment-strategy.md](</C:/Users/mcdit/Code/frankie-fit/docs/deployment-strategy.md>)
 - [implementation-backlog.md](</C:/Users/mcdit/Code/frankie-fit/docs/implementation-backlog.md>)
 - [seed-data-plan.md](</C:/Users/mcdit/Code/frankie-fit/docs/seed-data-plan.md>)
@@ -652,6 +653,9 @@ Those details make the content more believable than polished hindsight alone.
 - Built a real AI-native wellness app concept instead of a generic demo.
 - Used AI-assisted workflow to move from brief -> architecture -> schema -> scaffold -> auth -> onboarding -> chat logging -> dashboard.
 - Frankie already supports conversational logging for activity, diet, and wellness.
+- The product now has a founder-facing admin overview, not just the end-user app surface.
+- The repo now has seeded internal and synthetic accounts with believable chat and log history, which makes demos and QA much more realistic.
+- Frankie now has the first real AI orchestration layer in the codebase, with a model-first path and a safe deterministic fallback.
 - Real implementation work has exposed the messy reality of natural language input and why experienced engineering judgment still matters.
 
 ### Current Good Lessons
@@ -661,6 +665,9 @@ Those details make the content more believable than polished hindsight alone.
 - Rule-based approaches can get far enough to validate product flow before heavier AI orchestration is added.
 - Real user input gets messy fast, which creates strong future opportunities for Frankie intelligence improvements.
 - Seed data is not busywork. If the seeded chat, logs, dashboards, and admin surfaces do not line up, the product immediately feels fake.
+- The admin experience is part of the product too. The founder surface needs intentional design, not just hidden routes and raw tables.
+- Calling a product AI-native should mean more than putting chat in the UI. The model needs to be in the decision loop, with tools, memory, evals, and guardrails.
+- A practical AI-native migration does not require rebuilding everything. It can start with a real orchestrator and deterministic fallbacks.
 
 ### Current Good One-Liners
 
@@ -668,6 +675,7 @@ Those details make the content more believable than polished hindsight alone.
 - AI speeds up execution, but it does not remove the need for product and technical judgment.
 - The more real the product gets, the more obvious it becomes where AI helps and where engineering still leads.
 - Good demo data is part of product engineering, not an afterthought.
+- Internal product tooling is still product work. The admin surface deserves the same clarity as the user app.
 
 ### Current Important Reminder
 

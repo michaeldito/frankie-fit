@@ -12,12 +12,15 @@ export type ChatExperience = {
   error: string | null;
 };
 
+export type RelativeLoggedFor = "today" | "yesterday" | "unknown";
+
 export type ParsedActivity = {
   activityType: string;
   durationMinutes: number | null;
   intensity: string | null;
   description: string;
   detectedKeyword: string;
+  loggedFor: RelativeLoggedFor;
 };
 
 export type ParsedDietEntry = {
@@ -25,6 +28,7 @@ export type ParsedDietEntry = {
   mealType: string | null;
   confidence: number;
   detectedKeyword: string;
+  loggedFor: RelativeLoggedFor;
 };
 
 export type ParsedWellnessCheckin = {
@@ -35,6 +39,7 @@ export type ParsedWellnessCheckin = {
   motivationScore: number | null;
   notes: string | null;
   detectedSignals: string[];
+  loggedFor: RelativeLoggedFor;
 };
 
 type ActivityMatch = {
@@ -841,7 +846,8 @@ export function parseActivityMessage(message: string): ParsedActivity[] {
       durationMinutes: getDurationMinutes(clause),
       intensity: getIntensity(clause),
       description: clause,
-      detectedKeyword: activityMatch.keyword
+      detectedKeyword: activityMatch.keyword,
+      loggedFor: "today"
     });
   });
 
@@ -870,7 +876,8 @@ export function parseDietMessage(message: string): ParsedDietEntry[] {
       description: cleanedDescription,
       mealType: mealMatch?.label ?? null,
       confidence: mealMatch ? 0.92 : hasFoodCue(clause) ? 0.82 : 0.7,
-      detectedKeyword: mealMatch?.keyword ?? "food_update"
+      detectedKeyword: mealMatch?.keyword ?? "food_update",
+      loggedFor: "today"
     };
     const dedupeKey = `${entry.mealType ?? "unknown"}::${entry.description.toLowerCase()}`;
 
@@ -966,7 +973,8 @@ export function parseWellnessMessage(message: string): ParsedWellnessCheckin | n
     stressScore,
     motivationScore,
     notes: relevantClauses.length > 0 ? relevantClauses.join("; ") : null,
-    detectedSignals: Array.from(detectedSignals)
+    detectedSignals: Array.from(detectedSignals),
+    loggedFor: "today"
   };
 }
 
@@ -1106,42 +1114,61 @@ function joinConfirmationSegments(segments: string[]) {
   return `${segments.slice(0, -1).join(", ")}, and ${segments[segments.length - 1]}`;
 }
 
+export function buildStructuredLogConfirmation(
+  profile: AppProfile | null,
+  parsedActivities: ParsedActivity[],
+  parsedDietEntries: ParsedDietEntry[],
+  parsedWellnessCheckin: ParsedWellnessCheckin | null
+) {
+  if (
+    parsedActivities.length === 0 &&
+    parsedDietEntries.length === 0 &&
+    !parsedWellnessCheckin
+  ) {
+    return null;
+  }
+
+  const confirmationSegments: string[] = [];
+
+  if (parsedActivities.length > 0) {
+    confirmationSegments.push(joinActivityConfirmations(parsedActivities));
+  }
+
+  if (parsedDietEntries.length > 0) {
+    confirmationSegments.push(joinDietConfirmations(parsedDietEntries));
+  }
+
+  if (parsedWellnessCheckin) {
+    confirmationSegments.push(formatWellnessConfirmation(parsedWellnessCheckin));
+  }
+
+  const confirmationText = joinConfirmationSegments(confirmationSegments);
+  const goalText = profile?.primary_goal
+    ? ` That keeps us moving toward ${profile.primary_goal.toLowerCase()}.`
+    : "";
+
+  return {
+    assistantMessageType: "log_confirmation" as const,
+    parsedActivities,
+    parsedDietEntries,
+    parsedWellnessCheckin,
+    reply: `Nice. I logged ${confirmationText}.${goalText} If you want, tell me how it felt, how the meals lined up with your day, or how recovery is trending and I can help shape the next step.`
+  };
+}
+
 export function buildAssistantReply(profile: AppProfile | null, message: string) {
   const parsedActivities = parseActivityMessage(message);
   const parsedDietEntries = parseDietMessage(message);
   const parsedWellnessCheckin = parseWellnessMessage(message);
-
-  if (
-    parsedActivities.length > 0 ||
-    parsedDietEntries.length > 0 ||
+  const structuredConfirmation = buildStructuredLogConfirmation(
+    profile,
+    parsedActivities,
+    parsedDietEntries,
     parsedWellnessCheckin
-  ) {
-    const confirmationSegments: string[] = [];
+  );
 
-    if (parsedActivities.length > 0) {
-      confirmationSegments.push(joinActivityConfirmations(parsedActivities));
-    }
-
-    if (parsedDietEntries.length > 0) {
-      confirmationSegments.push(joinDietConfirmations(parsedDietEntries));
-    }
-
-    if (parsedWellnessCheckin) {
-      confirmationSegments.push(formatWellnessConfirmation(parsedWellnessCheckin));
-    }
-
-    const confirmationText = joinConfirmationSegments(confirmationSegments);
-    const goalText = profile?.primary_goal
-      ? ` That keeps us moving toward ${profile.primary_goal.toLowerCase()}.`
-      : "";
-
-    return {
-      assistantMessageType: "log_confirmation" as const,
-      parsedActivities,
-      parsedDietEntries,
-      parsedWellnessCheckin,
-      reply: `Nice. I logged ${confirmationText}.${goalText} If you want, tell me how it felt, how the meals lined up with your day, or how recovery is trending and I can help shape the next step.`
-    };
+  if (structuredConfirmation) {
+    return structuredConfirmation;
   }
 
   const coachingStyleText = profile?.coaching_style

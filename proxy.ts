@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublicKey, hasSupabaseEnv } from "@/lib/env";
 import type { Database } from "@/types/database";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   if (!hasSupabaseEnv()) {
     return NextResponse.next({ request });
   }

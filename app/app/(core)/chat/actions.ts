@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { buildAssistantReply, getChatExperience } from "@/lib/chat";
+import { getChatExperience } from "@/lib/chat";
+import { orchestrateFrankieReply } from "@/lib/ai/orchestrator/frankie-orchestrator";
+import { logActivityEntries } from "@/lib/ai/tools/log-activity";
+import { logDietEntries } from "@/lib/ai/tools/log-diet";
+import { logWellnessCheckin } from "@/lib/ai/tools/log-wellness";
 import { getCurrentAppContext, getDisplayName } from "@/lib/profile";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -58,64 +62,40 @@ export async function sendChatMessage(formData: FormData) {
     );
   }
 
-  const reply = buildAssistantReply(context.profile, message);
+  const reply = await orchestrateFrankieReply({
+    profile: context.profile,
+    message,
+    recentMessages: chatExperience.messages
+  });
 
-  if (reply.parsedActivities.length > 0) {
-    const { error: activityLogError } = await supabase.from("activity_logs").insert(
-      reply.parsedActivities.map((activity, index) => ({
-        user_id: user.id,
-        source_message_id: userMessage.id,
-        activity_type: activity.activityType,
-        description: activity.description,
-        duration_minutes: activity.durationMinutes,
-        intensity: activity.intensity,
-        metadata_json: {
-          detectedKeyword: activity.detectedKeyword,
-          segmentIndex: index
-        }
-      }))
-    );
-
-    if (activityLogError) {
-      redirect(`/app/chat?error=${encodeURIComponent(activityLogError.message)}`);
-    }
-  }
-
-  if (reply.parsedDietEntries.length > 0) {
-    const { error: dietLogError } = await supabase.from("diet_logs").insert(
-      reply.parsedDietEntries.map((entry, index) => ({
-        user_id: user.id,
-        source_message_id: userMessage.id,
-        description: entry.description,
-        meal_type: entry.mealType,
-        confidence: entry.confidence,
-        metadata_json: {
-          detectedKeyword: entry.detectedKeyword,
-          segmentIndex: index
-        }
-      }))
-    );
-
-    if (dietLogError) {
-      redirect(`/app/chat?error=${encodeURIComponent(dietLogError.message)}`);
-    }
-  }
-
-  if (reply.parsedWellnessCheckin) {
-    const { error: wellnessLogError } = await supabase.from("wellness_checkins").insert({
-      user_id: user.id,
-      source_message_id: userMessage.id,
-      energy_score: reply.parsedWellnessCheckin.energyScore,
-      soreness_score: reply.parsedWellnessCheckin.sorenessScore,
-      mood_score: reply.parsedWellnessCheckin.moodScore,
-      stress_score: reply.parsedWellnessCheckin.stressScore,
-      motivation_score: reply.parsedWellnessCheckin.motivationScore,
-      notes: reply.parsedWellnessCheckin.notes
+  try {
+    await logActivityEntries({
+      supabase,
+      userId: user.id,
+      sourceMessageId: userMessage.id,
+      entries: reply.parsedActivities,
+      extractionSource: reply.metadata.extractionSource
     });
-
-    if (wellnessLogError) {
-      redirect(`/app/chat?error=${encodeURIComponent(wellnessLogError.message)}`);
-    }
+    await logDietEntries({
+      supabase,
+      userId: user.id,
+      sourceMessageId: userMessage.id,
+      entries: reply.parsedDietEntries,
+      extractionSource: reply.metadata.extractionSource
+    });
+    await logWellnessCheckin({
+      supabase,
+      userId: user.id,
+      sourceMessageId: userMessage.id,
+      entry: reply.parsedWellnessCheckin,
+      extractionSource: reply.metadata.extractionSource
+    });
+  } catch (error) {
+    redirect(
+      `/app/chat?error=${encodeURIComponent(
+        error instanceof Error ? error.message : "Frankie could not save the structured logs."
+      )}`
+    );
   }
 
   const { error: assistantMessageError } = await supabase
@@ -148,9 +128,12 @@ export async function sendChatMessage(formData: FormData) {
                   moodScore: reply.parsedWellnessCheckin.moodScore,
                   stressScore: reply.parsedWellnessCheckin.stressScore,
                   motivationScore: reply.parsedWellnessCheckin.motivationScore,
-                  detectedSignals: reply.parsedWellnessCheckin.detectedSignals
+                  detectedSignals: reply.parsedWellnessCheckin.detectedSignals,
+                  loggedFor: reply.parsedWellnessCheckin.loggedFor
                 }
               : null
+            ,
+            orchestration: reply.metadata
           }
           : {}
     });

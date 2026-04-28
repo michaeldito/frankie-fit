@@ -19,6 +19,8 @@ Completed in the app:
 - wellness check-ins from chat with multi-signal support
 - dashboard summaries backed by real saved data
 - profile editing for core coaching context
+- admin overview with aggregate reporting across tracked accounts
+- first-pass Frankie AI orchestration layer with model extraction and response fallbacks
 - LinkedIn/content notes that capture the build story as it evolves
 
 Completed in the repo:
@@ -27,14 +29,14 @@ Completed in the repo:
 
 Now in progress:
 
-- admin overview with aggregate product-health reporting
-- Frankie intelligence refinement planning
+- Frankie intelligence refinement
+- deeper AI-native migration beyond the first orchestration layer
 
 ## Current Build Notes
 
 These are worth keeping in mind as we keep building.
 
-- Chat logging is currently rule-based and intentionally lightweight. Frankie is not using a full LLM orchestration layer yet.
+- Chat logging now has a first-pass AI orchestration layer, but the regex parser still exists as an intentional fallback while we harden the model-driven path.
 - Activity parsing supports multiple activities in one message, but interpretation is still keyword-heavy.
 - Diet parsing supports multiple meals or snacks in one message, but mixed-domain sentences can still confuse it.
 - Wellness parsing supports multiple signals in one message, but response quality should continue improving as we gather real examples.
@@ -45,6 +47,7 @@ These are worth keeping in mind as we keep building.
 - Seed data should favor `internal_test` and `synthetic_demo` accounts so admin review stays privacy-safe and demos stay realistic.
 - Seeded chat history should stay aligned with structured log rows. For Frankie Fit, fake logs without matching messages will make the product feel less believable.
 - The first demo seed pack is intentionally happy-path and complete. Add sparse or messy accounts as a second pack rather than overloading the base dataset.
+- The first AI layer is fetch-based and uses the OpenAI Responses API with structured outputs rather than introducing the OpenAI SDK or MCP dependencies too early.
 
 ## Future Refinement Notes
 
@@ -56,6 +59,9 @@ These are not blockers for the current MVP, but they are important follow-up are
 - add stronger handling for alcohol, hydration, and recovery-adjacent context
 - add cautious cross-signal reasoning so Frankie can suggest possible causes without overstating certainty
 - consider moving dashboard summaries to precomputed aggregates only after raw-log rendering becomes a performance or complexity problem
+- move Frankie from regex-first parsing to model-based structured extraction with deterministic tool writes
+- add traceability, eval fixtures, and prompt/version control before calling the app fully AI-native
+- expand context loading, add time-aware extraction, and introduce eval coverage before removing the fallback parser
 
 ## Working Principle
 

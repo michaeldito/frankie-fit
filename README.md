@@ -16,6 +16,7 @@ Supporting planning docs:
 - [Low-Fidelity Wireframes](C:/Users/mcdit/Code/frankie-fit/docs/low-fi-wireframes.md)
 - [MVP Technical Architecture](C:/Users/mcdit/Code/frankie-fit/docs/mvp-technical-architecture.md)
 - [Database Schema Plan](C:/Users/mcdit/Code/frankie-fit/docs/database-schema-plan.md)
+- [AI-Native Architecture Review](C:/Users/mcdit/Code/frankie-fit/docs/ai-native-architecture-review.md)
 - [Seed Data Plan](C:/Users/mcdit/Code/frankie-fit/docs/seed-data-plan.md)
 - [Implementation Backlog](C:/Users/mcdit/Code/frankie-fit/docs/implementation-backlog.md)
 - [Deployment Strategy](C:/Users/mcdit/Code/frankie-fit/docs/deployment-strategy.md)
@@ -29,6 +30,7 @@ The repo now includes the first working Next.js scaffold for:
 - the authenticated app shell
 - starter routes for `/app/chat`, `/app/dashboard`, and `/app/profile`
 - Supabase client helpers and environment scaffolding
+- a first-pass `lib/ai/` orchestration layer for Frankie
 
 ## Development
 
