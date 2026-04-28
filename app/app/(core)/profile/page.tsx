@@ -101,7 +101,7 @@ function CheckboxGrid({
     <div className="grid gap-3 sm:grid-cols-2">
       {options.map((option) => (
         <label
-          className="flex items-center gap-3 rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm"
+          className="ff-card-soft flex items-center gap-3 px-4 py-3 text-sm"
           key={option}
         >
           <input
@@ -130,9 +130,9 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-5">
-      <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">{eyebrow}</p>
-      <h2 className="mt-3 text-2xl font-semibold tracking-tight">{title}</h2>
+    <section className="ff-panel p-5 sm:p-6">
+      <p className="ff-kicker">{eyebrow}</p>
+      <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">{title}</h2>
       <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">{description}</p>
       <div className="mt-6 space-y-5">{children}</div>
     </section>
@@ -160,55 +160,56 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       : "";
 
   return (
-    <div className="space-y-6">
-      <header className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface-strong)] p-5">
-        <p className="text-sm uppercase tracking-[0.25em] text-[var(--muted)]">Profile</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="ff-scroll min-h-0 flex-1 space-y-6 overflow-y-auto pr-1 lg:space-y-7">
+        <header className="ff-panel-strong p-6">
+        <p className="ff-kicker">Profile</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-[2.35rem]">
           The context Frankie uses to coach you.
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--muted)]">
           Update the important pieces of your goals, routine, and coaching preferences without
           redoing onboarding from scratch.
         </p>
-      </header>
+        </header>
 
-      {saved ? (
-        <div className="rounded-[1.5rem] border border-[color:color-mix(in_srgb,var(--brand)_55%,var(--border)_45%)] bg-[color:color-mix(in_srgb,var(--brand)_14%,var(--surface)_86%)] px-5 py-4 text-sm leading-6 text-[var(--foreground)]">
-          Your profile is updated. Frankie will use this new context in chat, the dashboard, and
-          the next-step guidance.
-        </div>
-      ) : null}
+        {saved ? (
+          <div className="rounded-[1.5rem] border border-[color:color-mix(in_srgb,var(--brand)_55%,var(--border)_45%)] bg-[color:color-mix(in_srgb,var(--brand)_14%,var(--surface)_86%)] px-5 py-4 text-sm leading-6 text-[var(--foreground)] shadow-[var(--shadow-card)]">
+            Your profile is updated. Frankie will use this new context in chat, the dashboard, and
+            the next-step guidance.
+          </div>
+        ) : null}
 
-      {error ? (
-        <div className="rounded-[1.5rem] border border-[color:color-mix(in_srgb,var(--accent)_55%,var(--border)_45%)] bg-[color:color-mix(in_srgb,var(--accent)_12%,var(--surface)_88%)] px-5 py-4 text-sm leading-6 text-[var(--foreground)]">
-          {error}
-        </div>
-      ) : null}
+        {error ? (
+          <div className="rounded-[1.5rem] border border-[color:color-mix(in_srgb,var(--accent)_55%,var(--border)_45%)] bg-[color:color-mix(in_srgb,var(--accent)_12%,var(--surface)_88%)] px-5 py-4 text-sm leading-6 text-[var(--foreground)] shadow-[var(--shadow-card)]">
+            {error}
+          </div>
+        ) : null}
 
-      {!context.schemaReady ? (
-        <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-5">
-          <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
-            Database setup needed
-          </p>
-          <p className="mt-3 max-w-3xl leading-7 text-[var(--muted)]">
-            This page becomes editable once the Supabase profile schema is available. Right now
-            auth is live, but the `profiles` table is still missing in the connected project.
-          </p>
-        </section>
-      ) : null}
+        {!context.schemaReady ? (
+          <section className="ff-panel p-5 sm:p-6">
+            <p className="ff-kicker">
+              Database setup needed
+            </p>
+            <p className="mt-3 max-w-3xl leading-7 text-[var(--muted)]">
+              This page becomes editable once the Supabase profile schema is available. Right now
+              auth is live, but the `profiles` table is still missing in the connected project.
+            </p>
+          </section>
+        ) : null}
 
-      <form action={saveProfile} className="space-y-6">
-        <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-5">
-            <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
+        <form action={saveProfile} className="space-y-6 pb-6" id="profile-form">
+          <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="ff-panel p-5">
+            <p className="ff-kicker">
               Profile summary
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-              <span className="rounded-full bg-[var(--surface-strong)] px-3 py-1">{displayName}</span>
-              <span className="rounded-full bg-[var(--surface-strong)] px-3 py-1">
+              <span className="ff-pill">{displayName}</span>
+              <span className="ff-pill">
                 Primary goal: {context.profile?.primary_goal || "Not set yet"}
               </span>
-              <span className="rounded-full bg-[var(--surface-strong)] px-3 py-1">{accountLabel}</span>
+              <span className="ff-pill">{accountLabel}</span>
             </div>
             {context.profile?.onboarding_summary ? (
               <p className="mt-4 leading-7 text-[var(--muted)]">{context.profile.onboarding_summary}</p>
@@ -219,8 +220,8 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             )}
           </div>
 
-          <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-5">
-            <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
+          <div className="ff-panel p-5">
+            <p className="ff-kicker">
               Account details
             </p>
             <div className="mt-4 space-y-3">
@@ -257,7 +258,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Display name</span>
               <input
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-input"
                 defaultValue={context.profile?.full_name ?? displayName}
                 name="fullName"
                 placeholder="How Frankie should address you"
@@ -268,7 +269,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Age range</span>
               <select
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-select"
                 defaultValue={context.profile?.age_range ?? ""}
                 name="ageRange"
               >
@@ -284,7 +285,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2 md:col-span-2">
               <span className="text-sm font-medium">Primary goal</span>
               <input
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-input"
                 defaultValue={context.profile?.primary_goal ?? ""}
                 name="primaryGoal"
                 placeholder="Consistency, endurance, strength, recovery..."
@@ -312,7 +313,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Activity level</span>
               <select
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-select"
                 defaultValue={context.profile?.activity_level ?? ""}
                 name="activityLevel"
               >
@@ -328,7 +329,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Fitness experience</span>
               <select
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-select"
                 defaultValue={context.profile?.fitness_experience ?? ""}
                 name="fitnessExperience"
               >
@@ -345,7 +346,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           <label className="block space-y-2">
             <span className="text-sm font-medium">Current activities</span>
             <textarea
-              className="min-h-24 w-full rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4 outline-none transition focus:border-[var(--brand)]"
+              className="ff-textarea min-h-24"
               defaultValue={(context.profile?.current_activities ?? []).join(", ")}
               name="currentActivities"
               placeholder="Walking, lifting twice a week, weekend cycling..."
@@ -374,7 +375,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Training environment</span>
               <select
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-select"
                 defaultValue={context.profile?.training_environment ?? ""}
                 name="trainingEnvironment"
               >
@@ -390,7 +391,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Target training days</span>
               <select
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-select"
                 defaultValue={context.profile?.target_training_days?.toString() ?? ""}
                 name="targetTrainingDays"
               >
@@ -406,7 +407,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Typical session length</span>
               <select
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-select"
                 defaultValue={context.profile?.typical_session_length?.toString() ?? ""}
                 name="typicalSessionLength"
               >
@@ -423,7 +424,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           <label className="block space-y-2">
             <span className="text-sm font-medium">Schedule notes</span>
             <textarea
-              className="min-h-24 w-full rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4 outline-none transition focus:border-[var(--brand)]"
+              className="ff-textarea min-h-24"
               defaultValue={scheduleNotes}
               name="preferredScheduleNotes"
               placeholder="Weekdays are easier, mornings are rough, weekends are flexible..."
@@ -449,7 +450,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Nutrition goal</span>
               <input
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-input"
                 defaultValue={context.profile?.nutrition_goal ?? ""}
                 name="nutritionGoal"
                 placeholder="Eat more consistently, simplify meals, recover better..."
@@ -460,7 +461,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Diet restrictions or allergies</span>
               <textarea
-                className="min-h-24 w-full rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4 outline-none transition focus:border-[var(--brand)]"
+                className="ff-textarea min-h-24"
                 defaultValue={(context.profile?.diet_restrictions ?? []).join(", ")}
                 name="dietRestrictions"
                 placeholder="Comma or line-separated is fine"
@@ -472,7 +473,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Energy baseline</span>
               <select
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-select"
                 defaultValue={context.profile?.energy_baseline ?? ""}
                 name="energyBaseline"
               >
@@ -488,7 +489,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Stress baseline</span>
               <select
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-select"
                 defaultValue={context.profile?.stress_baseline ?? ""}
                 name="stressBaseline"
               >
@@ -511,7 +512,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             />
           </div>
 
-          <label className="flex items-start gap-3 rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4 text-sm leading-6">
+          <label className="ff-card-soft flex items-start gap-3 px-4 py-4 text-sm leading-6">
             <input
               className="mt-1 h-4 w-4 accent-[var(--brand)]"
               defaultChecked={context.profile?.wellness_checkin_opt_in ?? true}
@@ -534,7 +535,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Injuries or limitations</span>
               <textarea
-                className="min-h-24 w-full rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4 outline-none transition focus:border-[var(--brand)]"
+                className="ff-textarea min-h-24"
                 defaultValue={(context.profile?.injuries_limitations ?? []).join(", ")}
                 name="injuriesLimitations"
                 placeholder="Knee pain, shoulder mobility, low back tightness..."
@@ -544,7 +545,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Health considerations</span>
               <textarea
-                className="min-h-24 w-full rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4 outline-none transition focus:border-[var(--brand)]"
+                className="ff-textarea min-h-24"
                 defaultValue={(context.profile?.health_considerations ?? []).join(", ")}
                 name="healthConsiderations"
                 placeholder="Anything Frankie should know before making suggestions"
@@ -554,7 +555,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Avoidances</span>
               <textarea
-                className="min-h-24 w-full rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4 outline-none transition focus:border-[var(--brand)]"
+                className="ff-textarea min-h-24"
                 defaultValue={(context.profile?.avoidances ?? []).join(", ")}
                 name="avoidances"
                 placeholder="Exercises, coaching language, food guidance, or patterns to avoid"
@@ -566,7 +567,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Coaching style</span>
               <select
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-select"
                 defaultValue={context.profile?.coaching_style ?? ""}
                 name="coachingStyle"
               >
@@ -582,7 +583,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <label className="block space-y-2">
               <span className="text-sm font-medium">Check-in style</span>
               <select
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 outline-none transition focus:border-[var(--brand)]"
+                className="ff-select"
                 defaultValue={context.profile?.preferred_checkin_style ?? ""}
                 name="preferredCheckinStyle"
               >
@@ -596,20 +597,20 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             </label>
           </div>
         </Section>
+        </form>
+      </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-5">
+      <div className="-mx-4 -mb-4 shrink-0 border-t border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_84%,black_16%)]/96 px-5 py-4 backdrop-blur-xl sm:-mx-6 sm:-mb-5 sm:px-6 sm:py-5">
+        <div className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center justify-between gap-4">
           <p className="max-w-2xl text-sm leading-6 text-[var(--muted)]">
             Saving here updates the coaching context Frankie uses across chat, dashboard summaries,
             and the app shell. This is the practical v1 editor, not a full settings maze.
           </p>
-          <button
-            className="rounded-full bg-[var(--brand)] px-5 py-3 text-sm font-medium text-white transition hover:bg-[var(--brand-strong)]"
-            type="submit"
-          >
+          <button className="ff-button-primary px-5 py-3 text-sm" form="profile-form" type="submit">
             Save profile changes
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

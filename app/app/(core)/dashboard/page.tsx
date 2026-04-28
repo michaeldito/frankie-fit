@@ -36,9 +36,9 @@ function getActiveTab(value: string | undefined): DashboardTabId {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-5">
+    <div className="ff-card p-5">
       <p className="text-sm text-[var(--muted)]">{label}</p>
-      <p className="mt-3 text-3xl font-semibold">{value}</p>
+      <p className="mt-3 text-3xl font-semibold tracking-[-0.04em]">{value}</p>
     </div>
   );
 }
@@ -53,9 +53,9 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-5">
-      <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">{eyebrow}</p>
-      <h2 className="mt-3 text-xl font-semibold tracking-tight">{title}</h2>
+    <section className="ff-panel p-5">
+      <p className="ff-kicker">{eyebrow}</p>
+      <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em]">{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -76,7 +76,7 @@ function EmptyState({
     <SectionCard eyebrow="Getting started" title={title}>
       <p className="max-w-2xl leading-7 text-[var(--muted)]">{body}</p>
       <Link
-        className="mt-5 inline-flex rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white"
+        className="ff-button-primary mt-5 px-4 py-2 text-sm"
         href={href}
       >
         {cta}
@@ -100,7 +100,7 @@ function RecentList({
         <div className="space-y-3">
           {items.map((item) => (
             <article
-              className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface-strong)] p-4"
+              className="ff-card-soft p-4"
               key={item.id}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -131,7 +131,7 @@ function ExerciseTrend({ trend }: { trend: DashboardTrendPoint[] }) {
             <div className="flex h-full flex-col items-center justify-end gap-3" key={point.label}>
               <div className="text-xs text-[var(--muted)]">{point.value}</div>
               <div
-                className="w-full rounded-t-2xl bg-[var(--brand)]/85"
+                className="w-full rounded-t-[1.1rem] bg-[linear-gradient(180deg,rgba(147,197,253,0.98)_0%,rgba(37,99,235,0.98)_100%)] shadow-[0_12px_28px_rgba(29,78,216,0.22)]"
                 style={{ height: `${height}px` }}
               />
               <div className="text-xs uppercase tracking-[0.15em] text-[var(--muted)]">
@@ -186,7 +186,7 @@ function WellnessTrend({ trend }: { trend: WellnessTrendPoint[] }) {
       <div className="space-y-3">
         {trend.map((point) => (
           <div
-            className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface-strong)] p-4"
+            className="ff-card-soft p-4"
             key={point.label}
           >
             <div className="flex items-center justify-between gap-3">
@@ -336,40 +336,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const activeTab = getActiveTab(getSearchParam(resolvedSearchParams.tab));
   const context = await getCurrentAppContext();
   const dashboardData = await getDashboardData(context);
-  const primaryGoal = context.profile?.primary_goal;
-  const subcopy = primaryGoal
-    ? `A simple read on how your current rhythm is supporting ${primaryGoal.toLowerCase()}.`
-    : "A simple read on how things are going.";
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface-strong)] p-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-[var(--muted)]">
-            Your Dashboard
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-            A calmer read on what the week is saying.
-          </h1>
-          <p className="mt-3 max-w-3xl leading-7 text-[var(--muted)]">{subcopy}</p>
-        </div>
-        <Link
-          className="rounded-[1.25rem] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_84%,black_16%)] px-4 py-3 transition hover:border-[var(--brand)] hover:bg-[var(--surface)]"
-          href={dashboardData.nextStep.href}
-        >
-          <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
-            Next best step
-          </p>
-          <p className="mt-2 font-semibold">{dashboardData.nextStep.title}</p>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-[var(--muted)]">
-            {dashboardData.nextStep.description}
-          </p>
-        </Link>
-      </header>
-
+    <div className="space-y-6 lg:space-y-7">
       {!dashboardData.ready ? (
-        <section className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-5">
-          <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
+        <section className="ff-panel p-5 sm:p-6">
+          <p className="ff-kicker">
             Setup note
           </p>
           <p className="mt-3 max-w-3xl leading-7 text-[var(--muted)]">
@@ -382,16 +354,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </section>
       ) : null}
 
-      <div className="flex flex-wrap gap-3">
+      <div className="ff-card flex flex-wrap gap-3 p-3">
         {dashboardTabs.map((tab) => {
           const active = tab.id === activeTab;
 
           return (
             <Link
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              className={`rounded-full px-4 py-2.5 text-sm font-medium transition ${
                 active
-                  ? "bg-[var(--brand)] text-white shadow-[0_12px_30px_rgba(19,50,48,0.35)]"
-                  : "border border-[var(--border)] bg-[var(--surface-strong)] hover:border-[var(--brand)]"
+                  ? "bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-white shadow-[0_16px_30px_rgba(29,78,216,0.32)]"
+                  : "border border-transparent bg-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_70%,black_30%)] hover:text-[var(--foreground)]"
               }`}
               href={`/app/dashboard?tab=${tab.id}`}
               key={tab.id}

@@ -6,7 +6,7 @@ This document translates the MVP architecture, schema, and product design into a
 
 ## Current Progress Snapshot
 
-As of April 24, 2026, the project has moved beyond the planning-only stage.
+As of April 27, 2026, the project has moved well beyond the planning-only stage.
 
 Completed in the app:
 
@@ -21,6 +21,9 @@ Completed in the app:
 - profile editing for core coaching context
 - admin overview with aggregate reporting across tracked accounts
 - first-pass Frankie AI orchestration layer with model extraction and response fallbacks
+- first visual-system pass across the app shell, chat, dashboard, profile, and admin surfaces
+- stacked app shell refactor with modal actions, top-right user controls, and a fixed scrollable chat pane
+- public landing-page redesign with full-width header sections, calmer spacing, and a more deliberate Tailwind-style hero composition
 - LinkedIn/content notes that capture the build story as it evolves
 
 Completed in the repo:
@@ -31,6 +34,7 @@ Now in progress:
 
 - Frankie intelligence refinement
 - deeper AI-native migration beyond the first orchestration layer
+- lightweight AI observability, evals, and traceability around the new model-backed flow
 
 ## Current Build Notes
 
@@ -48,6 +52,9 @@ These are worth keeping in mind as we keep building.
 - Seeded chat history should stay aligned with structured log rows. For Frankie Fit, fake logs without matching messages will make the product feel less believable.
 - The first demo seed pack is intentionally happy-path and complete. Add sparse or messy accounts as a second pack rather than overloading the base dataset.
 - The first AI layer is fetch-based and uses the OpenAI Responses API with structured outputs rather than introducing the OpenAI SDK or MCP dependencies too early.
+- The app UI is moving toward a stricter "less is more" principle. Keep headers specific, remove repeated helper copy, and let layout and hierarchy do more of the work.
+- Chat should keep its own internal transcript scrolling, while dashboard and admin should prefer normal page scrolling. Profile is a special case because its form pairs with a fixed footer action bar.
+- The public landing page should stay visually aligned with the product shell: edge-to-edge headers, stronger section breathing room, and fewer cramped stacked blocks.
 
 ## Future Refinement Notes
 

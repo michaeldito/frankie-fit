@@ -185,7 +185,9 @@ This is the broad story arc so far.
 7. The app was scaffolded with a modern stack and then connected to real auth and onboarding.
 8. Frankie gained persistent chat plus structured activity, diet, and wellness logging.
 9. The dashboard moved from placeholder UI to real saved data.
-10. The project is now entering the phase where profile editing, admin surfaces, and Frankie intelligence refinement become the next wave.
+10. The product gained profile editing, a founder-facing admin overview, and seeded reviewable accounts for realistic demos and QA.
+11. Frankie moved from a rule-based parser toward a real AI-native architecture with a model-backed orchestration layer and deterministic fallbacks.
+12. The next phase is not "make a chat UI" anymore. It is improving intelligence quality, evals, observability, and trust in the AI layer.
 
 ## Content Mining Map
 
@@ -656,6 +658,9 @@ Those details make the content more believable than polished hindsight alone.
 - The product now has a founder-facing admin overview, not just the end-user app surface.
 - The repo now has seeded internal and synthetic accounts with believable chat and log history, which makes demos and QA much more realistic.
 - Frankie now has the first real AI orchestration layer in the codebase, with a model-first path and a safe deterministic fallback.
+- After the heavier systems work, the product shifted into a calmer UI polish phase: stronger card contrast, cleaner spacing, more consistent form surfaces, and a more cohesive dark visual system across the core app.
+- The next UI refinement went beyond colors: the app shell was restructured into a leaner sidebar plus stacked top header, user controls moved to the top-right, goal and next-step details became modal actions, and chat became an inline scrollable workspace instead of a long page.
+- That same polish phase reached the marketing site too: the landing page was reorganized into fuller-width header sections, given more breathing room, and reworked around a cleaner Tailwind-style hero composition.
 - Real implementation work has exposed the messy reality of natural language input and why experienced engineering judgment still matters.
 
 ### Current Good Lessons
@@ -668,6 +673,7 @@ Those details make the content more believable than polished hindsight alone.
 - The admin experience is part of the product too. The founder surface needs intentional design, not just hidden routes and raw tables.
 - Calling a product AI-native should mean more than putting chat in the UI. The model needs to be in the decision loop, with tools, memory, evals, and guardrails.
 - A practical AI-native migration does not require rebuilding everything. It can start with a real orchestrator and deterministic fallbacks.
+- The interface got better when more copy was removed. Specific, quiet headings and cleaner spacing made the product feel more confident than adding extra explanation everywhere.
 
 ### Current Good One-Liners
 

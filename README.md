@@ -25,7 +25,7 @@ Supporting planning docs:
 
 The repo now includes the first working Next.js scaffold for:
 
-- the public marketing page
+- the public marketing page, now refreshed around fuller-width landing-page sections and a more deliberate Tailwind-style hero
 - auth route shells at `/login` and `/signup`
 - the authenticated app shell
 - starter routes for `/app/chat`, `/app/dashboard`, and `/app/profile`

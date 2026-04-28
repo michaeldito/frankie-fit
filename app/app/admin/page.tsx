@@ -12,9 +12,9 @@ function MetricCard({
   detail?: string;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-5">
+    <div className="ff-card p-5">
       <p className="text-sm text-[var(--muted)]">{label}</p>
-      <p className="mt-3 text-3xl font-semibold">{value}</p>
+      <p className="mt-3 text-3xl font-semibold tracking-[-0.04em]">{value}</p>
       {detail ? <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{detail}</p> : null}
     </div>
   );
@@ -30,9 +30,9 @@ function SectionCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-5">
-      <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">{eyebrow}</p>
-      <h2 className="mt-3 text-xl font-semibold tracking-tight">{title}</h2>
+    <section className="ff-panel p-5">
+      <p className="ff-kicker">{eyebrow}</p>
+      <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em]">{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -44,35 +44,31 @@ export default async function AdminOverviewPage() {
   const overview = await getAdminOverviewData(context);
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface-strong)] p-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-[var(--muted)]">
-            Admin Overview
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+    <div className="space-y-6 lg:space-y-7">
+      <header className="ff-panel-strong flex flex-col gap-5 p-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-3">
+          <p className="ff-kicker">Admin Overview</p>
+          <h1 className="max-w-4xl text-3xl font-semibold tracking-[-0.04em] sm:text-[2.35rem]">
             A privacy-conscious read on tracked product health.
           </h1>
-          <p className="mt-3 max-w-3xl leading-7 text-[var(--muted)]">
+          <p className="max-w-3xl leading-7 text-[var(--muted)]">
             This is the smallest useful founder view for Frankie Fit: broad product signal across
             real, internal, and synthetic accounts first, safe test-account visibility second, and
             no default surveillance of real-user details.
           </p>
         </div>
-        <div className="rounded-[1.25rem] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_84%,black_16%)] px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
-            Current mode
+        <div className="ff-card min-w-[17rem] p-4">
+          <p className="ff-kicker">Current mode</p>
+          <p className="mt-3 text-lg font-semibold tracking-[-0.02em]">
+            Aggregate-first across all tracked accounts
           </p>
-          <p className="mt-2 font-semibold">Aggregate-first across all tracked accounts</p>
         </div>
       </header>
 
       {!overview.ready ? (
-        <section className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-5">
-          <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
-            Admin setup note
-          </p>
-          <p className="mt-3 max-w-3xl leading-7 text-[var(--muted)]">
+        <section className="ff-panel p-5 sm:p-6">
+          <p className="ff-kicker">Admin setup note</p>
+          <p className="mt-4 max-w-3xl leading-7 text-[var(--muted)]">
             The admin overview code is built, but the aggregate SQL helpers may not be in your
             Supabase project yet. Run the migration in
             <span className="font-medium text-[var(--foreground)]">
@@ -130,10 +126,7 @@ export default async function AdminOverviewPage() {
             {overview.frictionSummary.length > 0 ? (
               <div className="space-y-3">
                 {overview.frictionSummary.map((item) => (
-                  <article
-                    className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface-strong)] p-4"
-                    key={item.label}
-                  >
+                  <article className="ff-card-soft p-4" key={item.label}>
                     <div className="flex items-center justify-between gap-4">
                       <p className="font-medium">{item.label}</p>
                       <p className="text-lg font-semibold">{item.entry_count}</p>
@@ -156,19 +149,16 @@ export default async function AdminOverviewPage() {
             {overview.testAccounts.length > 0 ? (
               <div className="space-y-3">
                 {overview.testAccounts.map((account) => (
-                  <article
-                    className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface-strong)] p-4"
-                    key={account.id}
-                  >
+                  <article className="ff-card-soft p-4" key={account.id}>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="font-medium">{account.name}</p>
-                      <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs uppercase tracking-[0.15em] text-[var(--muted)]">
+                      <span className="ff-pill text-[0.72rem] uppercase tracking-[0.15em]">
                         {account.accountType}
                       </span>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                       Onboarding: {account.onboardingCompleted ? "complete" : "incomplete"}
-                      {account.primaryGoal ? ` • Goal: ${account.primaryGoal}` : ""}
+                      {account.primaryGoal ? ` / Goal: ${account.primaryGoal}` : ""}
                     </p>
                   </article>
                 ))}
@@ -185,13 +175,10 @@ export default async function AdminOverviewPage() {
             {overview.productSuggestions.length > 0 ? (
               <div className="space-y-3">
                 {overview.productSuggestions.map((suggestion) => (
-                  <article
-                    className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--surface-strong)] p-4"
-                    key={suggestion.id}
-                  >
+                  <article className="ff-card-soft p-4" key={suggestion.id}>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="font-medium">{suggestion.title}</p>
-                      <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs uppercase tracking-[0.15em] text-[var(--muted)]">
+                      <span className="ff-pill text-[0.72rem] uppercase tracking-[0.15em]">
                         {suggestion.status.replace("_", " ")}
                       </span>
                     </div>

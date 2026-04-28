@@ -15,10 +15,10 @@ export function NavLink({ href, children }: NavLinkProps) {
 
   return (
     <Link
-      className={`rounded-2xl px-4 py-3 text-sm font-medium transition ${
+      className={`rounded-[1.1rem] px-4 py-3 text-sm font-medium transition ${
         active
-          ? "bg-[var(--brand)] text-white shadow-[0_12px_30px_rgba(19,50,48,0.35)]"
-          : "text-[var(--muted)] hover:bg-[var(--surface-strong)] hover:text-[var(--foreground)]"
+          ? "border border-transparent bg-[color:color-mix(in_srgb,var(--brand)_86%,white_14%)] text-white shadow-[0_16px_32px_rgba(29,78,216,0.34)]"
+          : "border border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_74%,black_26%)] hover:text-[var(--foreground)]"
       }`}
       href={href}
     >
