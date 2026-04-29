@@ -29,6 +29,9 @@ Completed in the app:
 Completed in the repo:
 
 - demo seed-data plan and rerunnable seed script for 10 reviewable accounts
+- mobile architecture plan for a future Expo / React Native iPhone companion app
+- mobile v1 screen spec covering auth, onboarding, chat, progress, and profile
+- mobile repo structure plan and mobile UI direction docs
 
 Now in progress:
 
@@ -55,6 +58,10 @@ These are worth keeping in mind as we keep building.
 - The app UI is moving toward a stricter "less is more" principle. Keep headers specific, remove repeated helper copy, and let layout and hierarchy do more of the work.
 - Chat should keep its own internal transcript scrolling, while dashboard and admin should prefer normal page scrolling. Profile is a special case because its form pairs with a fixed footer action bar.
 - The public landing page should stay visually aligned with the product shell: edge-to-edge headers, stronger section breathing room, and fewer cramped stacked blocks.
+- If Frankie Fit moves into iPhone, share schemas, contracts, and backend logic first. Do not try to force the Next.js UI code directly into React Native.
+- The right first native integration path for Apple Watch value is iPhone HealthKit import, not a watchOS app on day one.
+- Mobile phase 1 should stay narrow: chat first, lighter progress summaries, and basic profile editing. Admin should remain web-only.
+- The mobile design language should stay aligned with the web app's calmer blue system, but mobile should show less at once and lean more on sheets, sticky actions, and stronger one-thumb ergonomics.
 
 ## Future Refinement Notes
 
@@ -458,6 +465,15 @@ Avoid pulling these in too early:
 - multi-agent orchestration
 - highly customizable dashboards
 - social features
+
+### Mobile Follow-On Note
+
+Native mobile is still out of scope for the current MVP build, but the repo now has an approved direction for how to add it cleanly later:
+
+- Expo + React Native
+- same Supabase backend
+- chat-first mobile scope
+- HealthKit after the core mobile Frankie loop works
 
 ## Recommended Next Build Artifact
 

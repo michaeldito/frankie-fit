@@ -661,6 +661,9 @@ Those details make the content more believable than polished hindsight alone.
 - After the heavier systems work, the product shifted into a calmer UI polish phase: stronger card contrast, cleaner spacing, more consistent form surfaces, and a more cohesive dark visual system across the core app.
 - The next UI refinement went beyond colors: the app shell was restructured into a leaner sidebar plus stacked top header, user controls moved to the top-right, goal and next-step details became modal actions, and chat became an inline scrollable workspace instead of a long page.
 - That same polish phase reached the marketing site too: the landing page was reorganized into fuller-width header sections, given more breathing room, and reworked around a cleaner Tailwind-style hero composition.
+- The next product-design thread started looking beyond the browser: the app now has a concrete iPhone companion strategy instead of vague "maybe mobile later" thinking.
+- That mobile strategy is now specific enough to build against: the first iPhone version is defined around auth, onboarding, chat, progress, and profile rather than a fuzzy "mobile app someday."
+- The mobile planning got deeper in two useful directions at once: a repo-structure plan for how to add Expo without wrecking the web app, and a UI-direction doc that keeps mobile aligned with the calmer, less-is-more Frankie style.
 - Real implementation work has exposed the messy reality of natural language input and why experienced engineering judgment still matters.
 
 ### Current Good Lessons
@@ -674,6 +677,9 @@ Those details make the content more believable than polished hindsight alone.
 - Calling a product AI-native should mean more than putting chat in the UI. The model needs to be in the decision loop, with tools, memory, evals, and guardrails.
 - A practical AI-native migration does not require rebuilding everything. It can start with a real orchestrator and deterministic fallbacks.
 - The interface got better when more copy was removed. Specific, quiet headings and cleaner spacing made the product feel more confident than adding extra explanation everywhere.
+- Mobile planning got sharper once the team stopped thinking in terms of "port the web app" and started thinking in terms of "share the product and logic, rebuild the UI natively."
+- A good mobile plan felt more credible once the team named what would stay web-only. Leaving admin on the web made the iPhone scope cleaner immediately.
+- Good mobile planning was not just about screens. It also needed a clear answer for repo structure, shared logic boundaries, and what not to over-share between web and React Native.
 
 ### Current Good One-Liners
 
