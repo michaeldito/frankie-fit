@@ -718,7 +718,7 @@ Likely environment variables:
 
 See also:
 
-- [Deployment Strategy](C:/Users/mcdit/Code/frankie-fit/docs/deployment-strategy.md)
+- [Deployment Strategy](deployment-strategy.md)
 
 ## Web App
 
@@ -745,7 +745,7 @@ See also:
 
 ### Deployment Note
 
-This MVP architecture intentionally optimizes for the easiest first deploy. The phased cloud-learning plan lives in [Deployment Strategy](C:/Users/mcdit/Code/frankie-fit/docs/deployment-strategy.md).
+This MVP architecture intentionally optimizes for the easiest first deploy. The phased cloud-learning plan lives in [Deployment Strategy](deployment-strategy.md).
 
 ## Open Architecture Questions
 

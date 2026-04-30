@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the design direction for the Frankie Fit iPhone app before implementation starts.
+This document defines the design direction for the Frankie Fit iPhone app as it moves from first implementation into UI/UX refinement.
 
 It is meant to keep the mobile app visually and experientially aligned with the web product while still feeling native to iPhone.
 
@@ -12,6 +12,23 @@ The goal is to answer:
 - what visual language should carry over from web
 - what should change for mobile
 - what UI principles should guide screen design
+
+## Current Status - April 30, 2026
+
+The first mobile app now exists in `apps/mobile`.
+
+Design and UX decisions from device testing:
+
+- use `Dashboard` as the user-facing bottom-tab label for web/mobile parity
+- keep the internal `progress` route name until a rename is worth the churn
+- preserve web onboarding semantics, including multi-select answers
+- use `Finish onboarding` only for first-time onboarding
+- use `Save profile changes` when an onboarded user edits their profile
+- avoid keyboard-blocked primary actions on auth and onboarding screens
+- keep the chat keyboard close action centered and visually separate from `Send`
+- show `Sending` while the user message is being saved
+- show Frankie's thinking state only after the saved message is ready for response generation
+- order the wellness trend newest-first so Today is visible before older entries
 
 ## Core Direction
 
@@ -171,7 +188,7 @@ Avoid:
 The bottom tab bar should be simple:
 
 - Chat
-- Progress
+- Dashboard
 - Profile
 
 ### Design Principles
@@ -222,9 +239,9 @@ Desired feel:
 - bulky permanent recommendation cards
 - large empty-state illustrations unless they are truly strong
 
-## 2. Progress
+## 2. Dashboard
 
-This should be lighter than the web dashboard.
+This should be lighter than the web dashboard while still using the same user-facing name.
 
 Desired feel:
 
@@ -392,7 +409,8 @@ That fits the Frankie Fit product better than trying to prove value through more
 
 ## Suggested Next Step
 
-After this UI direction doc, the strongest next artifact is:
+After the first mobile implementation, the strongest next design work is:
 
-- low-fi mobile wireframes
-- or an Expo scaffold with a first design system pass
+- tighten the dashboard and profile screens against web parity
+- keep testing keyboard and tab-bar behavior on device
+- design the read-only HealthKit permission and import flow before implementation

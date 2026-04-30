@@ -9,7 +9,15 @@
     "start": "next start",
     "lint": "eslint .",
     "seed:demo": "node scripts/seed-demo-data.mjs",
-    "seed:demo:dry": "node scripts/seed-demo-data.mjs --dry-run"
+    "seed:demo:dry": "node scripts/seed-demo-data.mjs --dry-run",
+    "dev:web": "next dev --webpack",
+    "build:web": "next build --webpack",
+    "lint:web": "eslint .",
+    "dev:mobile": "pnpm --dir apps/mobile start",
+    "ios:mobile": "pnpm --dir apps/mobile ios",
+    "android:mobile": "pnpm --dir apps/mobile android",
+    "web:mobile": "pnpm --dir apps/mobile web",
+    "lint:mobile": "pnpm --dir apps/mobile lint"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

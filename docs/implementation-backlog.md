@@ -6,7 +6,7 @@ This document translates the MVP architecture, schema, and product design into a
 
 ## Current Progress Snapshot
 
-As of April 27, 2026, the project has moved well beyond the planning-only stage.
+As of April 30, 2026, the project has moved well beyond the planning-only stage.
 
 Completed in the app:
 
@@ -29,13 +29,22 @@ Completed in the app:
 Completed in the repo:
 
 - demo seed-data plan and rerunnable seed script for 10 reviewable accounts
-- mobile architecture plan for a future Expo / React Native iPhone companion app
-- mobile v1 screen spec covering auth, onboarding, chat, progress, and profile
+- Expo / React Native mobile app scaffold in `apps/mobile`
+- workspace tooling for web and mobile development from the root repo
+- mobile architecture plan for the Expo / React Native iPhone companion app
+- mobile v1 screen spec covering auth, onboarding, chat, dashboard, and profile
 - mobile repo structure plan and mobile UI direction docs
+- mobile Supabase auth flow using the same project and profile model as web
+- mobile onboarding/profile editor with field parity against the web onboarding flow, including multi-select answers where web supports them
+- mobile chat connected to server-side Frankie orchestration through the mobile chat API route
+- mobile dashboard/profile surfaces backed by real Supabase data
 
 Now in progress:
 
 - Frankie intelligence refinement
+- mobile UI/UX refinement after device testing
+- mobile dashboard/profile parity against the web app
+- Apple Health integration planning for read-only workout import
 - deeper AI-native migration beyond the first orchestration layer
 - lightweight AI observability, evals, and traceability around the new model-backed flow
 
@@ -58,9 +67,16 @@ These are worth keeping in mind as we keep building.
 - The app UI is moving toward a stricter "less is more" principle. Keep headers specific, remove repeated helper copy, and let layout and hierarchy do more of the work.
 - Chat should keep its own internal transcript scrolling, while dashboard and admin should prefer normal page scrolling. Profile is a special case because its form pairs with a fixed footer action bar.
 - The public landing page should stay visually aligned with the product shell: edge-to-edge headers, stronger section breathing room, and fewer cramped stacked blocks.
-- If Frankie Fit moves into iPhone, share schemas, contracts, and backend logic first. Do not try to force the Next.js UI code directly into React Native.
+- The first mobile app now lives in `apps/mobile`. Keep sharing schemas, contracts, and backend logic first. Do not try to force the Next.js UI code directly into React Native.
+- Mobile chat should keep sensitive Frankie orchestration on trusted backend code. The client should send the Supabase bearer token to the mobile API route rather than holding OpenAI secrets.
+- Mobile chat now uses a two-step send flow: save the user message first, then show Frankie's thinking state only after the saved message is ready for the model response.
+- Mobile onboarding and profile editing should stay 100% aligned with web field semantics. The save action should say `Finish onboarding` only for first-time onboarding and `Save profile changes` for later edits.
+- The current mobile dashboard uses the user-facing `Dashboard` tab label. The route file may still be named `progress` internally until a later rename is worth the churn.
+- The mobile wellness trend should show the most recent day first, with Today and Yesterday before older entries.
 - The right first native integration path for Apple Watch value is iPhone HealthKit import, not a watchOS app on day one.
-- Mobile phase 1 should stay narrow: chat first, lighter progress summaries, and basic profile editing. Admin should remain web-only.
+- Mobile phase 1 should stay narrow: chat first, lighter dashboard summaries, and basic profile editing. Admin should remain web-only.
+- Apple Health should be read-only unless the product direction changes. We are not planning to write workouts or health data back into Apple Health.
+- Apple Health and workout heart-rate timeline access will require a development build or production native app. Expo Go is fine for basic app testing, but not enough for HealthKit.
 - The mobile design language should stay aligned with the web app's calmer blue system, but mobile should show less at once and lean more on sheets, sticky actions, and stronger one-thumb ergonomics.
 
 ## Future Refinement Notes
@@ -460,7 +476,6 @@ Avoid pulling these in too early:
 
 - food image upload
 - voice UI
-- native mobile app
 - advanced analytics
 - multi-agent orchestration
 - highly customizable dashboards
@@ -468,12 +483,14 @@ Avoid pulling these in too early:
 
 ### Mobile Follow-On Note
 
-Native mobile is still out of scope for the current MVP build, but the repo now has an approved direction for how to add it cleanly later:
+Native mobile is now active in the repo, but the scope should stay tight:
 
 - Expo + React Native
 - same Supabase backend
-- chat-first mobile scope
-- HealthKit after the core mobile Frankie loop works
+- chat-first mobile scope with dashboard/profile support
+- server-side Frankie orchestration through trusted backend routes
+- web/mobile onboarding parity
+- read-only HealthKit after the core mobile Frankie loop works
 
 ## Recommended Next Build Artifact
 

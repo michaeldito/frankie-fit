@@ -32,6 +32,29 @@ This gives the project:
 - less UI compromise than trying to force web layouts into a native shell
 - more code reuse than building the mobile app as a completely separate system
 
+## Implementation Status - April 30, 2026
+
+The first mobile implementation is now underway in `apps/mobile`.
+
+What exists now:
+
+- Expo Router app scaffold with TypeScript
+- root workspace scripts for web and mobile development
+- Supabase auth connected to the same project as web
+- auth-aware routing that sends incomplete profiles into onboarding
+- onboarding/profile editor flow aligned with the web onboarding fields
+- mobile chat connected to server-side Frankie orchestration through `app/api/mobile/chat/route.ts`
+- mobile dashboard and profile screens backed by real Supabase data
+- keyboard handling improvements for auth, onboarding, and chat
+
+Important current choices:
+
+- the OpenAI key stays server-side
+- the mobile app calls a trusted backend route with the user's Supabase bearer token
+- the chat send flow saves the user message before showing Frankie's thinking state
+- the user-facing mobile tab is currently `Dashboard`, even though the route file may still be named `progress`
+- admin remains web-only
+
 ## Why Mobile Makes Sense For Frankie Fit
 
 Frankie Fit is already well-shaped for iPhone because the product is centered around:
@@ -180,7 +203,7 @@ The iPhone app should not try to mirror every web screen one-for-one.
 Recommended mobile navigation:
 
 - `Chat`
-- `Progress`
+- `Dashboard`
 - `Profile`
 
 Optional later:
@@ -206,7 +229,7 @@ Responsibilities:
 
 This is the strongest shared experience between web and mobile.
 
-## 2. Progress
+## 2. Dashboard
 
 This is the mobile form of the dashboard.
 
@@ -260,9 +283,18 @@ The first iPhone version should be intentionally narrow.
 
 This is enough to make Frankie Fit feel real on iPhone.
 
+Current status:
+
+- login / signup are implemented
+- onboarding is implemented and routes incomplete users correctly
+- chat is connected to the real Frankie backend path
+- activity, diet, and wellness logging can flow through chat
+- dashboard and profile read real saved data
+- profile editing reuses the onboarding fields and uses edit-specific save copy after onboarding is complete
+
 ## Mobile Phase 2
 
-- progress screen
+- dashboard refinement
 - better summary cards
 - recommendation surfaces
 - improved profile/settings
@@ -371,6 +403,10 @@ Example:
 
 This is much better than treating Apple Watch data like raw freeform text.
 
+The intended Apple Health scope is read-only unless product direction changes later.
+
+For lifting and other workouts, HealthKit can expose time-series samples such as heart-rate readings during the workout when the user grants permission and the data exists. That gives Frankie a path to reason about workout intensity, recovery, and heart-rate patterns over time instead of only seeing a workout summary. Access to those samples will require a native development build or production app; Expo Go is not enough for HealthKit.
+
 ## Recommended Health Integration Shape
 
 Future entities likely needed:
@@ -429,7 +465,7 @@ Needed changes:
 
 Portable, but should become:
 
-- `Progress`
+- `Dashboard`
 - simpler
 - more stacked
 - less dense
@@ -451,8 +487,8 @@ Not phase 1 mobile material.
 5. Build mobile chat first
 6. Reuse Frankie backend/orchestration path
 7. Add profile editing
-8. Add progress screen
-9. Add HealthKit integration
+8. Add dashboard screen
+9. Plan and add read-only HealthKit integration
 
 ## Realistic Risks
 
@@ -486,8 +522,8 @@ That is the cleanest way to make Frankie Fit real on iPhone without compromising
 
 ## Suggested Next Artifact
 
-The next best artifact after this document would be:
+The next best artifacts after the first mobile scaffold are:
 
-- a `mobile-v1-screen-spec.md`
-- or a `mobile-repo-structure-plan.md`
-- or the actual Expo app scaffold on the MacBook
+- a read-only Apple Health integration plan
+- a shared schema extraction plan once web/mobile duplication becomes painful
+- a mobile UI polish checklist based on device testing

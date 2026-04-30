@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines how Frankie Fit should incorporate a future mobile app into the repo without creating unnecessary chaos.
+This document defines how Frankie Fit should incorporate the mobile app into the repo without creating unnecessary chaos.
 
 The goal is to answer:
 
@@ -25,10 +25,25 @@ But it should do that in **phases**, not in one giant refactor.
 My recommendation is:
 
 1. keep the current web app stable
-2. add `apps/mobile` when you start on the MacBook
+2. keep `apps/mobile` as the Expo sibling app
 3. extract shared packages only where duplication becomes real
 
 This gives you structure without stalling progress.
+
+## Current Status - April 30, 2026
+
+The repo has started the phased mobile path.
+
+What is in place now:
+
+- root-level Next.js web app remains in place
+- Expo / React Native app exists at `apps/mobile`
+- `pnpm-workspace.yaml` wires the repo as a workspace
+- root scripts expose explicit web and mobile commands
+- mobile calls trusted backend routes for Frankie orchestration
+- shared package extraction has not started yet
+
+This means the repo is currently in the intended phase-1 shape: mobile exists, web has not been moved into `apps/web`, and shared packages should wait until duplication becomes painful.
 
 ## Recommended End-State Shape
 
@@ -71,7 +86,7 @@ Responsibilities:
 - auth
 - onboarding
 - chat
-- progress
+- dashboard
 - profile
 - future HealthKit integration
 
@@ -115,9 +130,9 @@ Do not disrupt that just to "look cleaner."
 
 ## Phase 1: Add Mobile With Minimal Repo Movement
 
-When you are ready to start mobile:
+Mobile phase 1 has started:
 
-- create `apps/mobile`
+- `apps/mobile` exists
 - keep the current web app where it is temporarily
 - let mobile prove itself first
 
@@ -244,22 +259,22 @@ The mobile app should consume Frankie intelligence, not own it.
 
 ## Recommended Script Structure
 
-Once the repo becomes a workspace, a practical script shape could be:
+The repo is now a workspace. The current root script shape is:
 
 ```json
 {
   "scripts": {
-    "dev:web": "pnpm --dir apps/web dev",
+    "dev:web": "next dev --webpack",
     "dev:mobile": "pnpm --dir apps/mobile start",
-    "lint:web": "pnpm --dir apps/web lint",
+    "lint:web": "eslint .",
     "lint:mobile": "pnpm --dir apps/mobile lint",
-    "build:web": "pnpm --dir apps/web build",
+    "build:web": "next build --webpack",
     "seed:demo": "node scripts/seed-demo-data.mjs"
   }
 }
 ```
 
-The exact commands can change, but the principle is:
+The exact commands can keep evolving, but the principle remains:
 
 - web scripts stay explicit
 - mobile scripts stay explicit
@@ -282,7 +297,7 @@ Mobile will need a narrower public env set:
 
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- backend API base URL if needed
+- `EXPO_PUBLIC_FRANKIE_API_BASE_URL`
 
 Important:
 
@@ -339,7 +354,8 @@ This is the best balance between:
 
 ## Suggested Next Step
 
-After this repo structure plan, the strongest next artifacts are:
+After the first Expo scaffold, the strongest next repo moves are:
 
-- `mobile-ui-direction.md`
-- or the actual Expo scaffold on the MacBook
+- keep mobile/web behavior in parity while the screens mature
+- extract shared schemas only after duplication becomes clearly painful
+- plan the HealthKit read-only integration before adding native dependencies

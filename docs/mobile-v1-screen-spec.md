@@ -28,6 +28,30 @@ The mobile version should prioritize:
 - fewer competing surfaces on screen at once
 - chat as the center of the experience
 
+## Current Build Status - April 30, 2026
+
+The first mobile build now exists in `apps/mobile`.
+
+Implemented so far:
+
+- login and signup
+- Supabase session handling
+- auth redirects for incomplete onboarding
+- onboarding/profile editor flow using the same core fields as web
+- multi-select onboarding answers where web supports multiple selections
+- chat transcript loading and sending through the mobile Frankie API
+- two-stage chat status: `Sending` while saving the message, then Frankie's thinking state after the message is sent
+- keyboard accessory with centered `Close` action in chat
+- dashboard tabs for exercise, diet, and wellness backed by saved data
+- newest-first wellness trend ordering
+- profile summary and editable profile context
+
+Still being refined:
+
+- tighter mobile UI polish
+- deeper dashboard/profile parity with the web app
+- read-only Apple Health planning
+
 ## Core Mobile Principles
 
 - Chat is the primary home of the app.
@@ -43,7 +67,7 @@ The mobile version should prioritize:
 The v1 mobile app should use three main tabs:
 
 - Chat
-- Progress
+- Dashboard
 - Profile
 
 ### App Entry Rules
@@ -68,6 +92,8 @@ app/
     progress
     profile
 ```
+
+Note: the current implementation may keep the internal file route named `progress`, while the user-facing tab label is `Dashboard`.
 
 ## Screen 1: Welcome / Auth
 
@@ -202,6 +228,9 @@ Most mobile value should come from the user being able to quickly open the app, 
 - keyboard handling must be smooth and predictable
 - composer should remain easy to use with one thumb
 - avoid heavy permanent side context; use compact cards or sheets instead
+- show the sending state while the user message is being saved
+- show Frankie's thinking state only after the user message has actually been sent to the backend
+- keep the keyboard close action centered and visually separate from the send action
 
 ### Empty State
 
@@ -216,7 +245,7 @@ Frankie should offer a simple first action such as:
 - watch import UI
 - advanced chat settings
 
-## Screen 4: Progress
+## Screen 4: Dashboard
 
 ### Purpose
 
@@ -226,15 +255,10 @@ It should help users understand how the week is going without feeling like a den
 
 ### Naming
 
-Recommendation:
+Current recommendation:
 
-- use `Progress` instead of `Dashboard` on mobile
-
-Why:
-
-- feels simpler
-- reads more naturally in bottom tabs
-- is easier to understand at a glance
+- use `Dashboard` as the user-facing tab label to stay in parity with the web app
+- keep the internal `progress` route name only if renaming it would add avoidable churn
 
 ### Primary User Questions
 
@@ -305,7 +329,7 @@ Use a segmented control or top tabs inside the screen for:
 
 - check-ins this week
 - trend summary for energy / stress / soreness / motivation
-- recent wellness entries
+- recent wellness entries ordered newest-first, with Today and Yesterday before older days
 - one Frankie wellness insight
 
 ### Core Actions
@@ -318,7 +342,7 @@ Use a segmented control or top tabs inside the screen for:
 - deep journaling experiences
 - therapy-style flows
 
-## Mobile Progress Design Notes
+## Mobile Dashboard Design Notes
 
 - keep cards taller and simpler than web
 - avoid too many small side-by-side metrics
@@ -397,7 +421,7 @@ The mobile app is successful when a user can:
 2. finish onboarding
 3. land in Chat
 4. log activity, diet, and wellness naturally
-5. view a simple weekly read in Progress
+5. view a simple weekly read in Dashboard
 6. update their coaching context in Profile
 
 That is enough for the first real iPhone Frankie Fit experience.

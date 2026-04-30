@@ -1,0 +1,631 @@
+import { supabase } from '@/lib/supabase';
+import type { AppProfile } from '@/lib/profile-data';
+import type { Database } from '../../../types/database';
+
+type ActivityLogRow = Database['public']['Tables']['activity_logs']['Row'];
+type DietLogRow = Database['public']['Tables']['diet_logs']['Row'];
+type WellnessCheckinRow = Database['public']['Tables']['wellness_checkins']['Row'];
+
+export type DashboardMetric = {
+  label: string;
+  value: string;
+};
+
+export type DashboardTrendPoint = {
+  label: string;
+  value: number;
+};
+
+export type DashboardRecentItem = {
+  dateLabel: string;
+  detail: string;
+  id: string;
+  title: string;
+};
+
+export type WellnessTrendPoint = {
+  energy: number | null;
+  label: string;
+  motivation: number | null;
+  soreness: number | null;
+  stress: number | null;
+};
+
+export type ExerciseDashboardData = {
+  breakdown: { label: string; value: number }[];
+  empty: boolean;
+  insight: string;
+  metrics: DashboardMetric[];
+  recent: DashboardRecentItem[];
+  trend: DashboardTrendPoint[];
+};
+
+export type DietDashboardData = {
+  empty: boolean;
+  insight: string;
+  metrics: DashboardMetric[];
+  patterns: { label: string; value: number }[];
+  recent: DashboardRecentItem[];
+};
+
+export type WellnessDashboardData = {
+  empty: boolean;
+  insight: string;
+  metrics: DashboardMetric[];
+  recent: DashboardRecentItem[];
+  trend: WellnessTrendPoint[];
+};
+
+export type DashboardData = {
+  diet: DietDashboardData;
+  error: string | null;
+  exercise: ExerciseDashboardData;
+  nextStep: {
+    ctaLabel: string;
+    description: string;
+    title: string;
+  };
+  ready: boolean;
+  wellness: WellnessDashboardData;
+};
+
+function createDateAtLocalMidnight(value?: Date) {
+  const nextValue = value ? new Date(value) : new Date();
+  nextValue.setHours(0, 0, 0, 0);
+  return nextValue;
+}
+
+function addDays(value: Date, amount: number) {
+  const nextValue = new Date(value);
+  nextValue.setDate(nextValue.getDate() + amount);
+  return nextValue;
+}
+
+function getWeekStart(value?: Date) {
+  const today = createDateAtLocalMidnight(value);
+  const dayOfWeek = today.getDay();
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  return addDays(today, diff);
+}
+
+function toDateKey(value: Date) {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, '0');
+  const day = `${value.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function fromDateKey(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, (month ?? 1) - 1, day ?? 1);
+}
+
+function formatShortDay(value: string) {
+  return fromDateKey(value).toLocaleDateString('en-US', { weekday: 'short' });
+}
+
+function formatShortDate(value: string) {
+  return fromDateKey(value).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+function capitalizeLabel(value: string | null | undefined, fallback: string) {
+  if (!value) {
+    return fallback;
+  }
+
+  return value.slice(0, 1).toUpperCase() + value.slice(1);
+}
+
+function average(values: (number | null | undefined)[]) {
+  const validValues = values.filter((value): value is number => typeof value === 'number');
+
+  if (validValues.length === 0) {
+    return null;
+  }
+
+  const total = validValues.reduce((sum, value) => sum + value, 0);
+  return total / validValues.length;
+}
+
+function createEmptyActivityDashboard(): ExerciseDashboardData {
+  return {
+    breakdown: [],
+    empty: true,
+    insight:
+      'No exercise has been logged yet. A short walk, quick lift, or brief mobility session is enough to start the picture.',
+    metrics: [
+      { label: 'Workouts', value: '0' },
+      { label: 'Active days', value: '0' },
+      { label: 'Minutes', value: '0' },
+    ],
+    recent: [],
+    trend: [],
+  };
+}
+
+function createEmptyDietDashboard(): DietDashboardData {
+  return {
+    empty: true,
+    insight:
+      'No food has been logged yet. Even one simple meal update gives Frankie a much better read on your routine.',
+    metrics: [
+      { label: 'Meals logged', value: '0' },
+      { label: 'Days with logs', value: '0' },
+      { label: 'Most logged', value: 'None yet' },
+    ],
+    patterns: [],
+    recent: [],
+  };
+}
+
+function createEmptyWellnessDashboard(): WellnessDashboardData {
+  return {
+    empty: true,
+    insight:
+      'No wellness check-ins are saved yet. A quick energy, stress, or soreness update will make Frankie much more useful.',
+    metrics: [
+      { label: 'Check-ins', value: '0' },
+      { label: 'Energy', value: 'No data' },
+      { label: 'Recovery', value: 'No data' },
+    ],
+    recent: [],
+    trend: [],
+  };
+}
+
+function getScoreDescriptor(score: number | null, options: [string, string, string, string, string]) {
+  if (score === null) {
+    return 'No data';
+  }
+
+  const roundedScore = Math.max(1, Math.min(5, Math.round(score)));
+  return options[roundedScore - 1];
+}
+
+function getEnergyLabel(score: number | null) {
+  return getScoreDescriptor(score, ['Very low', 'Low', 'Steady', 'Solid', 'High']);
+}
+
+function getRecoveryLabel(score: number | null) {
+  return getScoreDescriptor(score, [
+    'Fresh',
+    'Light strain',
+    'Moderate strain',
+    'High strain',
+    'Heavy strain',
+  ]);
+}
+
+function formatActivityDetail(activity: ActivityLogRow) {
+  const segments: string[] = [];
+
+  if (activity.duration_minutes) {
+    segments.push(`${activity.duration_minutes} min`);
+  }
+
+  if (activity.intensity) {
+    segments.push(activity.intensity);
+  }
+
+  if (activity.description && activity.description !== activity.activity_type) {
+    segments.push(activity.description);
+  }
+
+  return segments.join(' / ') || 'Logged through chat';
+}
+
+function formatDietDetail(entry: DietLogRow) {
+  const mealType = entry.meal_type ? `${capitalizeLabel(entry.meal_type, 'Meal')} / ` : '';
+  return `${mealType}${entry.description}`;
+}
+
+function formatWellnessDetail(entry: WellnessCheckinRow) {
+  const segments: string[] = [];
+
+  if (entry.energy_score !== null) {
+    segments.push(`Energy ${entry.energy_score}/5`);
+  }
+
+  if (entry.stress_score !== null) {
+    segments.push(`Stress ${entry.stress_score}/5`);
+  }
+
+  if (entry.motivation_score !== null) {
+    segments.push(`Motivation ${entry.motivation_score}/5`);
+  }
+
+  if (entry.soreness_score !== null) {
+    segments.push(`Soreness ${entry.soreness_score}/5`);
+  }
+
+  return entry.notes?.trim() || segments.join(' / ') || 'Wellness check-in';
+}
+
+function toWellnessRecentItem(entry: WellnessCheckinRow) {
+  const dateLabel = formatShortDate(entry.logged_for_date);
+
+  return {
+    dateLabel,
+    detail: formatWellnessDetail(entry),
+    id: entry.id,
+    title: `Check-in / ${dateLabel}`,
+  };
+}
+
+function buildActivityTrend(activityLogs: ActivityLogRow[]) {
+  const today = createDateAtLocalMidnight();
+  const trendMap = new Map<string, number>();
+
+  activityLogs.forEach((activity) => {
+    trendMap.set(activity.logged_for_date, (trendMap.get(activity.logged_for_date) ?? 0) + 1);
+  });
+
+  return Array.from({ length: 7 }, (_value, index) => {
+    const date = addDays(today, index - 6);
+    const dateKey = toDateKey(date);
+
+    return {
+      label: formatShortDay(dateKey),
+      value: trendMap.get(dateKey) ?? 0,
+    };
+  });
+}
+
+function buildWellnessTrend(wellnessCheckins: WellnessCheckinRow[]) {
+  const today = createDateAtLocalMidnight();
+  const groupedByDay = new Map<string, WellnessCheckinRow[]>();
+
+  wellnessCheckins.forEach((checkin) => {
+    const group = groupedByDay.get(checkin.logged_for_date) ?? [];
+    group.push(checkin);
+    groupedByDay.set(checkin.logged_for_date, group);
+  });
+
+  return Array.from({ length: 7 }, (_value, index) => {
+    const date = addDays(today, -index);
+    const dateKey = toDateKey(date);
+    const dayEntries = groupedByDay.get(dateKey) ?? [];
+    const label = index === 0 ? 'Today' : index === 1 ? 'Yesterday' : formatShortDay(dateKey);
+
+    return {
+      energy: average(dayEntries.map((entry) => entry.energy_score)),
+      label,
+      motivation: average(dayEntries.map((entry) => entry.motivation_score)),
+      soreness: average(dayEntries.map((entry) => entry.soreness_score)),
+      stress: average(dayEntries.map((entry) => entry.stress_score)),
+    };
+  });
+}
+
+function buildExerciseInsight(
+  profile: AppProfile | null,
+  activityLogs: ActivityLogRow[],
+  workoutsThisWeek: number,
+  activeDaysThisWeek: number
+) {
+  if (activityLogs.length === 0) {
+    return createEmptyActivityDashboard().insight;
+  }
+
+  const targetTrainingDays = profile?.target_training_days ?? 3;
+  const activityBreakdown = activityLogs.reduce<Map<string, number>>((map, log) => {
+    map.set(log.activity_type, (map.get(log.activity_type) ?? 0) + 1);
+    return map;
+  }, new Map());
+  const topActivity = Array.from(activityBreakdown.entries()).sort((left, right) => right[1] - left[1])[0];
+
+  if (workoutsThisWeek < Math.min(targetTrainingDays, 2)) {
+    return 'You have some movement logged, but consistency is still the opening. A couple more sessions this week would make Frankie\'s guidance much sharper.';
+  }
+
+  if (activeDaysThisWeek >= targetTrainingDays) {
+    return 'You are matching your current training target. The move now is staying steady instead of forcing extra volume just for the sake of it.';
+  }
+
+  if (topActivity) {
+    return `Most of your recent training is ${topActivity[0].toLowerCase()}. That gives Frankie a clear read, and adding one complementary session could round the week out well.`;
+  }
+
+  return 'Your activity picture is starting to take shape. Keep logging the basics and Frankie can get more precise about what to do next.';
+}
+
+function buildDietInsight(dietLogs: DietLogRow[], daysWithFoodLogs: number) {
+  if (dietLogs.length === 0) {
+    return createEmptyDietDashboard().insight;
+  }
+
+  const mealBreakdown = dietLogs.reduce<Map<string, number>>((map, log) => {
+    const label = log.meal_type ?? 'unlabeled';
+    map.set(label, (map.get(label) ?? 0) + 1);
+    return map;
+  }, new Map());
+  const topMeal = Array.from(mealBreakdown.entries()).sort((left, right) => right[1] - left[1])[0];
+
+  if (daysWithFoodLogs <= 2) {
+    return 'You are starting to build nutrition visibility, but the biggest win right now is simply logging meals on more days rather than chasing detail.';
+  }
+
+  if (topMeal?.[0] === 'snack') {
+    return 'Most of your recent food logs are snack-like entries. A couple more full meal logs would give Frankie a more grounded read on the rhythm of your week.';
+  }
+
+  if (topMeal && topMeal[0] !== 'unlabeled') {
+    return `Your logging rhythm is getting more useful. ${capitalizeLabel(topMeal[0], 'Meal')} is showing up most often, so Frankie can start nudging the rest of the day around that pattern.`;
+  }
+
+  return 'You have enough meal data for Frankie to start spotting patterns. Keep the updates simple and consistent.';
+}
+
+function buildWellnessInsight(wellnessCheckins: WellnessCheckinRow[]) {
+  if (wellnessCheckins.length === 0) {
+    return createEmptyWellnessDashboard().insight;
+  }
+
+  const recentCheckins = wellnessCheckins.slice(0, 7);
+  const averageEnergy = average(recentCheckins.map((entry) => entry.energy_score));
+  const averageStress = average(recentCheckins.map((entry) => entry.stress_score));
+  const averageMotivation = average(recentCheckins.map((entry) => entry.motivation_score));
+  const averageSoreness = average(recentCheckins.map((entry) => entry.soreness_score));
+
+  if ((averageEnergy ?? 5) <= 2.5 && (averageMotivation ?? 5) <= 2.5) {
+    return 'Energy and motivation both look a little low lately. That usually points to backing off the pressure and keeping the next move simple.';
+  }
+
+  if ((averageStress ?? 1) >= 4) {
+    return 'Stress is running high enough that recovery probably deserves more weight in the next few days. Frankie should keep the plan supportive, not aggressive.';
+  }
+
+  if ((averageSoreness ?? 1) >= 4) {
+    return 'Recovery looks strained right now. A lighter day or a mobility-focused session would probably help more than forcing intensity.';
+  }
+
+  return 'Your wellness signals look fairly steady. Keep checking in when something shifts so Frankie can adjust before the week gets away from you.';
+}
+
+function buildNextStep(
+  profile: AppProfile | null,
+  activityLogs: ActivityLogRow[],
+  dietLogs: DietLogRow[],
+  wellnessCheckins: WellnessCheckinRow[]
+) {
+  if (!profile?.onboarding_completed) {
+    return {
+      ctaLabel: 'Finish onboarding',
+      description:
+        'Frankie needs your goals, preferences, and constraints before the coaching can get personal.',
+      title: 'Complete your onboarding',
+    };
+  }
+
+  const today = createDateAtLocalMidnight();
+  const todayKey = toDateKey(today);
+  const yesterdayKey = toDateKey(addDays(today, -1));
+  const weekStartKey = toDateKey(getWeekStart(today));
+  const workoutsThisWeek = activityLogs.filter((log) => log.logged_for_date >= weekStartKey).length;
+  const targetTrainingDays = profile.target_training_days ?? 3;
+  const hasMealToday = dietLogs.some((log) => log.logged_for_date === todayKey);
+  const hasActivityToday = activityLogs.some((log) => log.logged_for_date === todayKey);
+  const hasRecentWellnessCheckin = wellnessCheckins.some(
+    (checkin) => checkin.logged_for_date >= yesterdayKey
+  );
+
+  if (profile.wellness_checkin_opt_in && !hasRecentWellnessCheckin) {
+    return {
+      ctaLabel: 'Check in with Frankie',
+      description:
+        'A short energy, soreness, or stress update will keep today\'s guidance grounded in how the week actually feels.',
+      title: 'Quick recovery check-in',
+    };
+  }
+
+  if (!hasMealToday) {
+    return {
+      ctaLabel: 'Log a meal',
+      description:
+        'One simple food update gives Frankie a much better read on whether your routine is supporting the goal you set.',
+      title: 'Log today\'s meal',
+    };
+  }
+
+  if (!hasActivityToday && workoutsThisWeek < targetTrainingDays) {
+    return {
+      ctaLabel: 'Get a workout idea',
+      description:
+        'You are still a little short of your current weekly rhythm. A small session today may be the highest-value move.',
+      title: 'Ask Frankie for today\'s workout',
+    };
+  }
+
+  if (wellnessCheckins.length === 0) {
+    return {
+      ctaLabel: 'Log a check-in',
+      description:
+        'Even a single check-in helps Frankie connect your training, meals, and energy more clearly.',
+      title: 'Start a wellness trail',
+    };
+  }
+
+  return {
+    ctaLabel: 'Open chat',
+    description:
+      'You have enough signal in the app now that Frankie can start shaping a smarter recommendation for the rest of the day.',
+    title: 'Ask Frankie for the next move',
+  };
+}
+
+function buildExerciseDashboardData(profile: AppProfile | null, activityLogs: ActivityLogRow[]) {
+  if (activityLogs.length === 0) {
+    return createEmptyActivityDashboard();
+  }
+
+  const weekStartKey = toDateKey(getWeekStart());
+  const activityLogsThisWeek = activityLogs.filter((log) => log.logged_for_date >= weekStartKey);
+  const totalMinutesThisWeek = activityLogsThisWeek.reduce(
+    (sum, log) => sum + (log.duration_minutes ?? 0),
+    0
+  );
+  const activeDaysThisWeek = new Set(activityLogsThisWeek.map((log) => log.logged_for_date)).size;
+  const activityBreakdown = Array.from(
+    activityLogs.reduce<Map<string, number>>((map, log) => {
+      map.set(log.activity_type, (map.get(log.activity_type) ?? 0) + 1);
+      return map;
+    }, new Map())
+  )
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 4)
+    .map(([label, value]) => ({ label, value }));
+
+  return {
+    breakdown: activityBreakdown,
+    empty: false,
+    insight: buildExerciseInsight(
+      profile,
+      activityLogs,
+      activityLogsThisWeek.length,
+      activeDaysThisWeek
+    ),
+    metrics: [
+      { label: 'Workouts', value: `${activityLogsThisWeek.length}` },
+      { label: 'Active days', value: `${activeDaysThisWeek}` },
+      { label: 'Minutes', value: `${totalMinutesThisWeek}` },
+    ],
+    recent: activityLogs.slice(0, 5).map((activity) => ({
+      dateLabel: formatShortDate(activity.logged_for_date),
+      detail: formatActivityDetail(activity),
+      id: activity.id,
+      title: activity.activity_type,
+    })),
+    trend: buildActivityTrend(activityLogs),
+  };
+}
+
+function buildDietDashboardData(dietLogs: DietLogRow[]) {
+  if (dietLogs.length === 0) {
+    return createEmptyDietDashboard();
+  }
+
+  const weekStartKey = toDateKey(getWeekStart());
+  const dietLogsThisWeek = dietLogs.filter((log) => log.logged_for_date >= weekStartKey);
+  const daysWithFoodLogs = new Set(dietLogsThisWeek.map((log) => log.logged_for_date)).size;
+  const mealBreakdown = Array.from(
+    dietLogs.reduce<Map<string, number>>((map, log) => {
+      const label = log.meal_type ?? 'unlabeled';
+      map.set(label, (map.get(label) ?? 0) + 1);
+      return map;
+    }, new Map())
+  )
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 4)
+    .map(([label, value]) => ({ label: capitalizeLabel(label, 'Unlabeled'), value }));
+  const topMeal = mealBreakdown[0]?.label ?? 'None yet';
+
+  return {
+    empty: false,
+    insight: buildDietInsight(dietLogsThisWeek, daysWithFoodLogs),
+    metrics: [
+      { label: 'Meals logged', value: `${dietLogsThisWeek.length}` },
+      { label: 'Days with logs', value: `${daysWithFoodLogs}` },
+      { label: 'Most logged', value: topMeal },
+    ],
+    patterns: mealBreakdown,
+    recent: dietLogs.slice(0, 6).map((entry) => ({
+      dateLabel: formatShortDate(entry.logged_for_date),
+      detail: formatDietDetail(entry),
+      id: entry.id,
+      title: capitalizeLabel(entry.meal_type, 'Meal'),
+    })),
+  };
+}
+
+function buildWellnessDashboardData(wellnessCheckins: WellnessCheckinRow[]) {
+  if (wellnessCheckins.length === 0) {
+    return createEmptyWellnessDashboard();
+  }
+
+  const weekStartKey = toDateKey(getWeekStart());
+  const checkinsThisWeek = wellnessCheckins.filter(
+    (checkin) => checkin.logged_for_date >= weekStartKey
+  );
+  const averageEnergy = average(checkinsThisWeek.map((entry) => entry.energy_score));
+  const averageSoreness = average(checkinsThisWeek.map((entry) => entry.soreness_score));
+
+  return {
+    empty: false,
+    insight: buildWellnessInsight(wellnessCheckins),
+    metrics: [
+      { label: 'Check-ins', value: `${checkinsThisWeek.length}` },
+      { label: 'Energy', value: getEnergyLabel(averageEnergy) },
+      { label: 'Recovery', value: getRecoveryLabel(averageSoreness) },
+    ],
+    recent: wellnessCheckins.slice(0, 5).map((entry) => toWellnessRecentItem(entry)),
+    trend: buildWellnessTrend(wellnessCheckins),
+  };
+}
+
+function isMissingDashboardTable(message: string | null | undefined) {
+  if (!message) {
+    return false;
+  }
+
+  return (
+    message.includes('public.activity_logs') ||
+    message.includes('public.diet_logs') ||
+    message.includes('public.wellness_checkins')
+  );
+}
+
+export async function getDashboardData(userId: string, profile: AppProfile | null): Promise<DashboardData> {
+  const emptyExercise = createEmptyActivityDashboard();
+  const emptyDiet = createEmptyDietDashboard();
+  const emptyWellness = createEmptyWellnessDashboard();
+  const sinceDateKey = toDateKey(addDays(createDateAtLocalMidnight(), -29));
+
+  const [activityResult, dietResult, wellnessResult] = await Promise.all([
+    supabase
+      .from('activity_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('logged_for_date', sinceDateKey)
+      .order('logged_for_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(80),
+    supabase
+      .from('diet_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('logged_for_date', sinceDateKey)
+      .order('logged_for_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(120),
+    supabase
+      .from('wellness_checkins')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('logged_for_date', sinceDateKey)
+      .order('logged_for_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(80),
+  ]);
+
+  const firstError =
+    activityResult.error?.message ??
+    dietResult.error?.message ??
+    wellnessResult.error?.message ??
+    null;
+  const ready = !isMissingDashboardTable(firstError);
+  const activityLogs = activityResult.data ?? [];
+  const dietLogs = dietResult.data ?? [];
+  const wellnessCheckins = wellnessResult.data ?? [];
+
+  return {
+    diet: ready ? buildDietDashboardData(dietLogs) : emptyDiet,
+    error: firstError,
+    exercise: ready ? buildExerciseDashboardData(profile, activityLogs) : emptyExercise,
+    nextStep: buildNextStep(profile, activityLogs, dietLogs, wellnessCheckins),
+    ready,
+    wellness: ready ? buildWellnessDashboardData(wellnessCheckins) : emptyWellness,
+  };
+}

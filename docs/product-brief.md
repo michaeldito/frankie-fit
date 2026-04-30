@@ -8,18 +8,23 @@ Frankie Fit is designed to feel simple on the surface while doing sophisticated 
 
 Related planning docs:
 
-- [V1 Product Decisions](C:/Users/mcdit/Code/frankie-fit/docs/v1-product-decisions.md)
-- [Onboarding Flow](C:/Users/mcdit/Code/frankie-fit/docs/onboarding-flow.md)
-- [V1 Dashboard and Screen Spec](C:/Users/mcdit/Code/frankie-fit/docs/v1-dashboard-spec.md)
-- [Frankie Voice and UI Decisions](C:/Users/mcdit/Code/frankie-fit/docs/frankie-voice-and-ui-decisions.md)
-- [Frankie First-Run and In-App Copy](C:/Users/mcdit/Code/frankie-fit/docs/frankie-first-run-copy.md)
-- [Landing Page Copy](C:/Users/mcdit/Code/frankie-fit/docs/landing-page-copy.md)
-- [Wireframe Content Map](C:/Users/mcdit/Code/frankie-fit/docs/wireframe-content-map.md)
-- [Low-Fidelity Wireframes](C:/Users/mcdit/Code/frankie-fit/docs/low-fi-wireframes.md)
-- [MVP Technical Architecture](C:/Users/mcdit/Code/frankie-fit/docs/mvp-technical-architecture.md)
-- [Database Schema Plan](C:/Users/mcdit/Code/frankie-fit/docs/database-schema-plan.md)
-- [Implementation Backlog](C:/Users/mcdit/Code/frankie-fit/docs/implementation-backlog.md)
-- [Deployment Strategy](C:/Users/mcdit/Code/frankie-fit/docs/deployment-strategy.md)
+- [V1 Product Decisions](v1-product-decisions.md)
+- [Onboarding Flow](onboarding-flow.md)
+- [V1 Dashboard and Screen Spec](v1-dashboard-spec.md)
+- [Frankie Voice and UI Decisions](frankie-voice-and-ui-decisions.md)
+- [Frankie First-Run and In-App Copy](frankie-first-run-copy.md)
+- [Landing Page Copy](landing-page-copy.md)
+- [Wireframe Content Map](wireframe-content-map.md)
+- [Low-Fidelity Wireframes](low-fi-wireframes.md)
+- [MVP Technical Architecture](mvp-technical-architecture.md)
+- [Database Schema Plan](database-schema-plan.md)
+- [AI-Native Architecture Review](ai-native-architecture-review.md)
+- [Mobile Architecture Plan](mobile-architecture-plan.md)
+- [Mobile V1 Screen Spec](mobile-v1-screen-spec.md)
+- [Mobile Repo Structure Plan](mobile-repo-structure-plan.md)
+- [Mobile UI Direction](mobile-ui-direction.md)
+- [Implementation Backlog](implementation-backlog.md)
+- [Deployment Strategy](deployment-strategy.md)
 
 ## Motivation
 

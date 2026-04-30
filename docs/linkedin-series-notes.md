@@ -147,30 +147,34 @@ These repo documents are part of the content story and should be mined for futur
 
 ### Product and Strategy Docs
 
-- [product-brief.md](</C:/Users/mcdit/Code/frankie-fit/docs/product-brief.md>)
-- [v1-product-decisions.md](</C:/Users/mcdit/Code/frankie-fit/docs/v1-product-decisions.md>)
-- [v1-dashboard-spec.md](</C:/Users/mcdit/Code/frankie-fit/docs/v1-dashboard-spec.md>)
-- [wireframe-content-map.md](</C:/Users/mcdit/Code/frankie-fit/docs/wireframe-content-map.md>)
-- [low-fi-wireframes.md](</C:/Users/mcdit/Code/frankie-fit/docs/low-fi-wireframes.md>)
+- [product-brief.md](product-brief.md)
+- [v1-product-decisions.md](v1-product-decisions.md)
+- [v1-dashboard-spec.md](v1-dashboard-spec.md)
+- [wireframe-content-map.md](wireframe-content-map.md)
+- [low-fi-wireframes.md](low-fi-wireframes.md)
 
 ### Voice, UX, and Marketing Docs
 
-- [frankie-voice-and-ui-decisions.md](</C:/Users/mcdit/Code/frankie-fit/docs/frankie-voice-and-ui-decisions.md>)
-- [frankie-first-run-copy.md](</C:/Users/mcdit/Code/frankie-fit/docs/frankie-first-run-copy.md>)
-- [landing-page-copy.md](</C:/Users/mcdit/Code/frankie-fit/docs/landing-page-copy.md>)
+- [frankie-voice-and-ui-decisions.md](frankie-voice-and-ui-decisions.md)
+- [frankie-first-run-copy.md](frankie-first-run-copy.md)
+- [landing-page-copy.md](landing-page-copy.md)
+- [mobile-ui-direction.md](mobile-ui-direction.md)
 
 ### Technical Planning Docs
 
-- [mvp-technical-architecture.md](</C:/Users/mcdit/Code/frankie-fit/docs/mvp-technical-architecture.md>)
-- [database-schema-plan.md](</C:/Users/mcdit/Code/frankie-fit/docs/database-schema-plan.md>)
-- [ai-native-architecture-review.md](</C:/Users/mcdit/Code/frankie-fit/docs/ai-native-architecture-review.md>)
-- [deployment-strategy.md](</C:/Users/mcdit/Code/frankie-fit/docs/deployment-strategy.md>)
-- [implementation-backlog.md](</C:/Users/mcdit/Code/frankie-fit/docs/implementation-backlog.md>)
-- [seed-data-plan.md](</C:/Users/mcdit/Code/frankie-fit/docs/seed-data-plan.md>)
+- [mvp-technical-architecture.md](mvp-technical-architecture.md)
+- [database-schema-plan.md](database-schema-plan.md)
+- [ai-native-architecture-review.md](ai-native-architecture-review.md)
+- [mobile-architecture-plan.md](mobile-architecture-plan.md)
+- [mobile-repo-structure-plan.md](mobile-repo-structure-plan.md)
+- [mobile-v1-screen-spec.md](mobile-v1-screen-spec.md)
+- [deployment-strategy.md](deployment-strategy.md)
+- [implementation-backlog.md](implementation-backlog.md)
+- [seed-data-plan.md](seed-data-plan.md)
 
 ### Product Flow Docs
 
-- [onboarding-flow.md](</C:/Users/mcdit/Code/frankie-fit/docs/onboarding-flow.md>)
+- [onboarding-flow.md](onboarding-flow.md)
 
 ## Full Project Narrative Arc
 
@@ -662,8 +666,16 @@ Those details make the content more believable than polished hindsight alone.
 - The next UI refinement went beyond colors: the app shell was restructured into a leaner sidebar plus stacked top header, user controls moved to the top-right, goal and next-step details became modal actions, and chat became an inline scrollable workspace instead of a long page.
 - That same polish phase reached the marketing site too: the landing page was reorganized into fuller-width header sections, given more breathing room, and reworked around a cleaner Tailwind-style hero composition.
 - The next product-design thread started looking beyond the browser: the app now has a concrete iPhone companion strategy instead of vague "maybe mobile later" thinking.
-- That mobile strategy is now specific enough to build against: the first iPhone version is defined around auth, onboarding, chat, progress, and profile rather than a fuzzy "mobile app someday."
+- That mobile strategy is now specific enough to build against: the first iPhone version is defined around auth, onboarding, chat, dashboard, and profile rather than a fuzzy "mobile app someday."
 - The mobile planning got deeper in two useful directions at once: a repo-structure plan for how to add Expo without wrecking the web app, and a UI-direction doc that keeps mobile aligned with the calmer, less-is-more Frankie style.
+- The mobile plan crossed from planning into implementation: `apps/mobile` now exists as an Expo / React Native sibling app inside the repo.
+- The MacBook setup exposed a very real part of AI-assisted development: the work is faster, but environment and tooling problems still need patient engineering judgment.
+- The first mobile slice is now more than a shell. Auth, onboarding, chat, dashboard, and profile are connected to the same Supabase-backed product system as web.
+- The mobile chat path also sharpened a security boundary: the app uses a trusted server route for Frankie intelligence so OpenAI keys and privileged Supabase keys stay off the phone.
+- Device testing surfaced practical UX issues that would not show up in a static plan: keyboard overlap during signup/onboarding, tab access while chatting, and status text that appeared before the message was actually sent.
+- The onboarding parity pass was a good example of web/mobile drift appearing early. Single-select mobile questions had to be corrected to match multi-select web behavior.
+- The product language got a little sharper too: the mobile tab now uses `Dashboard` for parity with the web app, while the internal route can keep its older `progress` name until a rename is worth the churn.
+- Apple Health planning is intentionally read-only for now. The interesting future value is importing workout and heart-rate timeline context, not writing data back to Health.
 - Real implementation work has exposed the messy reality of natural language input and why experienced engineering judgment still matters.
 
 ### Current Good Lessons
@@ -680,6 +692,11 @@ Those details make the content more believable than polished hindsight alone.
 - Mobile planning got sharper once the team stopped thinking in terms of "port the web app" and started thinking in terms of "share the product and logic, rebuild the UI natively."
 - A good mobile plan felt more credible once the team named what would stay web-only. Leaving admin on the web made the iPhone scope cleaner immediately.
 - Good mobile planning was not just about screens. It also needed a clear answer for repo structure, shared logic boundaries, and what not to over-share between web and React Native.
+- The first working mobile app made parity feel less abstract. Once a real user can sign up, onboard, chat, and inspect the dashboard, the differences between web and mobile become concrete fast.
+- Keyboard behavior is product behavior on mobile. A blocked save button or hidden tab bar is not polish; it changes whether the app is usable.
+- "Thinking" states need to reflect what the system is actually doing. Showing Frankie thinking before the user message is saved creates a subtle but real trust problem.
+- Server/client boundaries matter more on mobile because the phone is a public client. Frankie intelligence belongs behind a trusted API route.
+- HealthKit is not just a feature toggle. It changes the build strategy because Expo Go is enough for basic screens, but not enough for Apple Health permissions and native integrations.
 
 ### Current Good One-Liners
 
@@ -688,6 +705,10 @@ Those details make the content more believable than polished hindsight alone.
 - The more real the product gets, the more obvious it becomes where AI helps and where engineering still leads.
 - Good demo data is part of product engineering, not an afterthought.
 - Internal product tooling is still product work. The admin surface deserves the same clarity as the user app.
+- Mobile parity is not automatic just because the backend is shared.
+- On a phone, the keyboard is part of the interface architecture.
+- Good AI status UI should tell the truth about where the work is happening.
+- The safest mobile AI architecture is still boring in the right places: public client, trusted server route, private model key.
 
 ### Current Important Reminder
 
