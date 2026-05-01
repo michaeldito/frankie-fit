@@ -9,7 +9,12 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.michaeldito.frankiefit",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Frankie Fit reads Apple Health workouts, heart rate, energy, and distance to help summarize training and recovery context.",
+        "NSHealthUpdateUsageDescription": "Frankie Fit does not write health data."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -39,7 +44,15 @@
           }
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Frankie Fit reads Apple Health workouts, heart rate, energy, and distance to help summarize training and recovery context.",
+          "NSHealthUpdateUsageDescription": "Frankie Fit does not write health data.",
+          "background": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

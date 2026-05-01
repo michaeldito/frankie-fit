@@ -30,9 +30,9 @@ My recommendation is:
 
 This gives you structure without stalling progress.
 
-## Current Status - April 30, 2026
+## Current Status - May 1, 2026
 
-The repo has started the phased mobile path.
+The repo has started the phased mobile path, and real-device iPhone testing has confirmed the current workspace shape is still workable.
 
 What is in place now:
 
@@ -41,6 +41,8 @@ What is in place now:
 - `pnpm-workspace.yaml` wires the repo as a workspace
 - root scripts expose explicit web and mobile commands
 - mobile calls trusted backend routes for Frankie orchestration
+- local physical-device testing uses both the mobile Metro server and the root Next.js web/API server
+- the read-only HealthKit spike lives inside the mobile app without forcing a broader repo restructure
 - shared package extraction has not started yet
 
 This means the repo is currently in the intended phase-1 shape: mobile exists, web has not been moved into `apps/web`, and shared packages should wait until duplication becomes painful.
@@ -358,4 +360,4 @@ After the first Expo scaffold, the strongest next repo moves are:
 
 - keep mobile/web behavior in parity while the screens mature
 - extract shared schemas only after duplication becomes clearly painful
-- plan the HealthKit read-only integration before adding native dependencies
+- validate the HealthKit read-only spike before adding persistence or import tools

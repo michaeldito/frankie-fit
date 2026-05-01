@@ -15,10 +15,12 @@ Implemented in the first mobile pass:
 - exercise, diet, and wellness dashboard tabs
 - profile summary and edit entry point
 - keyboard handling refinements for auth, onboarding, and chat
+- read-only Apple Health setup spike validated in a local iPhone development build
 
 Not in scope yet:
 
-- Apple Health / HealthKit connection
+- Apple Health sync to Supabase
+- Apple Health writes
 - push reminders
 - voice input
 - admin views
@@ -52,12 +54,27 @@ For local device testing, `EXPO_PUBLIC_FRANKIE_API_BASE_URL` should point at the
 
 Do not put OpenAI keys or Supabase secret/service-role keys in the mobile env file.
 
+## Local Device Testing
+
+For core mobile testing on a physical iPhone, run both pieces:
+
+```bash
+pnpm dev:web
+pnpm dev:mobile
+```
+
+Metro serves the native app bundle. The Next.js web server serves trusted backend routes such as `/api/mobile/chat`.
+
+If chat shows `Network request failed`, first check that the web/API server is running and reachable from the phone. For real-device LAN testing, the API base URL should use the Mac's reachable network host rather than `localhost`.
+
 ## Development Commands
 
 From the repo root:
 
 - `pnpm dev:mobile`
 - `pnpm ios:mobile`
+- `pnpm ios:mobile:dev`
+- `pnpm ios:mobile:simulator`
 - `pnpm android:mobile`
 - `pnpm web:mobile`
 - `pnpm lint:mobile`
@@ -66,6 +83,8 @@ From `apps/mobile`:
 
 - `pnpm start`
 - `pnpm ios`
+- `pnpm ios:dev`
+- `pnpm ios:simulator`
 - `pnpm android`
 - `pnpm web`
 - `pnpm lint`
@@ -80,7 +99,22 @@ pnpm --dir apps/mobile exec tsc --noEmit
 
 Expo Go is useful for testing the current core app screens.
 
-HealthKit will require a development build or production iOS app because Expo Go cannot provide Apple Health permissions and native HealthKit modules.
+HealthKit requires a development build or production iOS app because Expo Go cannot provide Apple Health permissions and native HealthKit modules.
+
+For the local HealthKit spike:
+
+```bash
+pnpm ios:mobile:dev
+pnpm dev:mobile
+```
+
+On a physical iPhone, the first development build may also require:
+
+- a current Xcode install and selected command line tools
+- CocoaPods available locally
+- an Apple Development signing identity
+- Developer Mode enabled on the iPhone
+- the developer profile trusted under iOS VPN & Device Management
 
 ## Notes
 
@@ -88,3 +122,5 @@ HealthKit will require a development build or production iOS app because Expo Go
 - The internal route file may still be named `progress.tsx`.
 - Mobile chat uses a two-step send flow: save the user message, then generate Frankie's reply.
 - The app should keep web/mobile onboarding semantics aligned, including multi-select answers.
+- The Apple Health integration is read-only. Do not request write permissions unless the product direction changes.
+- Apple Health persistence and import tuning are intentionally paused while Frankie intelligence, evals, auditability, and deployment take priority.

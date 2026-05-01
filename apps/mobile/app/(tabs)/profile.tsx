@@ -24,6 +24,8 @@ import {
 } from '@/lib/profile-data';
 import { supabase } from '@/lib/supabase';
 
+const APPLE_HEALTH_ROUTE = '/health' as Parameters<typeof router.push>[0];
+
 function yesNo(value: boolean | null | undefined) {
   return value ? 'Yes' : 'No';
 }
@@ -217,6 +219,17 @@ export default function ProfileScreen() {
           <DetailRow label="Check-in style" value={profile?.preferred_checkin_style ?? 'Not set yet'} />
         </ProfileSection>
 
+        <ScrollCard style={styles.healthCard}>
+          <Text style={styles.kicker}>Apple Health</Text>
+          <Text style={styles.sectionTitle}>Read-only workout import</Text>
+          <Text style={styles.bodyText}>
+            Connect HealthKit from a development build to preview recent workouts and heart-rate context.
+          </Text>
+          <Pressable onPress={() => router.push(APPLE_HEALTH_ROUTE)} style={styles.editButton}>
+            <Text style={styles.editButtonText}>Open Apple Health setup</Text>
+          </Pressable>
+        </ScrollCard>
+
         <Pressable onPress={() => router.push('/onboarding')} style={styles.editButton}>
           <Text style={styles.editButtonText}>Edit profile context</Text>
         </Pressable>
@@ -246,6 +259,9 @@ const styles = StyleSheet.create({
   },
   errorCard: {
     borderColor: colors.danger,
+  },
+  healthCard: {
+    backgroundColor: colors.panelStrong,
   },
   kicker: {
     color: colors.accentStrong,

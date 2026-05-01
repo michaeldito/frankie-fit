@@ -240,18 +240,35 @@ Once dashboard summaries exist, decide whether:
 
 ## Recommended Immediate Decision
 
-For now, I recommend:
+As of May 1, 2026, the immediate deployment decision is:
 
-- build locally first
 - deploy the first working version with Vercel and Supabase
+- keep Supabase as the database/auth layer
+- keep OpenAI and Supabase privileged keys server-side only
+- point the mobile app at the deployed trusted API route when testing against production-like behavior
 - keep the codebase portable
-- revisit AWS versus GCP after the first real Frankie workflow is live
+- revisit AWS versus GCP after the Vercel MVP is live and the core Frankie workflow is stronger
 
 This gives you:
 
 - a real shipped product baseline
 - a cleaner cloud migration project later
 - less overload in the earliest build phase
+
+## Vercel MVP Readiness Checklist
+
+Before treating the Vercel deployment as the MVP baseline, verify:
+
+- production environment variables are configured in Vercel
+- OpenAI keys and Supabase service-role or secret keys are never exposed to the mobile client
+- Supabase auth callback URLs include the Vercel production URL
+- signup, login, onboarding, chat, dashboard, profile, and admin routes work outside localhost
+- `/api/mobile/chat` works from a mobile build using the deployed API base URL
+- RLS and admin access rules are reviewed after deployment
+- logs are useful enough to debug failed chat requests
+- demo or seed data is not inserted into production unless explicitly intended
+
+The next deployment pass should prefer a boring, inspectable Vercel launch over introducing GCP or AWS too early. The later cloud migration is still valuable, but it should become a focused learning project after the product baseline is real.
 
 ## Suggested Next Artifact
 

@@ -28,9 +28,9 @@ The mobile version should prioritize:
 - fewer competing surfaces on screen at once
 - chat as the center of the experience
 
-## Current Build Status - April 30, 2026
+## Current Build Status - May 1, 2026
 
-The first mobile build now exists in `apps/mobile`.
+The first mobile build now exists in `apps/mobile`, and a signed development build has been installed and launched on a connected iPhone.
 
 Implemented so far:
 
@@ -45,12 +45,18 @@ Implemented so far:
 - dashboard tabs for exercise, diet, and wellness backed by saved data
 - newest-first wellness trend ordering
 - profile summary and editable profile context
+- read-only Apple Health setup screen bundled in a native development build
 
 Still being refined:
 
 - tighter mobile UI polish
 - deeper dashboard/profile parity with the web app
-- read-only Apple Health planning
+- production-ready error handling for local/prod API connectivity
+
+Paused for now:
+
+- Apple Health persistence and import flows
+- baseline Apple Watch app exploration
 
 ## Core Mobile Principles
 
@@ -429,7 +435,7 @@ That is enough for the first real iPhone Frankie Fit experience.
 ## Nice-To-Have Later
 
 - push reminders
-- Apple Health connection flow
+- Apple Health permission and workout preview flow
 - Apple Watch workout import confirmation
 - richer log detail views
 - saved plans or routines

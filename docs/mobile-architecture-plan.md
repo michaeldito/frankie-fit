@@ -32,9 +32,9 @@ This gives the project:
 - less UI compromise than trying to force web layouts into a native shell
 - more code reuse than building the mobile app as a completely separate system
 
-## Implementation Status - April 30, 2026
+## Implementation Status - May 1, 2026
 
-The first mobile implementation is now underway in `apps/mobile`.
+The first mobile implementation is now underway in `apps/mobile`, and the local iPhone development-build path has been proven.
 
 What exists now:
 
@@ -46,6 +46,9 @@ What exists now:
 - mobile chat connected to server-side Frankie orchestration through `app/api/mobile/chat/route.ts`
 - mobile dashboard and profile screens backed by real Supabase data
 - keyboard handling improvements for auth, onboarding, and chat
+- read-only Apple Health spike started with HealthKit config and a guarded setup screen
+- a signed development build installed and launched on a connected iPhone
+- the HealthKit native bridge bundled successfully in that development build
 
 Important current choices:
 
@@ -53,6 +56,9 @@ Important current choices:
 - the mobile app calls a trusted backend route with the user's Supabase bearer token
 - the chat send flow saves the user message before showing Frankie's thinking state
 - the user-facing mobile tab is currently `Dashboard`, even though the route file may still be named `progress`
+- Apple Health remains read-only and requires a development build
+- Apple Health persistence and import tuning are paused while Frankie intelligence, evals, auditability, and deployment take priority
+- local physical-device chat testing needs both Metro and the Next.js web/API server running
 - admin remains web-only
 
 ## Why Mobile Makes Sense For Frankie Fit

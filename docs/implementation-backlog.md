@@ -6,7 +6,7 @@ This document translates the MVP architecture, schema, and product design into a
 
 ## Current Progress Snapshot
 
-As of April 30, 2026, the project has moved well beyond the planning-only stage.
+As of May 1, 2026, the project has moved well beyond the planning-only stage.
 
 Completed in the app:
 
@@ -38,15 +38,22 @@ Completed in the repo:
 - mobile onboarding/profile editor with field parity against the web onboarding flow, including multi-select answers where web supports them
 - mobile chat connected to server-side Frankie orchestration through the mobile chat API route
 - mobile dashboard/profile surfaces backed by real Supabase data
+- read-only Apple Health development-build spike validated on a connected iPhone for workout and heart-rate preview capability
 
 Now in progress:
 
 - Frankie intelligence refinement
+- evals, traceability, and auditability around Frankie chat behavior
+- first Vercel MVP deployment preparation
 - mobile UI/UX refinement after device testing
 - mobile dashboard/profile parity against the web app
-- Apple Health integration planning for read-only workout import
 - deeper AI-native migration beyond the first orchestration layer
 - lightweight AI observability, evals, and traceability around the new model-backed flow
+
+Paused intentionally:
+
+- Apple Health persistence and import tuning after the real-device spike proved the native path
+- a baseline Apple Watch app until the core Frankie intelligence and MVP deployment are stronger
 
 ## Current Build Notes
 
@@ -77,6 +84,8 @@ These are worth keeping in mind as we keep building.
 - Mobile phase 1 should stay narrow: chat first, lighter dashboard summaries, and basic profile editing. Admin should remain web-only.
 - Apple Health should be read-only unless the product direction changes. We are not planning to write workouts or health data back into Apple Health.
 - Apple Health and workout heart-rate timeline access will require a development build or production native app. Expo Go is fine for basic app testing, but not enough for HealthKit.
+- The first Apple Health spike validated the native build path on a connected iPhone. Supabase persistence and Frankie import tools should wait until chat intelligence and deployment are further along.
+- Real-device mobile chat testing needs two local servers: Metro for the native bundle and the Next.js web/API server for `/api/mobile/chat`. A mobile `Network request failed` in chat can simply mean the backend is not running or not reachable from the phone.
 - The mobile design language should stay aligned with the web app's calmer blue system, but mobile should show less at once and lean more on sheets, sticky actions, and stronger one-thumb ergonomics.
 
 ## Future Refinement Notes
@@ -490,7 +499,7 @@ Native mobile is now active in the repo, but the scope should stay tight:
 - chat-first mobile scope with dashboard/profile support
 - server-side Frankie orchestration through trusted backend routes
 - web/mobile onboarding parity
-- read-only HealthKit after the core mobile Frankie loop works
+- validate read-only HealthKit before syncing or importing workouts
 
 ## Recommended Next Build Artifact
 

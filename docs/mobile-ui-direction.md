@@ -13,9 +13,9 @@ The goal is to answer:
 - what should change for mobile
 - what UI principles should guide screen design
 
-## Current Status - April 30, 2026
+## Current Status - May 1, 2026
 
-The first mobile app now exists in `apps/mobile`.
+The first mobile app now exists in `apps/mobile`, and real-device testing has moved the feedback from abstract parity into actual iPhone behavior.
 
 Design and UX decisions from device testing:
 
@@ -29,6 +29,13 @@ Design and UX decisions from device testing:
 - show `Sending` while the user message is being saved
 - show Frankie's thinking state only after the saved message is ready for response generation
 - order the wellness trend newest-first so Today is visible before older entries
+- make mobile network errors more actionable because chat depends on both the native app bundle and the trusted web/API backend
+- keep HealthKit UI guarded so Expo Go remains usable while development builds can use Apple Health
+
+Current product direction:
+
+- focus near-term mobile refinement on chat reliability, profile/dashboard parity, and production API behavior
+- pause Apple Health polish and Apple Watch exploration until Frankie intelligence and deployment are stronger
 
 ## Core Direction
 
@@ -413,4 +420,4 @@ After the first mobile implementation, the strongest next design work is:
 
 - tighten the dashboard and profile screens against web parity
 - keep testing keyboard and tab-bar behavior on device
-- design the read-only HealthKit permission and import flow before implementation
+- refine the read-only HealthKit permission and import flow after the first native spike

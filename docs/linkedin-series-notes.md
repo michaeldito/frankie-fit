@@ -676,6 +676,10 @@ Those details make the content more believable than polished hindsight alone.
 - The onboarding parity pass was a good example of web/mobile drift appearing early. Single-select mobile questions had to be corrected to match multi-select web behavior.
 - The product language got a little sharper too: the mobile tab now uses `Dashboard` for parity with the web app, while the internal route can keep its older `progress` name until a rename is worth the churn.
 - Apple Health planning is intentionally read-only for now. The interesting future value is importing workout and heart-rate timeline context, not writing data back to Health.
+- The Apple Health work started with the unglamorous but important foundation: a dev-build path, native HealthKit bridge, read-only permissions, and a guarded screen that does not break Expo Go.
+- The first real-device iPhone development build proved the native path end to end: Xcode, CocoaPods, signing, Developer Mode, trusted profile, install, launch, Metro bundle, and HealthKit bridge all had to line up.
+- Mobile chat testing exposed an important architecture truth: the phone needs Metro for the native bundle and the Next.js backend for trusted Frankie API routes. A simple `Network request failed` can mean the API server is missing, not that the app logic is broken.
+- The near-term project plan is now sharper: pause Apple Health tuning, make Frankie intelligence more trustworthy and auditable, then deploy the MVP to Vercel before taking on deeper cloud or Watch work.
 - Real implementation work has exposed the messy reality of natural language input and why experienced engineering judgment still matters.
 
 ### Current Good Lessons
@@ -697,6 +701,10 @@ Those details make the content more believable than polished hindsight alone.
 - "Thinking" states need to reflect what the system is actually doing. Showing Frankie thinking before the user message is saved creates a subtle but real trust problem.
 - Server/client boundaries matter more on mobile because the phone is a public client. Frankie intelligence belongs behind a trusted API route.
 - HealthKit is not just a feature toggle. It changes the build strategy because Expo Go is enough for basic screens, but not enough for Apple Health permissions and native integrations.
+- The first HealthKit milestone should prove permission and sample shape before building persistence. Real device data should shape the schema, not guesses.
+- Evals and traceability are what turn an AI chat feature from impressive demo into maintainable product behavior.
+- Vercel is the right first deployment target because it gets the real MVP outside localhost without turning infrastructure learning into the main bottleneck.
+- Apple Watch can be valuable later, but a watch app should not outrun the core coach. Frankie needs to be trustworthy first.
 
 ### Current Good One-Liners
 
@@ -709,6 +717,8 @@ Those details make the content more believable than polished hindsight alone.
 - On a phone, the keyboard is part of the interface architecture.
 - Good AI status UI should tell the truth about where the work is happening.
 - The safest mobile AI architecture is still boring in the right places: public client, trusted server route, private model key.
+- A deployed MVP teaches different lessons than a local app. The sooner the core loop is on Vercel, the sooner the product can be judged as a real system.
+- The next serious AI milestone is not more magic. It is being able to explain what Frankie extracted, what it wrote, what prompt ran, and why.
 
 ### Current Important Reminder
 

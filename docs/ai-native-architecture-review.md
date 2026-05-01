@@ -604,6 +604,20 @@ If we want the smallest credible step toward a truly AI-native Frankie Fit, I wo
 
 That one slice would move Frankie Fit much closer to honestly AI-native.
 
+## Current Project Decision - May 1, 2026
+
+The next major product-quality push should focus on Frankie intelligence, evals, traceability, and auditability before adding more native health features.
+
+The practical sequence is:
+
+1. Add eval fixtures for messy real chat inputs.
+2. Record prompt/model/version metadata for model-backed chat actions.
+3. Trace extraction results, validation outcomes, deterministic tool writes, fallback reasons, and final replies.
+4. Keep detailed transcript inspection limited to internal or synthetic test accounts unless a privacy-safe admin review rule is explicit.
+5. Deploy the MVP to Vercel once the core chat path is reliable enough to debug outside localhost.
+
+Apple Health and Apple Watch remain valuable future connectors, but they should not distract from making Frankie trustworthy, measurable, and deployable.
+
 ## Recommended Success Criteria
 
 We should consider the redesign successful when:

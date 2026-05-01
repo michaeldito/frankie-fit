@@ -17,6 +17,7 @@ Supporting planning docs:
 - [MVP Technical Architecture](docs/mvp-technical-architecture.md)
 - [Database Schema Plan](docs/database-schema-plan.md)
 - [AI-Native Architecture Review](docs/ai-native-architecture-review.md)
+- [Apple Health Integration Plan](docs/apple-health-integration-plan.md)
 - [Mobile Architecture Plan](docs/mobile-architecture-plan.md)
 - [Mobile V1 Screen Spec](docs/mobile-v1-screen-spec.md)
 - [Mobile Repo Structure Plan](docs/mobile-repo-structure-plan.md)
@@ -39,6 +40,17 @@ The repo now includes the first working web and mobile scaffold for:
 - an Expo / React Native mobile app in `apps/mobile`
 - a mobile chat API route that keeps Frankie orchestration and OpenAI calls server-side
 - mobile auth, onboarding, chat, dashboard, and profile surfaces connected to the same Supabase project
+- a read-only Apple Health development-build spike validated on a connected iPhone for workout and heart-rate preview capability
+
+## Current Focus
+
+The next project push is focused on:
+
+- improving Frankie intelligence quality for messy real chat messages
+- adding evals, traceability, and audit-friendly chat behavior
+- preparing the first Vercel MVP deployment
+- keeping Apple Health read-only and paused until the core chat experience is stronger
+- keeping mobile aligned with web while using native iPhone UX where it matters
 
 ## Development
 
@@ -48,6 +60,8 @@ The repo now includes the first working web and mobile scaffold for:
 4. Run the web app with `pnpm dev:web`.
 5. Run the mobile app with `pnpm dev:mobile`.
 
+For physical iPhone chat testing, run the web/API server and the mobile Metro server at the same time. The phone loads the native bundle from Metro, but chat calls the trusted Next.js backend route for Frankie intelligence.
+
 Common commands:
 
 - `pnpm dev:web`
@@ -55,6 +69,7 @@ Common commands:
 - `pnpm lint:web`
 - `pnpm dev:mobile`
 - `pnpm ios:mobile`
+- `pnpm ios:mobile:dev`
 - `pnpm android:mobile`
 - `pnpm lint:mobile`
 
