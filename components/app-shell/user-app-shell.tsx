@@ -58,6 +58,22 @@ function getPageMeta(pathname: string) {
     };
   }
 
+  if (pathname.startsWith("/app/admin/debug")) {
+    return {
+      eyebrow: "Founder View",
+      title: "Debug",
+      subtitle: "Inspect individual Frankie turns when behavior gets weird."
+    };
+  }
+
+  if (pathname.startsWith("/app/admin/evals")) {
+    return {
+      eyebrow: "Founder View",
+      title: "Evals",
+      subtitle: "Benchmark, review, and tune Frankie intelligence over time."
+    };
+  }
+
   if (pathname.startsWith("/app/admin")) {
     return {
       eyebrow: "Founder View",
@@ -115,7 +131,7 @@ function ActionModal({
           </div>
           <button
             aria-label="Close panel"
-            className="ff-button-secondary h-10 w-10 p-0 text-base"
+            className="ff-button-secondary h-10 w-10 cursor-pointer p-0 text-base"
             onClick={onClose}
             type="button"
           >
@@ -125,11 +141,19 @@ function ActionModal({
         <p className="mt-5 max-w-2xl leading-7 text-[var(--muted)]">{body}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           {ctaHref && ctaLabel ? (
-            <Link className="ff-button-primary px-4 py-2.5 text-sm" href={ctaHref} onClick={onClose}>
+            <Link
+              className="ff-button-primary cursor-pointer px-4 py-2.5 text-sm"
+              href={ctaHref}
+              onClick={onClose}
+            >
               {ctaLabel}
             </Link>
           ) : null}
-          <button className="ff-button-secondary px-4 py-2.5 text-sm" onClick={onClose} type="button">
+          <button
+            className="ff-button-secondary cursor-pointer px-4 py-2.5 text-sm"
+            onClick={onClose}
+            type="button"
+          >
             Close
           </button>
         </div>
@@ -191,7 +215,9 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
               <nav className="mt-3 flex flex-col gap-2">
                 <NavLink href="/app/chat">Chat</NavLink>
                 <NavLink href="/app/dashboard">Dashboard</NavLink>
-                {user.isAdmin ? <NavLink href="/app/admin">Admin</NavLink> : null}
+                {user.isAdmin ? <NavLink href="/app/admin" match="exact">Admin</NavLink> : null}
+                {user.isAdmin ? <NavLink href="/app/admin/debug">Debug</NavLink> : null}
+                {user.isAdmin ? <NavLink href="/app/admin/evals">Evals</NavLink> : null}
               </nav>
             </div>
 
@@ -201,14 +227,14 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
               </p>
               <div className="mt-3 flex flex-col gap-2">
                 <button
-                  className="ff-button-secondary justify-start px-4 py-3 text-sm"
+                  className="ff-button-secondary cursor-pointer justify-start px-4 py-3 text-sm"
                   onClick={() => setOverlayPanel("goal")}
                   type="button"
                 >
                   Open goal
                 </button>
                 <button
-                  className="ff-button-secondary justify-start px-4 py-3 text-sm"
+                  className="ff-button-secondary cursor-pointer justify-start px-4 py-3 text-sm"
                   onClick={() => setOverlayPanel("next-step")}
                   type="button"
                 >
@@ -252,7 +278,7 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
                   {user.authConfigured ? (
                     <div className="relative" ref={profileMenuRef}>
                       <button
-                        className="ff-card flex items-center gap-3 px-3 py-2.5"
+                        className="ff-card cursor-pointer flex items-center gap-3 px-3 py-2.5"
                         onClick={() => setProfileMenuOpen((current) => !current)}
                         type="button"
                       >
@@ -294,7 +320,9 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
               <div className="mt-4 flex gap-2 overflow-x-auto lg:hidden">
                 <NavLink href="/app/chat">Chat</NavLink>
                 <NavLink href="/app/dashboard">Dashboard</NavLink>
-                {user.isAdmin ? <NavLink href="/app/admin">Admin</NavLink> : null}
+                {user.isAdmin ? <NavLink href="/app/admin" match="exact">Admin</NavLink> : null}
+                {user.isAdmin ? <NavLink href="/app/admin/debug">Debug</NavLink> : null}
+                {user.isAdmin ? <NavLink href="/app/admin/evals">Evals</NavLink> : null}
               </div>
             </header>
 

@@ -12,15 +12,29 @@ export type ChatExperience = {
   error: string | null;
 };
 
-export type RelativeLoggedFor = "today" | "yesterday" | "unknown";
+export type LoggedForDateValue = string;
+export type ActivityTimePrecision =
+  | "implicit_today"
+  | "relative_day"
+  | "explicit_day"
+  | "multi_day_window"
+  | "week_summary"
+  | "unknown";
 
 export type ParsedActivity = {
   activityType: string;
+  activityCategory: string | null;
+  sessionCount: number | null;
   durationMinutes: number | null;
   intensity: string | null;
+  timeReferenceText: string | null;
   description: string;
   detectedKeyword: string;
-  loggedFor: RelativeLoggedFor;
+  loggedForDate: LoggedForDateValue;
+  timePrecision: ActivityTimePrecision | null;
+  confidence: number | null;
+  missingFields: string[];
+  ambiguityFlags: string[];
 };
 
 export type ParsedDietEntry = {
@@ -28,7 +42,8 @@ export type ParsedDietEntry = {
   mealType: string | null;
   confidence: number;
   detectedKeyword: string;
-  loggedFor: RelativeLoggedFor;
+  timeReferenceText: string | null;
+  loggedForDate: LoggedForDateValue;
 };
 
 export type ParsedWellnessCheckin = {
@@ -39,7 +54,7 @@ export type ParsedWellnessCheckin = {
   motivationScore: number | null;
   notes: string | null;
   detectedSignals: string[];
-  loggedFor: RelativeLoggedFor;
+  loggedForDate: LoggedForDateValue;
 };
 
 type ActivityMatch = {
@@ -53,6 +68,9 @@ type MealMatch = {
   keyword: string;
   index: number;
 };
+
+const explicitWeekdayPattern =
+  /\b(?:(?:this\s+past|last|this)\s+)?(sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday|s)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?)\b/i;
 
 const activityKeywordMap: Array<{ keywords: string[]; label: string }> = [
   { keywords: ["run", "ran", "jog", "jogged"], label: "Running" },
@@ -115,6 +133,11 @@ const foodCueKeywords = [
   "smoothie",
   "coffee",
   "tea",
+  "beer",
+  "wine",
+  "alcohol",
+  "cocktail",
+  "cocktails",
   "water",
   "milk",
   "pasta",
@@ -271,6 +294,211 @@ function getIntensity(clause: string) {
   return null;
 }
 
+function getPacificTodayDate() {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  const parts = formatter.formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value ?? "1970";
+  const month = parts.find((part) => part.type === "month")?.value ?? "01";
+  const day = parts.find((part) => part.type === "day")?.value ?? "01";
+
+  return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12));
+}
+
+function toDateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function resolveRelativeDaysAgo(daysAgo: number) {
+  const date = getPacificTodayDate();
+  date.setUTCDate(date.getUTCDate() - daysAgo);
+  return toDateKey(date);
+}
+
+function resolveMostRecentWeekday(targetWeekday: number) {
+  const date = getPacificTodayDate();
+  const currentWeekday = date.getUTCDay();
+  const diff = (currentWeekday - targetWeekday + 7) % 7;
+  date.setUTCDate(date.getUTCDate() - diff);
+  return toDateKey(date);
+}
+
+function mapWeekdayTokenToIndex(token: string) {
+  const normalizedToken = token.toLowerCase();
+  const weekdayMap: Record<string, number> = {
+    sun: 0,
+    sunday: 0,
+    mon: 1,
+    monday: 1,
+    tue: 2,
+    tues: 2,
+    tuesday: 2,
+    wed: 3,
+    weds: 3,
+    wednesday: 3,
+    thu: 4,
+    thur: 4,
+    thurs: 4,
+    thursday: 4,
+    fri: 5,
+    friday: 5,
+    sat: 6,
+    saturday: 6
+  };
+
+  return weekdayMap[normalizedToken];
+}
+
+export function extractTimeReferenceText(text: string) {
+  const normalizedText = text.toLowerCase();
+
+  const relativeMatch = normalizedText.match(
+    /\b(?:today|yesterday|this morning|this afternoon|tonight|last night|\d+\s+days?\s+ago)\b/i
+  );
+
+  if (relativeMatch) {
+    return relativeMatch[0];
+  }
+
+  const weekdayMatch = normalizedText.match(explicitWeekdayPattern);
+
+  if (weekdayMatch) {
+    return weekdayMatch[0];
+  }
+
+  return null;
+}
+
+export function resolveLoggedForDateFromTimeReference(
+  timeReferenceText: string | null | undefined,
+  fallbackDate?: string | null
+): LoggedForDateValue {
+  const normalizedText = timeReferenceText?.trim().toLowerCase() ?? "";
+  const normalizedFallbackDate =
+    fallbackDate && /^\d{4}-\d{2}-\d{2}$/.test(fallbackDate) ? fallbackDate : null;
+  const explicitDateMatch = normalizedText.match(/\b\d{4}-\d{2}-\d{2}\b/);
+
+  if (explicitDateMatch) {
+    return explicitDateMatch[0];
+  }
+
+  if (!normalizedText) {
+    return normalizedFallbackDate ?? toDateKey(getPacificTodayDate());
+  }
+
+  if (/\byesterday\b/.test(normalizedText)) {
+    return resolveRelativeDaysAgo(1);
+  }
+
+  if (/\btoday\b|\bthis morning\b|\bthis afternoon\b|\btonight\b|\blast night\b/.test(normalizedText)) {
+    return toDateKey(getPacificTodayDate());
+  }
+
+  const daysAgoMatch = normalizedText.match(/\b(\d+)\s+days?\s+ago\b/);
+
+  if (daysAgoMatch) {
+    const daysAgo = Number.parseInt(daysAgoMatch[1], 10);
+
+    if (!Number.isNaN(daysAgo) && daysAgo >= 0) {
+      return resolveRelativeDaysAgo(daysAgo);
+    }
+  }
+
+  const weekdayMatch = normalizedText.match(explicitWeekdayPattern);
+
+  if (weekdayMatch) {
+    if (normalizedFallbackDate) {
+      return normalizedFallbackDate;
+    }
+
+    const weekday = mapWeekdayTokenToIndex(weekdayMatch[1] ?? "");
+
+    if (weekday !== undefined) {
+      return resolveMostRecentWeekday(weekday);
+    }
+  }
+
+  return normalizedFallbackDate ?? toDateKey(getPacificTodayDate());
+}
+
+function getLoggedForDate(text: string): LoggedForDateValue {
+  return resolveLoggedForDateFromTimeReference(extractTimeReferenceText(text), null);
+}
+
+function getActivityTimePrecision(text: string): ActivityTimePrecision {
+  const normalizedText = text.toLowerCase();
+
+  if (
+    /\b(?:over\s+the\s+last|for\s+the\s+last|for\s+the\s+past|the\s+last|last|past)\s+\d+\s+days\b/.test(
+      normalizedText
+    )
+  ) {
+    return "multi_day_window";
+  }
+
+  if (/\b(?:this week|this past week|earlier this week|later this week|over the week)\b/.test(normalizedText)) {
+    return "week_summary";
+  }
+
+  if (explicitWeekdayPattern.test(normalizedText) || /\bweekend\b/.test(normalizedText)) {
+    return "explicit_day";
+  }
+
+  if (/\b(?:today|yesterday|this morning|this afternoon|tonight|\d+\s+days?\s+ago)\b/.test(normalizedText)) {
+    return "relative_day";
+  }
+
+  return "implicit_today";
+}
+
+function getActivityCategory(label: string) {
+  const normalizedLabel = label.toLowerCase();
+
+  if (normalizedLabel.includes("run") || normalizedLabel.includes("cycl") || normalizedLabel.includes("row")) {
+    return "cardio";
+  }
+
+  if (
+    normalizedLabel.includes("strength") ||
+    normalizedLabel.includes("lift") ||
+    normalizedLabel.includes("weight")
+  ) {
+    return "strength";
+  }
+
+  if (normalizedLabel.includes("yoga")) {
+    return "mind_body";
+  }
+
+  if (normalizedLabel.includes("mobility") || normalizedLabel.includes("stretch")) {
+    return "mobility";
+  }
+
+  if (normalizedLabel.includes("walk") || normalizedLabel.includes("hik")) {
+    return "outdoor_recreation";
+  }
+
+  return "other";
+}
+
+function getFallbackActivityMissingFields(durationMinutes: number | null, intensity: string | null) {
+  const missingFields: string[] = [];
+
+  if (!durationMinutes) {
+    missingFields.push("durationMinutes");
+  }
+
+  if (!intensity) {
+    missingFields.push("intensity");
+  }
+
+  return missingFields;
+}
+
 function hasFoodCue(clause: string) {
   const normalizedClause = clause.toLowerCase();
 
@@ -324,6 +552,11 @@ function looksLikeDietClause(clause: string, mealMatch: MealMatch | null) {
   }
 
   return findActivityMatch(clause) === null;
+}
+
+export function isLikelyDietClause(clause: string) {
+  const mealMatch = findMealMatch(clause);
+  return looksLikeDietClause(clause, mealMatch);
 }
 
 function hasAnyCue(clause: string, cues: string[]) {
@@ -841,13 +1074,26 @@ export function parseActivityMessage(message: string): ParsedActivity[] {
       return;
     }
 
+    const timeReferenceText = extractTimeReferenceText(clause);
+    const loggedForDate = getLoggedForDate(clause);
+
     parsedActivities.push({
       activityType: activityMatch.label,
+      activityCategory: getActivityCategory(activityMatch.label),
+      sessionCount: 1,
       durationMinutes: getDurationMinutes(clause),
       intensity: getIntensity(clause),
+      timeReferenceText,
       description: clause,
       detectedKeyword: activityMatch.keyword,
-      loggedFor: "today"
+      loggedForDate,
+      timePrecision: getActivityTimePrecision(clause),
+      confidence: 0.72,
+      missingFields: getFallbackActivityMissingFields(
+        getDurationMinutes(clause),
+        getIntensity(clause)
+      ),
+      ambiguityFlags: []
     });
   });
 
@@ -867,6 +1113,8 @@ export function parseDietMessage(message: string): ParsedDietEntry[] {
     }
 
     const cleanedDescription = cleanDietDescription(clause);
+    const timeReferenceText = extractTimeReferenceText(clause);
+    const loggedForDate = getLoggedForDate(clause);
 
     if (!cleanedDescription) {
       return;
@@ -877,7 +1125,8 @@ export function parseDietMessage(message: string): ParsedDietEntry[] {
       mealType: mealMatch?.label ?? null,
       confidence: mealMatch ? 0.92 : hasFoodCue(clause) ? 0.82 : 0.7,
       detectedKeyword: mealMatch?.keyword ?? "food_update",
-      loggedFor: "today"
+      timeReferenceText,
+      loggedForDate
     };
     const dedupeKey = `${entry.mealType ?? "unknown"}::${entry.description.toLowerCase()}`;
 
@@ -966,6 +1215,8 @@ export function parseWellnessMessage(message: string): ParsedWellnessCheckin | n
     return null;
   }
 
+  const loggedForDate = getLoggedForDate(message);
+
   return {
     energyScore,
     sorenessScore,
@@ -974,7 +1225,7 @@ export function parseWellnessMessage(message: string): ParsedWellnessCheckin | n
     motivationScore,
     notes: relevantClauses.length > 0 ? relevantClauses.join("; ") : null,
     detectedSignals: Array.from(detectedSignals),
-    loggedFor: "today"
+    loggedForDate
   };
 }
 

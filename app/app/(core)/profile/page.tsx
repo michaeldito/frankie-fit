@@ -101,11 +101,11 @@ function CheckboxGrid({
     <div className="grid gap-3 sm:grid-cols-2">
       {options.map((option) => (
         <label
-          className="ff-card-soft flex items-center gap-3 px-4 py-3 text-sm"
+          className="ff-card-soft flex cursor-pointer items-center gap-3 px-4 py-3 text-sm"
           key={option}
         >
           <input
-            className="h-4 w-4 accent-[var(--brand)]"
+            className="h-4 w-4 cursor-pointer accent-[var(--brand)]"
             defaultChecked={selected.includes(option)}
             name={name}
             type="checkbox"
@@ -512,9 +512,9 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             />
           </div>
 
-          <label className="ff-card-soft flex items-start gap-3 px-4 py-4 text-sm leading-6">
+          <label className="ff-card-soft flex cursor-pointer items-start gap-3 px-4 py-4 text-sm leading-6">
             <input
-              className="mt-1 h-4 w-4 accent-[var(--brand)]"
+              className="mt-1 h-4 w-4 cursor-pointer accent-[var(--brand)]"
               defaultChecked={context.profile?.wellness_checkin_opt_in ?? true}
               name="wellnessCheckinOptIn"
               type="checkbox"

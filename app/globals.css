@@ -170,6 +170,10 @@ textarea::placeholder {
     resize: vertical;
   }
 
+  .ff-select {
+    cursor: pointer;
+  }
+
   .ff-input:hover,
   .ff-select:hover,
   .ff-textarea:hover {
@@ -190,6 +194,7 @@ textarea::placeholder {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
     border: 0;
     border-radius: 9999px;
     background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 86%, white 14%) 0%, var(--brand) 100%);
@@ -212,6 +217,7 @@ textarea::placeholder {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
     border: 1px solid var(--border);
     border-radius: 9999px;
     background: color-mix(in srgb, var(--surface-strong) 84%, black 16%);
@@ -221,6 +227,12 @@ textarea::placeholder {
       border-color 160ms ease,
       background 160ms ease,
       transform 160ms ease;
+  }
+
+  .ff-button-primary:disabled,
+  .ff-button-secondary:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
   }
 
   .ff-button-secondary:hover {

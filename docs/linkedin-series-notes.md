@@ -259,6 +259,23 @@ Use:
 
 Good angle:
 
+- AI can make a product feel broad very quickly, but real user language exposes where the surrounding orchestration is still narrower than the model itself
+- one of the most useful discoveries was that Frankie could often extract open-ended activities, but the clarification logic still behaved like it only deeply understood a shortlist of workouts
+
+### Story Layer 6: The Difference Between "AI Can Recognize It" And "The Product Truly Understands It"
+
+Use:
+
+- ai-native architecture review
+- open-vocabulary activity plan
+- debug traces from real and seeded conversations
+
+Good angle:
+
+- an experienced engineer notices that the model path can identify activities like hiking, boxing, or soccer, while the fallback and clarification layers still carry assumptions from an earlier regex-first design
+- the real work is not just adding a model call, but redesigning the surrounding logic so the product behaves consistently across the huge variety of real-world human input
+- a concrete turning point in the build was moving activity handling toward metadata like category, session count, missing fields, and ambiguity flags instead of pretending a short hand-written keyword list could cover the full fitness world
+
 - the moment the product stopped being a static app and started revealing the messy reality of user behavior
 
 ## 5-Post Series Outline
@@ -680,6 +697,9 @@ Those details make the content more believable than polished hindsight alone.
 - The first real-device iPhone development build proved the native path end to end: Xcode, CocoaPods, signing, Developer Mode, trusted profile, install, launch, Metro bundle, and HealthKit bridge all had to line up.
 - Mobile chat testing exposed an important architecture truth: the phone needs Metro for the native bundle and the Next.js backend for trusted Frankie API routes. A simple `Network request failed` can mean the API server is missing, not that the app logic is broken.
 - The near-term project plan is now sharper: pause Apple Health tuning, make Frankie intelligence more trustworthy and auditable, then deploy the MVP to Vercel before taking on deeper cloud or Watch work.
+- The next product maturity shift is not just deployment. It is deployability with debuggability: a small real-user family beta where weird Frankie behavior can be traced turn by turn instead of guessed at after the fact.
+- That observability shift is now concrete in the repo: Frankie writes structured trace rows for chat turns, and the admin side has a dedicated debug view instead of treating troubleshooting like archaeology.
+- The eval loop moved from theory into product tooling: benchmark personas, replay actions, daily and weekly summaries, and human review labels now have a first implementation path inside the admin experience.
 - Real implementation work has exposed the messy reality of natural language input and why experienced engineering judgment still matters.
 
 ### Current Good Lessons
@@ -705,6 +725,8 @@ Those details make the content more believable than polished hindsight alone.
 - Evals and traceability are what turn an AI chat feature from impressive demo into maintainable product behavior.
 - Vercel is the right first deployment target because it gets the real MVP outside localhost without turning infrastructure learning into the main bottleneck.
 - Apple Watch can be valuable later, but a watch app should not outrun the core coach. Frankie needs to be trustworthy first.
+- A private beta changes the standard for "working." Once real people outside the build loop are using the app, observability becomes part of the product.
+- A useful AI debug surface is not just logs. It is a readable explanation of what the user said, what the model extracted, what the tools wrote, and whether the fallback path got involved.
 
 ### Current Good One-Liners
 
@@ -719,6 +741,7 @@ Those details make the content more believable than polished hindsight alone.
 - The safest mobile AI architecture is still boring in the right places: public client, trusted server route, private model key.
 - A deployed MVP teaches different lessons than a local app. The sooner the core loop is on Vercel, the sooner the product can be judged as a real system.
 - The next serious AI milestone is not more magic. It is being able to explain what Frankie extracted, what it wrote, what prompt ran, and why.
+- The eval loop became the practical answer to "how do we make Frankie smarter without guessing?" Instead of tuning from vibes, the app now has a path toward seeded benchmark users, repeatable runs, field-level review labels, and prompt/version comparison over time.
 
 ### Current Important Reminder
 

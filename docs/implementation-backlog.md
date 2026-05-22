@@ -20,7 +20,12 @@ Completed in the app:
 - dashboard summaries backed by real saved data
 - profile editing for core coaching context
 - admin overview with aggregate reporting across tracked accounts
+- admin debug view with turn-by-turn Frankie trace inspection
+- admin evals scaffold for benchmark personas, field-level checks, and review tags
+- first database-backed eval runner foundation with scenario replay, daily summaries, weekly summaries, and human review capture
+- browser-local bullet progress for eval message replay so admins are not stuck waiting on one opaque long-running request
 - first-pass Frankie AI orchestration layer with model extraction and response fallbacks
+- Frankie trace capture for web and mobile chat turns via `ai_trace_runs`
 - first visual-system pass across the app shell, chat, dashboard, profile, and admin surfaces
 - stacked app shell refactor with modal actions, top-right user controls, and a fixed scrollable chat pane
 - public landing-page redesign with full-width header sections, calmer spacing, and a more deliberate Tailwind-style hero composition
@@ -44,11 +49,16 @@ Now in progress:
 
 - Frankie intelligence refinement
 - evals, traceability, and auditability around Frankie chat behavior
+- applying and testing the eval migration against Supabase
+- first real eval replay run for the three benchmark personas
+- extending the same stepwise progress pattern from message replay to full reset/replay/summarize runs
+- family beta deployment and admin-side debug readiness
 - first Vercel MVP deployment preparation
 - mobile UI/UX refinement after device testing
 - mobile dashboard/profile parity against the web app
 - deeper AI-native migration beyond the first orchestration layer
 - lightweight AI observability, evals, and traceability around the new model-backed flow
+- open-vocabulary activity understanding so Frankie does not depend on a narrow built-in activity list
 
 Paused intentionally:
 
@@ -60,6 +70,8 @@ Paused intentionally:
 These are worth keeping in mind as we keep building.
 
 - Chat logging now has a first-pass AI orchestration layer, but the regex parser still exists as an intentional fallback while we harden the model-driven path.
+- Frankie logging should follow the contract in `docs/frankie-logging-contract.md`: log clear facts, treat optional detail as optional, and clarify only for core blockers.
+- Frankie quality tuning should follow `docs/frankie-eval-loop-design.md`: replay benchmark scenarios, review field-level checks, tune, then compare against prior runs.
 - Activity parsing supports multiple activities in one message, but interpretation is still keyword-heavy.
 - Diet parsing supports multiple meals or snacks in one message, but mixed-domain sentences can still confuse it.
 - Wellness parsing supports multiple signals in one message, but response quality should continue improving as we gather real examples.
@@ -71,9 +83,13 @@ These are worth keeping in mind as we keep building.
 - Seeded chat history should stay aligned with structured log rows. For Frankie Fit, fake logs without matching messages will make the product feel less believable.
 - The first demo seed pack is intentionally happy-path and complete. Add sparse or messy accounts as a second pack rather than overloading the base dataset.
 - The first AI layer is fetch-based and uses the OpenAI Responses API with structured outputs rather than introducing the OpenAI SDK or MCP dependencies too early.
+- The activity extraction layer now carries richer metadata like category, session count, missing fields, ambiguity flags, time precision, and confidence. Future clarification logic should prefer those structured fields over activity-name regex whenever possible.
 - The app UI is moving toward a stricter "less is more" principle. Keep headers specific, remove repeated helper copy, and let layout and hierarchy do more of the work.
 - Chat should keep its own internal transcript scrolling, while dashboard and admin should prefer normal page scrolling. Profile is a special case because its form pairs with a fixed footer action bar.
 - The public landing page should stay visually aligned with the product shell: edge-to-edge headers, stronger section breathing room, and fewer cramped stacked blocks.
+- A small real-user beta does not need a separate database on day one if account boundaries and debug tooling are explicit. The bigger risk is not shared infrastructure; it is shared data without observability.
+- Before inviting family beta users, Frankie Fit should be able to answer what happened on a specific turn: raw message, extracted payload, writes performed, reply produced, and whether the model or fallback path handled the turn.
+- The current debug path is trace-row based rather than raw-table browsing. That keeps the first beta support workflow focused on what Frankie saw and did, instead of widening real-user table access too early.
 - The first mobile app now lives in `apps/mobile`. Keep sharing schemas, contracts, and backend logic first. Do not try to force the Next.js UI code directly into React Native.
 - Mobile chat should keep sensitive Frankie orchestration on trusted backend code. The client should send the Supabase bearer token to the mobile API route rather than holding OpenAI secrets.
 - Mobile chat now uses a two-step send flow: save the user message first, then show Frankie's thinking state only after the saved message is ready for the model response.
@@ -101,6 +117,7 @@ These are not blockers for the current MVP, but they are important follow-up are
 - move Frankie from regex-first parsing to model-based structured extraction with deterministic tool writes
 - add traceability, eval fixtures, and prompt/version control before calling the app fully AI-native
 - expand context loading, add time-aware extraction, and introduce eval coverage before removing the fallback parser
+- redesign activity extraction and clarification so Frankie reasons from activity metadata like category, missing fields, and ambiguity flags instead of a short list of hard-coded activity names
 
 ## Working Principle
 

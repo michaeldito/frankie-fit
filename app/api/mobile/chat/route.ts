@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { orchestrateFrankieReply } from "@/lib/ai/orchestrator/frankie-orchestrator";
+import { recordAiTraceRun } from "@/lib/ai/tracing/ai-trace-runs";
 import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
 import { logWellnessCheckin } from "@/lib/ai/tools/log-wellness";
@@ -342,67 +343,117 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const startedAt = Date.now();
   const reply = await orchestrateFrankieReply({
     profile: context.profile,
     message: messageForReply,
     recentMessages: chatExperience.messages
   });
+  const persistedLogIds = {
+    activityLogIds: [] as string[],
+    dietLogIds: [] as string[],
+    wellnessCheckinIds: [] as string[]
+  };
 
-  try {
-    await logActivityEntries({
-      supabase: context.supabase,
-      userId: context.user.id,
-      sourceMessageId: sourceMessage.id,
-      entries: reply.parsedActivities,
-      extractionSource: reply.metadata.extractionSource
-    });
-    await logDietEntries({
-      supabase: context.supabase,
-      userId: context.user.id,
-      sourceMessageId: sourceMessage.id,
-      entries: reply.parsedDietEntries,
-      extractionSource: reply.metadata.extractionSource
-    });
-    await logWellnessCheckin({
-      supabase: context.supabase,
-      userId: context.user.id,
-      sourceMessageId: sourceMessage.id,
-      entry: reply.parsedWellnessCheckin,
-      extractionSource: reply.metadata.extractionSource
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error:
+  if (reply.shouldPersistStructuredData) {
+    try {
+      if (reply.persistPlan.activities) {
+        persistedLogIds.activityLogIds = await logActivityEntries({
+          supabase: context.supabase,
+          userId: context.user.id,
+          sourceMessageId: sourceMessage.id,
+          entries: reply.parsedActivities,
+          extractionSource: reply.metadata.extractionSource
+        });
+      }
+      if (reply.persistPlan.dietEntries) {
+        persistedLogIds.dietLogIds = await logDietEntries({
+          supabase: context.supabase,
+          userId: context.user.id,
+          sourceMessageId: sourceMessage.id,
+          entries: reply.parsedDietEntries,
+          extractionSource: reply.metadata.extractionSource
+        });
+      }
+      if (reply.persistPlan.wellnessCheckin) {
+        persistedLogIds.wellnessCheckinIds = await logWellnessCheckin({
+          supabase: context.supabase,
+          userId: context.user.id,
+          sourceMessageId: sourceMessage.id,
+          entry: reply.parsedWellnessCheckin,
+          extractionSource: reply.metadata.extractionSource
+        });
+      }
+    } catch (error) {
+      await recordAiTraceRun({
+        supabase: context.supabase,
+        userId: context.user.id,
+        userEmail: context.user.email ?? null,
+        displayName: getDisplayName(context.user, context.profile),
+        profile: context.profile,
+        threadId: chatExperience.thread.id,
+        threadTitle: chatExperience.thread.title,
+        sourceMessageId: sourceMessage.id,
+        userMessage: messageForReply,
+        reply,
+        persistedLogIds,
+        runStatus: "log_write_failed",
+        errorStage: "structured_log_write",
+        errorMessage:
           error instanceof Error
             ? error.message
-            : "Frankie could not save the structured logs."
-      },
-      { status: 500 }
-    );
+            : "Frankie could not save the structured logs.",
+        latencyMs: Date.now() - startedAt
+      });
+
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Frankie could not save the structured logs."
+        },
+        { status: 500 }
+      );
+    }
   }
 
   const structuredPayload =
-    reply.parsedActivities.length > 0 ||
-    reply.parsedDietEntries.length > 0 ||
-    reply.parsedWellnessCheckin
+    reply.shouldPersistStructuredData &&
+    (reply.parsedActivities.length > 0 ||
+      reply.parsedDietEntries.length > 0 ||
+      reply.parsedWellnessCheckin)
       ? {
-          activitiesLogged: reply.parsedActivities.map((activity) => ({
+          activitiesLogged: reply.persistPlan.activities
+            ? reply.parsedActivities.map((activity) => ({
             activityType: activity.activityType,
+            activityCategory: activity.activityCategory,
+            sessionCount: activity.sessionCount,
             durationMinutes: activity.durationMinutes,
-            intensity: activity.intensity
-          })),
-          dietLogged: reply.parsedDietEntries.map((entry) => ({
+            intensity: activity.intensity,
+            timeReferenceText: activity.timeReferenceText,
+            loggedForDate: activity.loggedForDate,
+            timePrecision: activity.timePrecision,
+            confidence: activity.confidence,
+            missingFields: activity.missingFields,
+            ambiguityFlags: activity.ambiguityFlags
+          }))
+            : [],
+          dietLogged: reply.persistPlan.dietEntries
+            ? reply.parsedDietEntries.map((entry) => ({
             confidence: entry.confidence,
             description: entry.description,
-            mealType: entry.mealType
-          })),
+            mealType: entry.mealType,
+            timeReferenceText: entry.timeReferenceText,
+            loggedForDate: entry.loggedForDate
+          }))
+            : [],
           orchestration: reply.metadata,
-          wellnessLogged: reply.parsedWellnessCheckin
+          wellnessLogged: reply.persistPlan.wellnessCheckin && reply.parsedWellnessCheckin
             ? {
                 detectedSignals: reply.parsedWellnessCheckin.detectedSignals,
                 energyScore: reply.parsedWellnessCheckin.energyScore,
-                loggedFor: reply.parsedWellnessCheckin.loggedFor,
+                loggedForDate: reply.parsedWellnessCheckin.loggedForDate,
                 moodScore: reply.parsedWellnessCheckin.moodScore,
                 motivationScore: reply.parsedWellnessCheckin.motivationScore,
                 sorenessScore: reply.parsedWellnessCheckin.sorenessScore,
@@ -412,7 +463,7 @@ export async function POST(request: NextRequest) {
         }
       : {};
 
-  const { error: assistantMessageError } = await context.supabase
+  const { data: assistantMessage, error: assistantMessageError } = await context.supabase
     .from("conversation_messages")
     .insert({
       thread_id: chatExperience.thread.id,
@@ -421,11 +472,48 @@ export async function POST(request: NextRequest) {
       message_type: reply.assistantMessageType,
       content: reply.reply,
       structured_payload: structuredPayload
-    });
+    })
+    .select("id")
+    .single();
 
   if (assistantMessageError) {
+    await recordAiTraceRun({
+      supabase: context.supabase,
+      userId: context.user.id,
+      userEmail: context.user.email ?? null,
+      displayName: getDisplayName(context.user, context.profile),
+      profile: context.profile,
+      threadId: chatExperience.thread.id,
+      threadTitle: chatExperience.thread.title,
+      sourceMessageId: sourceMessage.id,
+      userMessage: messageForReply,
+      reply,
+      persistedLogIds,
+      runStatus: "assistant_message_failed",
+      errorStage: "assistant_message_insert",
+      errorMessage: assistantMessageError.message,
+      latencyMs: Date.now() - startedAt
+    });
+
     return NextResponse.json({ error: assistantMessageError.message }, { status: 500 });
   }
+
+  await recordAiTraceRun({
+    supabase: context.supabase,
+    userId: context.user.id,
+    userEmail: context.user.email ?? null,
+    displayName: getDisplayName(context.user, context.profile),
+    profile: context.profile,
+    threadId: chatExperience.thread.id,
+    threadTitle: chatExperience.thread.title,
+    sourceMessageId: sourceMessage.id,
+    assistantMessageId: assistantMessage.id,
+    userMessage: messageForReply,
+    reply,
+    persistedLogIds,
+    runStatus: reply.metadata.needsClarification ? "clarification" : "completed",
+    latencyMs: Date.now() - startedAt
+  });
 
   const refreshedExperience = await loadChatExperience(context);
 

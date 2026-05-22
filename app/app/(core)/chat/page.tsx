@@ -1,5 +1,4 @@
-import { sendChatMessage } from "@/app/app/(core)/chat/actions";
-import { ChatTranscript } from "@/components/chat/chat-transcript";
+import { WebChatExperience } from "@/components/chat/web-chat-experience";
 import { getChatExperience } from "@/lib/chat";
 import { getCurrentAppContext, getDisplayName } from "@/lib/profile";
 
@@ -19,7 +18,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   const displayName = getDisplayName(context.user, context.profile);
   const firstName = displayName.split(" ")[0] ?? "there";
   const chatExperience = await getChatExperience(context, displayName);
-  const primaryGoal = context.profile?.primary_goal;
+  const primaryGoal = context.profile?.primary_goal ?? null;
   const preferredActivities = context.profile?.preferred_activities ?? [];
   const preferredActivityText =
     preferredActivities.length > 0
@@ -92,40 +91,15 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
           </div>
         </div>
 
-        <ChatTranscript
+        <WebChatExperience
           assistantCardClass={assistantCardClass}
           followupMessage={followupMessage}
+          initialMessages={chatExperience.messages}
           introMessage={introMessage}
-          messages={chatExperience.messages}
+          primaryGoal={primaryGoal}
+          schemaReady={chatExperience.schemaReady}
           userCardClass={userCardClass}
         />
-
-        <form action={sendChatMessage} className="border-t border-[var(--border)] px-5 py-4 sm:px-6">
-          <label className="block">
-            <span className="mb-3 block text-sm font-semibold tracking-[-0.01em]">
-              Tell Frankie what you did, ate, or how you are feeling.
-            </span>
-            <textarea
-              className="ff-textarea min-h-32"
-              name="message"
-              placeholder={
-                primaryGoal
-                  ? `I want to stay on track with ${primaryGoal.toLowerCase()}, and today looked like...`
-                  : "I had eggs and fruit for breakfast, walked for an hour, and motivation feels a little low."
-              }
-              required
-            />
-          </label>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="max-w-xl text-sm leading-6 text-[var(--muted)]">
-              Say it however you would normally say it. Frankie is meant to handle the messy
-              version now.
-            </p>
-            <button className="ff-button-primary px-5 py-3 text-sm" type="submit">
-              Send
-            </button>
-          </div>
-        </form>
       </section>
     </div>
   );

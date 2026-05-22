@@ -7,11 +7,15 @@ import type { ReactNode } from "react";
 type NavLinkProps = {
   href: string;
   children: ReactNode;
+  match?: "exact" | "prefix";
 };
 
-export function NavLink({ href, children }: NavLinkProps) {
+export function NavLink({ href, children, match = "prefix" }: NavLinkProps) {
   const pathname = usePathname();
-  const active = pathname === href || pathname.startsWith(`${href}/`);
+  const active =
+    match === "exact"
+      ? pathname === href
+      : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <Link

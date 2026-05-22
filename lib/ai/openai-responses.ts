@@ -51,6 +51,12 @@ function getNestedOutputText(value: unknown) {
   return null;
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 async function createOpenAiResponse(input: {
   model: string;
   messages: Array<{ role: "system" | "user"; content: string }>;
@@ -62,38 +68,48 @@ async function createOpenAiResponse(input: {
     throw new Error("OPENAI_API_KEY is not configured.");
   }
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: input.model,
-      input: input.messages,
-      ...(input.structuredFormat
-        ? {
-            text: {
-              format: {
-                type: "json_schema",
-                name: input.structuredFormat.name,
-                strict: true,
-                schema: input.structuredFormat.schema
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: input.model,
+        input: input.messages,
+        ...(input.structuredFormat
+          ? {
+              text: {
+                format: {
+                  type: "json_schema",
+                  name: input.structuredFormat.name,
+                  strict: true,
+                  schema: input.structuredFormat.schema
+                }
               }
             }
-          }
-        : {})
-    })
-  });
+          : {})
+      })
+    });
 
-  if (!response.ok) {
+    if (response.ok) {
+      return (await response.json()) as unknown;
+    }
+
     const errorText = await response.text();
-    throw new Error(
-      `OpenAI Responses API returned ${response.status}: ${errorText || "Unknown error"}`
-    );
+    const shouldRetry = response.status === 429 || response.status >= 500;
+
+    if (!shouldRetry || attempt === 3) {
+      throw new Error(
+        `OpenAI Responses API returned ${response.status}: ${errorText || "Unknown error"}`
+      );
+    }
+
+    await wait(400 * attempt);
   }
 
-  return (await response.json()) as unknown;
+  throw new Error("OpenAI Responses API retry loop exited unexpectedly.");
 }
 
 export function hasOpenAiApiKey() {

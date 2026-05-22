@@ -203,6 +203,350 @@ export type Database = {
         };
         Relationships: [];
       };
+      ai_trace_runs: {
+        Row: {
+          id: string;
+          user_id: string;
+          thread_id: string;
+          source_message_id: string | null;
+          assistant_message_id: string | null;
+          user_email: string | null;
+          user_display_name: string | null;
+          thread_title: string | null;
+          orchestration_mode: string;
+          extraction_source: string;
+          used_model: boolean;
+          model_name: string | null;
+          prompt_version: string | null;
+          intent: string | null;
+          raw_user_message: string;
+          profile_snapshot: Json;
+          recent_context_snapshot: Json;
+          extracted_payload: Json;
+          tool_calls: Json;
+          tool_results: Json;
+          persisted_log_ids: Json;
+          needs_clarification: boolean;
+          fallback_reason: string | null;
+          final_reply: string;
+          run_status: string;
+          error_stage: string | null;
+          error_message: string | null;
+          latency_ms: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          thread_id: string;
+          source_message_id?: string | null;
+          assistant_message_id?: string | null;
+          user_email?: string | null;
+          user_display_name?: string | null;
+          thread_title?: string | null;
+          orchestration_mode: string;
+          extraction_source: string;
+          used_model?: boolean;
+          model_name?: string | null;
+          prompt_version?: string | null;
+          intent?: string | null;
+          raw_user_message: string;
+          profile_snapshot?: Json;
+          recent_context_snapshot?: Json;
+          extracted_payload?: Json;
+          tool_calls?: Json;
+          tool_results?: Json;
+          persisted_log_ids?: Json;
+          needs_clarification?: boolean;
+          fallback_reason?: string | null;
+          final_reply: string;
+          run_status?: string;
+          error_stage?: string | null;
+          error_message?: string | null;
+          latency_ms?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          thread_id?: string;
+          source_message_id?: string | null;
+          assistant_message_id?: string | null;
+          user_email?: string | null;
+          user_display_name?: string | null;
+          thread_title?: string | null;
+          orchestration_mode?: string;
+          extraction_source?: string;
+          used_model?: boolean;
+          model_name?: string | null;
+          prompt_version?: string | null;
+          intent?: string | null;
+          raw_user_message?: string;
+          profile_snapshot?: Json;
+          recent_context_snapshot?: Json;
+          extracted_payload?: Json;
+          tool_calls?: Json;
+          tool_results?: Json;
+          persisted_log_ids?: Json;
+          needs_clarification?: boolean;
+          fallback_reason?: string | null;
+          final_reply?: string;
+          run_status?: string;
+          error_stage?: string | null;
+          error_message?: string | null;
+          latency_ms?: number | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      eval_runs: {
+        Row: {
+          id: string;
+          suite_id: string;
+          scenario_id: string | null;
+          run_scope: "scenario" | "suite";
+          status: "running" | "completed" | "failed";
+          model_name: string | null;
+          prompt_version: string | null;
+          error_message: string | null;
+          started_at: string;
+          completed_at: string | null;
+          created_by: string | null;
+          metadata_json: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          suite_id?: string;
+          scenario_id?: string | null;
+          run_scope?: "scenario" | "suite";
+          status?: "running" | "completed" | "failed";
+          model_name?: string | null;
+          prompt_version?: string | null;
+          error_message?: string | null;
+          started_at?: string;
+          completed_at?: string | null;
+          created_by?: string | null;
+          metadata_json?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          suite_id?: string;
+          scenario_id?: string | null;
+          run_scope?: "scenario" | "suite";
+          status?: "running" | "completed" | "failed";
+          model_name?: string | null;
+          prompt_version?: string | null;
+          error_message?: string | null;
+          started_at?: string;
+          completed_at?: string | null;
+          created_by?: string | null;
+          metadata_json?: Json;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "eval_runs_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      eval_run_items: {
+        Row: {
+          id: string;
+          eval_run_id: string;
+          scenario_id: string;
+          user_id: string;
+          day_index: number | null;
+          pillar: "activity" | "diet" | "wellness" | "summary";
+          input_message: string;
+          expected_json: Json;
+          trace_id: string | null;
+          source_message_id: string | null;
+          assistant_message_id: string | null;
+          assistant_reply: string | null;
+          actual_json: Json;
+          run_status: string;
+          error_message: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          eval_run_id: string;
+          scenario_id: string;
+          user_id: string;
+          day_index?: number | null;
+          pillar: "activity" | "diet" | "wellness" | "summary";
+          input_message: string;
+          expected_json?: Json;
+          trace_id?: string | null;
+          source_message_id?: string | null;
+          assistant_message_id?: string | null;
+          assistant_reply?: string | null;
+          actual_json?: Json;
+          run_status?: string;
+          error_message?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          eval_run_id?: string;
+          scenario_id?: string;
+          user_id?: string;
+          day_index?: number | null;
+          pillar?: "activity" | "diet" | "wellness" | "summary";
+          input_message?: string;
+          expected_json?: Json;
+          trace_id?: string | null;
+          source_message_id?: string | null;
+          assistant_message_id?: string | null;
+          assistant_reply?: string | null;
+          actual_json?: Json;
+          run_status?: string;
+          error_message?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "eval_run_items_eval_run_id_fkey";
+            columns: ["eval_run_id"];
+            isOneToOne: false;
+            referencedRelation: "eval_runs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "eval_run_items_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "eval_run_items_trace_id_fkey";
+            columns: ["trace_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_trace_runs";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      eval_reviews: {
+        Row: {
+          id: string;
+          eval_run_item_id: string;
+          review_check: string;
+          status: "good" | "needs_work" | "not_applicable";
+          issue_tags: string[];
+          field_note: string | null;
+          expected_behavior: string | null;
+          actual_behavior: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          eval_run_item_id: string;
+          review_check: string;
+          status: "good" | "needs_work" | "not_applicable";
+          issue_tags?: string[];
+          field_note?: string | null;
+          expected_behavior?: string | null;
+          actual_behavior?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          eval_run_item_id?: string;
+          review_check?: string;
+          status?: "good" | "needs_work" | "not_applicable";
+          issue_tags?: string[];
+          field_note?: string | null;
+          expected_behavior?: string | null;
+          actual_behavior?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "eval_reviews_eval_run_item_id_fkey";
+            columns: ["eval_run_item_id"];
+            isOneToOne: false;
+            referencedRelation: "eval_run_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "eval_reviews_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      coach_summaries: {
+        Row: {
+          id: string;
+          user_id: string;
+          summary_type: "daily" | "weekly";
+          period_start: string;
+          period_end: string;
+          summary_text: string;
+          structured_metrics_json: Json;
+          model_name: string | null;
+          prompt_version: string | null;
+          source_json: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          summary_type: "daily" | "weekly";
+          period_start: string;
+          period_end: string;
+          summary_text: string;
+          structured_metrics_json?: Json;
+          model_name?: string | null;
+          prompt_version?: string | null;
+          source_json?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          summary_type?: "daily" | "weekly";
+          period_start?: string;
+          period_end?: string;
+          summary_text?: string;
+          structured_metrics_json?: Json;
+          model_name?: string | null;
+          prompt_version?: string | null;
+          source_json?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "coach_summaries_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       activity_logs: {
         Row: {
           id: string;

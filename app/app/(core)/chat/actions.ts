@@ -68,34 +68,42 @@ export async function sendChatMessage(formData: FormData) {
     recentMessages: chatExperience.messages
   });
 
-  try {
-    await logActivityEntries({
-      supabase,
-      userId: user.id,
-      sourceMessageId: userMessage.id,
-      entries: reply.parsedActivities,
-      extractionSource: reply.metadata.extractionSource
-    });
-    await logDietEntries({
-      supabase,
-      userId: user.id,
-      sourceMessageId: userMessage.id,
-      entries: reply.parsedDietEntries,
-      extractionSource: reply.metadata.extractionSource
-    });
-    await logWellnessCheckin({
-      supabase,
-      userId: user.id,
-      sourceMessageId: userMessage.id,
-      entry: reply.parsedWellnessCheckin,
-      extractionSource: reply.metadata.extractionSource
-    });
-  } catch (error) {
-    redirect(
-      `/app/chat?error=${encodeURIComponent(
-        error instanceof Error ? error.message : "Frankie could not save the structured logs."
-      )}`
-    );
+  if (reply.shouldPersistStructuredData) {
+    try {
+      if (reply.persistPlan.activities) {
+        await logActivityEntries({
+          supabase,
+          userId: user.id,
+          sourceMessageId: userMessage.id,
+          entries: reply.parsedActivities,
+          extractionSource: reply.metadata.extractionSource
+        });
+      }
+      if (reply.persistPlan.dietEntries) {
+        await logDietEntries({
+          supabase,
+          userId: user.id,
+          sourceMessageId: userMessage.id,
+          entries: reply.parsedDietEntries,
+          extractionSource: reply.metadata.extractionSource
+        });
+      }
+      if (reply.persistPlan.wellnessCheckin) {
+        await logWellnessCheckin({
+          supabase,
+          userId: user.id,
+          sourceMessageId: userMessage.id,
+          entry: reply.parsedWellnessCheckin,
+          extractionSource: reply.metadata.extractionSource
+        });
+      }
+    } catch (error) {
+      redirect(
+        `/app/chat?error=${encodeURIComponent(
+          error instanceof Error ? error.message : "Frankie could not save the structured logs."
+        )}`
+      );
+    }
   }
 
   const { error: assistantMessageError } = await supabase
@@ -107,21 +115,32 @@ export async function sendChatMessage(formData: FormData) {
       message_type: reply.assistantMessageType,
       content: reply.reply,
       structured_payload:
-        reply.parsedActivities.length > 0 ||
+        reply.shouldPersistStructuredData &&
+          (reply.parsedActivities.length > 0 ||
           reply.parsedDietEntries.length > 0 ||
-          reply.parsedWellnessCheckin
+          reply.parsedWellnessCheckin)
           ? {
-            activitiesLogged: reply.parsedActivities.map((activity) => ({
-              activityType: activity.activityType,
-              durationMinutes: activity.durationMinutes,
-              intensity: activity.intensity
-            })),
-            dietLogged: reply.parsedDietEntries.map((entry) => ({
+            activitiesLogged: reply.persistPlan.activities ? reply.parsedActivities.map((activity) => ({
+            activityType: activity.activityType,
+            activityCategory: activity.activityCategory,
+            sessionCount: activity.sessionCount,
+            durationMinutes: activity.durationMinutes,
+            intensity: activity.intensity,
+            timeReferenceText: activity.timeReferenceText,
+            loggedForDate: activity.loggedForDate,
+            timePrecision: activity.timePrecision,
+            confidence: activity.confidence,
+            missingFields: activity.missingFields,
+              ambiguityFlags: activity.ambiguityFlags
+            })) : [],
+            dietLogged: reply.persistPlan.dietEntries ? reply.parsedDietEntries.map((entry) => ({
               description: entry.description,
               mealType: entry.mealType,
-              confidence: entry.confidence
-            })),
-            wellnessLogged: reply.parsedWellnessCheckin
+              confidence: entry.confidence,
+              timeReferenceText: entry.timeReferenceText,
+              loggedForDate: entry.loggedForDate
+            })) : [],
+            wellnessLogged: reply.persistPlan.wellnessCheckin && reply.parsedWellnessCheckin
               ? {
                   energyScore: reply.parsedWellnessCheckin.energyScore,
                   sorenessScore: reply.parsedWellnessCheckin.sorenessScore,
@@ -129,7 +148,7 @@ export async function sendChatMessage(formData: FormData) {
                   stressScore: reply.parsedWellnessCheckin.stressScore,
                   motivationScore: reply.parsedWellnessCheckin.motivationScore,
                   detectedSignals: reply.parsedWellnessCheckin.detectedSignals,
-                  loggedFor: reply.parsedWellnessCheckin.loggedFor
+                  loggedForDate: reply.parsedWellnessCheckin.loggedForDate
                 }
               : null
             ,

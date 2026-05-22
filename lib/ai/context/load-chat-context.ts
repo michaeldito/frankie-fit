@@ -8,7 +8,22 @@ function trimContent(value: string, maxLength: number) {
     return value;
   }
 
-  return `${value.slice(0, maxLength - 1)}…`;
+  return `${value.slice(0, maxLength - 1)}...`;
+}
+
+function dedupeAdjacentMessages(messages: ChatMessage[]) {
+  return messages.filter((message, index) => {
+    const previousMessage = messages[index - 1];
+
+    if (!previousMessage) {
+      return true;
+    }
+
+    return !(
+      previousMessage.role === message.role &&
+      previousMessage.content.trim() === message.content.trim()
+    );
+  });
 }
 
 export function buildChatContext(input: {
@@ -21,7 +36,7 @@ export function buildChatContext(input: {
       input.profile?.coaching_style ?? "Balanced mix"
     }.`;
 
-  const recentConversation = input.recentMessages
+  const recentConversation = dedupeAdjacentMessages(input.recentMessages)
     .slice(-6)
     .map((message) => `${message.role}: ${trimContent(message.content, 180)}`)
     .join("\n");
