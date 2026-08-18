@@ -57,9 +57,26 @@ export async function getAdminDebugData(input: {
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: reviewableProfiles, error: reviewableProfilesError } = await supabase
+    .from("profiles")
+    .select("id")
+    .in("account_type", ["internal_test", "synthetic_demo"]);
+
+  if (reviewableProfilesError) {
+    return buildEmptyDebugData(reviewableProfilesError.message);
+  }
+
+  const reviewableUserIds = (reviewableProfiles ?? []).map((profile) => profile.id);
+
+  if (reviewableUserIds.length === 0) {
+    return { ready: true, error: null, traces: [], selectedTrace: null, threadTimeline: [] };
+  }
+
   const { data, error } = await supabase
     .from("ai_trace_runs")
     .select("*")
+    .in("user_id", reviewableUserIds)
     .order("created_at", { ascending: false })
     .limit(120);
 

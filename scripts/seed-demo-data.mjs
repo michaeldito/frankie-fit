@@ -13,7 +13,6 @@ import {
 import { getLoggedForDate, getTimestampForDay } from "./seed-data/weekly-rhythm.mjs"
 
 const SEED_PACK_KEY = "demo-v1"
-const DEFAULT_DEMO_PASSWORD = "FrankieFitDemo!2026"
 const DRY_RUN = process.argv.includes("--dry-run")
 const VERBOSE = process.argv.includes("--verbose")
 
@@ -76,7 +75,7 @@ function getSupabaseCreateClient() {
 }
 
 function getDemoPassword() {
-  return process.env.FF_DEMO_ACCOUNT_PASSWORD || DEFAULT_DEMO_PASSWORD
+  return requireEnv("FF_DEMO_ACCOUNT_PASSWORD")
 }
 
 function getSeedMetadata(account, dayIndex, domain) {

@@ -376,37 +376,112 @@ function ToggleRow({
   );
 }
 
+type OnboardingFormState = {
+  fullName: string;
+  ageRange: string;
+  primaryGoal: string;
+  secondaryGoals: string[];
+  activityLevel: string;
+  fitnessExperience: string;
+  currentActivities: string;
+  preferredActivities: string[];
+  availableEquipment: string[];
+  trainingEnvironment: string;
+  targetTrainingDays: string;
+  typicalSessionLength: string;
+  preferredScheduleNotes: string;
+  dietPreferences: string[];
+  nutritionGoal: string;
+  dietRestrictions: string;
+  energyBaseline: string;
+  stressBaseline: string;
+  wellnessSupportFocus: string[];
+  wellnessCheckinOptIn: boolean;
+  injuriesLimitations: string;
+  healthConsiderations: string;
+  avoidances: string;
+  coachingStyle: string;
+  preferredCheckinStyle: string;
+  safetyAcknowledged: boolean;
+};
+
+const emptyOnboardingFormState: OnboardingFormState = {
+  fullName: '',
+  ageRange: '',
+  primaryGoal: '',
+  secondaryGoals: [],
+  activityLevel: '',
+  fitnessExperience: '',
+  currentActivities: '',
+  preferredActivities: [],
+  availableEquipment: [],
+  trainingEnvironment: '',
+  targetTrainingDays: '',
+  typicalSessionLength: '',
+  preferredScheduleNotes: '',
+  dietPreferences: [],
+  nutritionGoal: '',
+  dietRestrictions: '',
+  energyBaseline: '',
+  stressBaseline: '',
+  wellnessSupportFocus: [],
+  wellnessCheckinOptIn: true,
+  injuriesLimitations: '',
+  healthConsiderations: '',
+  avoidances: '',
+  coachingStyle: '',
+  preferredCheckinStyle: '',
+  safetyAcknowledged: false,
+};
+
+function buildFormStateFromProfile(
+  profile: ProfileOnboardingRow | null,
+  session: { user: { email?: string | null; user_metadata: unknown } }
+): OnboardingFormState {
+  return {
+    fullName:
+      asString(profile?.full_name) ||
+      getMetadataName(session.user.user_metadata) ||
+      session.user.email?.split('@')[0] ||
+      '',
+    ageRange: asString(profile?.age_range),
+    primaryGoal: asString(profile?.primary_goal),
+    secondaryGoals: asStringArray(profile?.secondary_goals),
+    activityLevel: asString(profile?.activity_level),
+    fitnessExperience: asString(profile?.fitness_experience),
+    currentActivities: formatTextList(profile?.current_activities),
+    preferredActivities: asStringArray(profile?.preferred_activities),
+    availableEquipment: asStringArray(profile?.available_equipment),
+    trainingEnvironment: asString(profile?.training_environment),
+    targetTrainingDays: profile?.target_training_days ? String(profile.target_training_days) : '',
+    typicalSessionLength: profile?.typical_session_length ? String(profile.typical_session_length) : '',
+    preferredScheduleNotes: getScheduleNotes(profile?.preferred_schedule),
+    dietPreferences: asStringArray(profile?.diet_preferences),
+    nutritionGoal: asString(profile?.nutrition_goal),
+    dietRestrictions: formatTextList(profile?.diet_restrictions),
+    energyBaseline: asString(profile?.energy_baseline),
+    stressBaseline: asString(profile?.stress_baseline),
+    wellnessSupportFocus: asStringArray(profile?.wellness_support_focus),
+    wellnessCheckinOptIn: profile?.wellness_checkin_opt_in !== false,
+    injuriesLimitations: formatTextList(profile?.injuries_limitations),
+    healthConsiderations: formatTextList(profile?.health_considerations),
+    avoidances: formatTextList(profile?.avoidances),
+    coachingStyle: asString(profile?.coaching_style),
+    preferredCheckinStyle: asString(profile?.preferred_checkin_style),
+    safetyAcknowledged: Boolean(profile?.safety_acknowledged),
+  };
+}
+
 export default function OnboardingScreen() {
   const { refreshProfile, session } = useAuth();
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [ageRange, setAgeRange] = useState('');
-  const [primaryGoal, setPrimaryGoal] = useState('');
-  const [secondaryGoals, setSecondaryGoals] = useState<string[]>([]);
-  const [activityLevel, setActivityLevel] = useState('');
-  const [fitnessExperience, setFitnessExperience] = useState('');
-  const [currentActivities, setCurrentActivities] = useState('');
-  const [preferredActivities, setPreferredActivities] = useState<string[]>([]);
-  const [availableEquipment, setAvailableEquipment] = useState<string[]>([]);
-  const [trainingEnvironment, setTrainingEnvironment] = useState('');
-  const [targetTrainingDays, setTargetTrainingDays] = useState('');
-  const [typicalSessionLength, setTypicalSessionLength] = useState('');
-  const [preferredScheduleNotes, setPreferredScheduleNotes] = useState('');
-  const [dietPreferences, setDietPreferences] = useState<string[]>([]);
-  const [nutritionGoal, setNutritionGoal] = useState('');
-  const [dietRestrictions, setDietRestrictions] = useState('');
-  const [energyBaseline, setEnergyBaseline] = useState('');
-  const [stressBaseline, setStressBaseline] = useState('');
-  const [wellnessSupportFocus, setWellnessSupportFocus] = useState<string[]>([]);
-  const [wellnessCheckinOptIn, setWellnessCheckinOptIn] = useState(true);
-  const [injuriesLimitations, setInjuriesLimitations] = useState('');
-  const [healthConsiderations, setHealthConsiderations] = useState('');
-  const [avoidances, setAvoidances] = useState('');
-  const [coachingStyle, setCoachingStyle] = useState('');
-  const [preferredCheckinStyle, setPreferredCheckinStyle] = useState('');
-  const [safetyAcknowledged, setSafetyAcknowledged] = useState(false);
   const [isProfileEdit, setIsProfileEdit] = useState(false);
+  const [form, setForm] = useState<OnboardingFormState>(emptyOnboardingFormState);
+
+  function updateField<K extends keyof OnboardingFormState>(key: K, value: OnboardingFormState[K]) {
+    setForm((previous) => ({ ...previous, [key]: value }));
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -464,37 +539,7 @@ export default function OnboardingScreen() {
 
       const profile = data as ProfileOnboardingRow | null;
 
-      setFullName(
-        asString(profile?.full_name) ||
-          getMetadataName(session.user.user_metadata) ||
-          session.user.email?.split('@')[0] ||
-          ''
-      );
-      setAgeRange(asString(profile?.age_range));
-      setPrimaryGoal(asString(profile?.primary_goal));
-      setSecondaryGoals(asStringArray(profile?.secondary_goals));
-      setActivityLevel(asString(profile?.activity_level));
-      setFitnessExperience(asString(profile?.fitness_experience));
-      setCurrentActivities(formatTextList(profile?.current_activities));
-      setPreferredActivities(asStringArray(profile?.preferred_activities));
-      setAvailableEquipment(asStringArray(profile?.available_equipment));
-      setTrainingEnvironment(asString(profile?.training_environment));
-      setTargetTrainingDays(profile?.target_training_days ? String(profile.target_training_days) : '');
-      setTypicalSessionLength(profile?.typical_session_length ? String(profile.typical_session_length) : '');
-      setPreferredScheduleNotes(getScheduleNotes(profile?.preferred_schedule));
-      setDietPreferences(asStringArray(profile?.diet_preferences));
-      setDietRestrictions(formatTextList(profile?.diet_restrictions));
-      setNutritionGoal(asString(profile?.nutrition_goal));
-      setEnergyBaseline(asString(profile?.energy_baseline));
-      setStressBaseline(asString(profile?.stress_baseline));
-      setWellnessSupportFocus(asStringArray(profile?.wellness_support_focus));
-      setWellnessCheckinOptIn(profile?.wellness_checkin_opt_in !== false);
-      setInjuriesLimitations(formatTextList(profile?.injuries_limitations));
-      setHealthConsiderations(formatTextList(profile?.health_considerations));
-      setAvoidances(formatTextList(profile?.avoidances));
-      setCoachingStyle(asString(profile?.coaching_style));
-      setPreferredCheckinStyle(asString(profile?.preferred_checkin_style));
-      setSafetyAcknowledged(Boolean(profile?.safety_acknowledged));
+      setForm(buildFormStateFromProfile(profile, session));
       setIsProfileEdit(Boolean(profile?.onboarding_completed));
       setIsLoadingProfile(false);
     }
@@ -509,22 +554,22 @@ export default function OnboardingScreen() {
   const isReady = useMemo(
     () =>
       Boolean(
-        primaryGoal &&
-          activityLevel &&
-          fitnessExperience &&
-          trainingEnvironment &&
-          coachingStyle &&
-          preferredCheckinStyle &&
-          safetyAcknowledged
+        form.primaryGoal &&
+          form.activityLevel &&
+          form.fitnessExperience &&
+          form.trainingEnvironment &&
+          form.coachingStyle &&
+          form.preferredCheckinStyle &&
+          form.safetyAcknowledged
       ),
     [
-      activityLevel,
-      coachingStyle,
-      fitnessExperience,
-      preferredCheckinStyle,
-      primaryGoal,
-      safetyAcknowledged,
-      trainingEnvironment,
+      form.activityLevel,
+      form.coachingStyle,
+      form.fitnessExperience,
+      form.preferredCheckinStyle,
+      form.primaryGoal,
+      form.safetyAcknowledged,
+      form.trainingEnvironment,
     ]
   );
 
@@ -541,49 +586,51 @@ export default function OnboardingScreen() {
       return;
     }
 
-    const parsedTargetTrainingDays = targetTrainingDays ? Number.parseInt(targetTrainingDays, 10) : null;
-    const parsedTypicalSessionLength = typicalSessionLength
-      ? Number.parseInt(typicalSessionLength, 10)
+    const parsedTargetTrainingDays = form.targetTrainingDays
+      ? Number.parseInt(form.targetTrainingDays, 10)
+      : null;
+    const parsedTypicalSessionLength = form.typicalSessionLength
+      ? Number.parseInt(form.typicalSessionLength, 10)
       : null;
 
     setIsSubmitting(true);
     const { error } = await supabase.from('profiles').upsert(
       {
         id: session.user.id,
-        full_name: fullName || null,
-        age_range: ageRange || null,
-        primary_goal: primaryGoal,
-        secondary_goals: secondaryGoals,
-        activity_level: activityLevel,
-        fitness_experience: fitnessExperience,
-        current_activities: parseTextList(currentActivities),
-        preferred_activities: preferredActivities,
-        available_equipment: availableEquipment,
-        training_environment: trainingEnvironment,
+        full_name: form.fullName || null,
+        age_range: form.ageRange || null,
+        primary_goal: form.primaryGoal,
+        secondary_goals: form.secondaryGoals,
+        activity_level: form.activityLevel,
+        fitness_experience: form.fitnessExperience,
+        current_activities: parseTextList(form.currentActivities),
+        preferred_activities: form.preferredActivities,
+        available_equipment: form.availableEquipment,
+        training_environment: form.trainingEnvironment,
         target_training_days: parsedTargetTrainingDays,
         typical_session_length: parsedTypicalSessionLength,
-        preferred_schedule: preferredScheduleNotes ? { notes: preferredScheduleNotes } : {},
-        diet_preferences: dietPreferences,
-        diet_restrictions: parseTextList(dietRestrictions),
-        nutrition_goal: nutritionGoal || null,
-        energy_baseline: energyBaseline || null,
-        stress_baseline: stressBaseline || null,
-        wellness_support_focus: wellnessSupportFocus,
-        wellness_checkin_opt_in: wellnessCheckinOptIn,
-        injuries_limitations: parseTextList(injuriesLimitations),
-        health_considerations: parseTextList(healthConsiderations),
-        avoidances: parseTextList(avoidances),
-        coaching_style: coachingStyle,
-        preferred_checkin_style: preferredCheckinStyle,
+        preferred_schedule: form.preferredScheduleNotes ? { notes: form.preferredScheduleNotes } : {},
+        diet_preferences: form.dietPreferences,
+        diet_restrictions: parseTextList(form.dietRestrictions),
+        nutrition_goal: form.nutritionGoal || null,
+        energy_baseline: form.energyBaseline || null,
+        stress_baseline: form.stressBaseline || null,
+        wellness_support_focus: form.wellnessSupportFocus,
+        wellness_checkin_opt_in: form.wellnessCheckinOptIn,
+        injuries_limitations: parseTextList(form.injuriesLimitations),
+        health_considerations: parseTextList(form.healthConsiderations),
+        avoidances: parseTextList(form.avoidances),
+        coaching_style: form.coachingStyle,
+        preferred_checkin_style: form.preferredCheckinStyle,
         safety_acknowledged: true,
         onboarding_completed: true,
         onboarding_summary: buildCoachingSummary({
-          primaryGoal,
-          activityLevel,
-          preferredActivities,
-          coachingStyle,
+          primaryGoal: form.primaryGoal,
+          activityLevel: form.activityLevel,
+          preferredActivities: form.preferredActivities,
+          coachingStyle: form.coachingStyle,
           targetTrainingDays: parsedTargetTrainingDays,
-          nutritionGoal,
+          nutritionGoal: form.nutritionGoal,
         }),
       },
       {
@@ -628,18 +675,23 @@ export default function OnboardingScreen() {
             eyebrow="Goals"
             subtitle="Enough context to make Frankie useful on day one."
             title="What are you here to improve?">
-            <SingleSelect label="Age range" onChange={setAgeRange} options={ageRangeOptions} value={ageRange} />
+            <SingleSelect
+              label="Age range"
+              onChange={(value) => updateField('ageRange', value)}
+              options={ageRangeOptions}
+              value={form.ageRange}
+            />
             <Field
               label="Primary goal *"
-              onChangeText={setPrimaryGoal}
+              onChangeText={(value) => updateField('primaryGoal', value)}
               placeholder="Consistency, endurance, body composition, energy..."
-              value={primaryGoal}
+              value={form.primaryGoal}
             />
             <MultiSelect
               label="Secondary goals"
-              onChange={setSecondaryGoals}
+              onChange={(value) => updateField('secondaryGoals', value)}
               options={secondaryGoalOptions}
-              values={secondaryGoals}
+              values={form.secondaryGoals}
             />
           </Section>
 
@@ -649,24 +701,24 @@ export default function OnboardingScreen() {
             title="Where are you starting from?">
             <SingleSelect
               label="Activity level"
-              onChange={setActivityLevel}
+              onChange={(value) => updateField('activityLevel', value)}
               options={activityLevelOptions}
               required
-              value={activityLevel}
+              value={form.activityLevel}
             />
             <SingleSelect
               label="Fitness experience"
-              onChange={setFitnessExperience}
+              onChange={(value) => updateField('fitnessExperience', value)}
               options={fitnessExperienceOptions}
               required
-              value={fitnessExperience}
+              value={form.fitnessExperience}
             />
             <Field
               label="Current activities"
               multiline
-              onChangeText={setCurrentActivities}
+              onChangeText={(value) => updateField('currentActivities', value)}
               placeholder="Walking, lifting twice a week, the occasional run..."
-              value={currentActivities}
+              value={form.currentActivities}
             />
           </Section>
 
@@ -676,22 +728,22 @@ export default function OnboardingScreen() {
             title="What fits your preferences and setup?">
             <MultiSelect
               label="Preferred activities"
-              onChange={setPreferredActivities}
+              onChange={(value) => updateField('preferredActivities', value)}
               options={movementOptions}
-              values={preferredActivities}
+              values={form.preferredActivities}
             />
             <MultiSelect
               label="Available equipment"
-              onChange={setAvailableEquipment}
+              onChange={(value) => updateField('availableEquipment', value)}
               options={equipmentOptions}
-              values={availableEquipment}
+              values={form.availableEquipment}
             />
             <SingleSelect
               label="Training environment"
-              onChange={setTrainingEnvironment}
+              onChange={(value) => updateField('trainingEnvironment', value)}
               options={trainingEnvironmentOptions}
               required
-              value={trainingEnvironment}
+              value={form.trainingEnvironment}
             />
           </Section>
 
@@ -701,22 +753,22 @@ export default function OnboardingScreen() {
             title="What can your routine support?">
             <SingleSelect
               label="Target training days"
-              onChange={setTargetTrainingDays}
+              onChange={(value) => updateField('targetTrainingDays', value)}
               options={targetTrainingDaysOptions}
-              value={targetTrainingDays}
+              value={form.targetTrainingDays}
             />
             <SingleSelect
               label="Typical session length"
-              onChange={setTypicalSessionLength}
+              onChange={(value) => updateField('typicalSessionLength', value)}
               options={typicalSessionLengthOptions}
-              value={typicalSessionLength}
+              value={form.typicalSessionLength}
             />
             <Field
               label="Schedule notes"
               multiline
-              onChangeText={setPreferredScheduleNotes}
+              onChangeText={(value) => updateField('preferredScheduleNotes', value)}
               placeholder="Weekdays are easier, mornings are rough, weekends are flexible..."
-              value={preferredScheduleNotes}
+              value={form.preferredScheduleNotes}
             />
           </Section>
 
@@ -726,45 +778,45 @@ export default function OnboardingScreen() {
             title="How should Frankie think about food, stress, and recovery?">
             <MultiSelect
               label="Diet preferences"
-              onChange={setDietPreferences}
+              onChange={(value) => updateField('dietPreferences', value)}
               options={dietPreferenceOptions}
-              values={dietPreferences}
+              values={form.dietPreferences}
             />
             <Field
               label="Nutrition goal"
-              onChangeText={setNutritionGoal}
+              onChangeText={(value) => updateField('nutritionGoal', value)}
               placeholder="Eat more consistently, simplify meals, recover better..."
-              value={nutritionGoal}
+              value={form.nutritionGoal}
             />
             <Field
               label="Diet restrictions or allergies"
               multiline
-              onChangeText={setDietRestrictions}
+              onChangeText={(value) => updateField('dietRestrictions', value)}
               placeholder="Comma or line-separated is fine"
-              value={dietRestrictions}
+              value={form.dietRestrictions}
             />
             <SingleSelect
               label="Energy baseline"
-              onChange={setEnergyBaseline}
+              onChange={(value) => updateField('energyBaseline', value)}
               options={energyBaselineOptions}
-              value={energyBaseline}
+              value={form.energyBaseline}
             />
             <SingleSelect
               label="Stress baseline"
-              onChange={setStressBaseline}
+              onChange={(value) => updateField('stressBaseline', value)}
               options={stressBaselineOptions}
-              value={stressBaseline}
+              value={form.stressBaseline}
             />
             <MultiSelect
               label="Wellness support focus"
-              onChange={setWellnessSupportFocus}
+              onChange={(value) => updateField('wellnessSupportFocus', value)}
               options={wellnessFocusOptions}
-              values={wellnessSupportFocus}
+              values={form.wellnessSupportFocus}
             />
             <ToggleRow
               label="Frankie can check in lightly on energy, stress, mood, and recovery along the way."
-              onChange={setWellnessCheckinOptIn}
-              value={wellnessCheckinOptIn}
+              onChange={(value) => updateField('wellnessCheckinOptIn', value)}
+              value={form.wellnessCheckinOptIn}
             />
           </Section>
 
@@ -775,42 +827,42 @@ export default function OnboardingScreen() {
             <Field
               label="Injuries or limitations"
               multiline
-              onChangeText={setInjuriesLimitations}
+              onChangeText={(value) => updateField('injuriesLimitations', value)}
               placeholder="Knee pain, low back tightness, shoulder mobility..."
-              value={injuriesLimitations}
+              value={form.injuriesLimitations}
             />
             <Field
               label="Health considerations"
               multiline
-              onChangeText={setHealthConsiderations}
+              onChangeText={(value) => updateField('healthConsiderations', value)}
               placeholder="Anything Frankie should know before making suggestions"
-              value={healthConsiderations}
+              value={form.healthConsiderations}
             />
             <Field
               label="Avoidances"
               multiline
-              onChangeText={setAvoidances}
+              onChangeText={(value) => updateField('avoidances', value)}
               placeholder="Exercises, coaching language, food guidance, or patterns to avoid"
-              value={avoidances}
+              value={form.avoidances}
             />
             <SingleSelect
               label="Coaching style"
-              onChange={setCoachingStyle}
+              onChange={(value) => updateField('coachingStyle', value)}
               options={coachingStyleOptions}
               required
-              value={coachingStyle}
+              value={form.coachingStyle}
             />
             <SingleSelect
               label="Check-in style"
-              onChange={setPreferredCheckinStyle}
+              onChange={(value) => updateField('preferredCheckinStyle', value)}
               options={checkinStyleOptions}
               required
-              value={preferredCheckinStyle}
+              value={form.preferredCheckinStyle}
             />
             <ToggleRow
               label="Frankie Fit provides wellness guidance and coaching support, not medical or clinical care."
-              onChange={setSafetyAcknowledged}
-              value={safetyAcknowledged}
+              onChange={(value) => updateField('safetyAcknowledged', value)}
+              value={form.safetyAcknowledged}
             />
           </Section>
 

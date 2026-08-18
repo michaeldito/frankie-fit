@@ -4,9 +4,12 @@ import { recordAiTraceRun } from "@/lib/ai/tracing/ai-trace-runs";
 import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
 import { logWellnessCheckin } from "@/lib/ai/tools/log-wellness";
-import { getChatExperience } from "@/lib/chat";
+import { getChatExperience, MAX_CHAT_MESSAGE_LENGTH } from "@/lib/chat";
 import { getCurrentAppContext, getDisplayName } from "@/lib/profile";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+const CHAT_RATE_LIMIT_PER_MINUTE = 20;
 
 function buildThreadErrorResponse(error: string | null, schemaReady: boolean) {
   return NextResponse.json(
@@ -42,6 +45,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Log in to continue." }, { status: 401 });
   }
 
+  const rateLimit = checkRateLimit(`chat:${context.user.id}`, CHAT_RATE_LIMIT_PER_MINUTE);
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "You're sending messages a little too fast. Give it a few seconds and try again." },
+      { status: 429, headers: { "Retry-After": `${rateLimit.retryAfterSeconds}` } }
+    );
+  }
+
   const body = (await request.json().catch(() => null)) as {
     action?: unknown;
     message?: unknown;
@@ -57,6 +69,13 @@ export async function POST(request: NextRequest) {
 
   if (action !== "generate_reply" && !message) {
     return NextResponse.json({ error: "Type a message for Frankie first." }, { status: 400 });
+  }
+
+  if (message.length > MAX_CHAT_MESSAGE_LENGTH) {
+    return NextResponse.json(
+      { error: `Messages are limited to ${MAX_CHAT_MESSAGE_LENGTH} characters.` },
+      { status: 400 }
+    );
   }
 
   if (action === "generate_reply" && !sourceMessageId) {

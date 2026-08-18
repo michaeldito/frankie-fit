@@ -1,6 +1,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { AppProfile, CurrentAppContext } from "@/lib/profile";
+import { addDays, getPacificToday, toDateKey } from "../packages/dashboard-core";
+
+export const MAX_CHAT_MESSAGE_LENGTH = 4000;
 
 type ChatThread = Database["public"]["Tables"]["conversation_threads"]["Row"];
 type ChatMessage = Database["public"]["Tables"]["conversation_messages"]["Row"];
@@ -294,37 +297,15 @@ function getIntensity(clause: string) {
   return null;
 }
 
-function getPacificTodayDate() {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Los_Angeles",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  });
-  const parts = formatter.formatToParts(new Date());
-  const year = parts.find((part) => part.type === "year")?.value ?? "1970";
-  const month = parts.find((part) => part.type === "month")?.value ?? "01";
-  const day = parts.find((part) => part.type === "day")?.value ?? "01";
-
-  return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12));
-}
-
-function toDateKey(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
 function resolveRelativeDaysAgo(daysAgo: number) {
-  const date = getPacificTodayDate();
-  date.setUTCDate(date.getUTCDate() - daysAgo);
-  return toDateKey(date);
+  return toDateKey(addDays(getPacificToday(), -daysAgo));
 }
 
 function resolveMostRecentWeekday(targetWeekday: number) {
-  const date = getPacificTodayDate();
+  const date = getPacificToday();
   const currentWeekday = date.getUTCDay();
   const diff = (currentWeekday - targetWeekday + 7) % 7;
-  date.setUTCDate(date.getUTCDate() - diff);
-  return toDateKey(date);
+  return toDateKey(addDays(date, -diff));
 }
 
 function mapWeekdayTokenToIndex(token: string) {
@@ -387,7 +368,7 @@ export function resolveLoggedForDateFromTimeReference(
   }
 
   if (!normalizedText) {
-    return normalizedFallbackDate ?? toDateKey(getPacificTodayDate());
+    return normalizedFallbackDate ?? toDateKey(getPacificToday());
   }
 
   if (/\byesterday\b/.test(normalizedText)) {
@@ -395,7 +376,7 @@ export function resolveLoggedForDateFromTimeReference(
   }
 
   if (/\btoday\b|\bthis morning\b|\bthis afternoon\b|\btonight\b|\blast night\b/.test(normalizedText)) {
-    return toDateKey(getPacificTodayDate());
+    return toDateKey(getPacificToday());
   }
 
   const daysAgoMatch = normalizedText.match(/\b(\d+)\s+days?\s+ago\b/);
@@ -422,7 +403,7 @@ export function resolveLoggedForDateFromTimeReference(
     }
   }
 
-  return normalizedFallbackDate ?? toDateKey(getPacificTodayDate());
+  return normalizedFallbackDate ?? toDateKey(getPacificToday());
 }
 
 function getLoggedForDate(text: string): LoggedForDateValue {

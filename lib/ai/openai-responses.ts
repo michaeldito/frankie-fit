@@ -57,6 +57,8 @@ function wait(ms: number) {
   });
 }
 
+const OPENAI_REQUEST_TIMEOUT_MS = 30_000;
+
 async function createOpenAiResponse(input: {
   model: string;
   messages: Array<{ role: "system" | "user"; content: string }>;
@@ -69,29 +71,47 @@ async function createOpenAiResponse(input: {
   }
 
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: input.model,
-        input: input.messages,
-        ...(input.structuredFormat
-          ? {
-              text: {
-                format: {
-                  type: "json_schema",
-                  name: input.structuredFormat.name,
-                  strict: true,
-                  schema: input.structuredFormat.schema
+    let response: Response;
+
+    try {
+      response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: input.model,
+          input: input.messages,
+          ...(input.structuredFormat
+            ? {
+                text: {
+                  format: {
+                    type: "json_schema",
+                    name: input.structuredFormat.name,
+                    strict: true,
+                    schema: input.structuredFormat.schema
+                  }
                 }
               }
-            }
-          : {})
-      })
-    });
+            : {})
+        }),
+        signal: AbortSignal.timeout(OPENAI_REQUEST_TIMEOUT_MS)
+      });
+    } catch (error) {
+      const isTimeout = error instanceof Error && error.name === "TimeoutError";
+
+      if (attempt === 3) {
+        throw new Error(
+          isTimeout
+            ? `OpenAI Responses API timed out after ${OPENAI_REQUEST_TIMEOUT_MS}ms.`
+            : `OpenAI Responses API request failed: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+
+      await wait(400 * attempt);
+      continue;
+    }
 
     if (response.ok) {
       return (await response.json()) as unknown;
