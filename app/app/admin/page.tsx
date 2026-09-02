@@ -12,10 +12,10 @@ function MetricCard({
   detail?: string;
 }) {
   return (
-    <div className="ff-card p-5">
+    <div className="ff-card p-4">
       <p className="text-sm text-[var(--muted)]">{label}</p>
-      <p className="mt-3 text-3xl font-semibold tracking-[-0.04em]">{value}</p>
-      {detail ? <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{detail}</p> : null}
+      <p className="mt-2 text-xl font-semibold tracking-[-0.02em]">{value}</p>
+      {detail ? <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">{detail}</p> : null}
     </div>
   );
 }
@@ -30,10 +30,10 @@ function SectionCard({
   children: ReactNode;
 }) {
   return (
-    <section className="ff-panel p-5">
+    <section className="ff-panel p-4">
       <p className="ff-kicker">{eyebrow}</p>
-      <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em]">{title}</h2>
-      <div className="mt-4">{children}</div>
+      <h2 className="mt-2 text-base font-semibold tracking-[-0.02em]">{title}</h2>
+      <div className="mt-3">{children}</div>
     </section>
   );
 }
@@ -44,31 +44,11 @@ export default async function AdminOverviewPage() {
   const overview = await getAdminOverviewData(context);
 
   return (
-    <div className="space-y-6 lg:space-y-7">
-      <header className="ff-panel-strong flex flex-col gap-5 p-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-3">
-          <p className="ff-kicker">Admin Overview</p>
-          <h1 className="max-w-4xl text-3xl font-semibold tracking-[-0.04em] sm:text-[2.35rem]">
-            A privacy-conscious read on tracked product health.
-          </h1>
-          <p className="max-w-3xl leading-7 text-[var(--muted)]">
-            This is the smallest useful founder view for Frankie Fit: broad product signal across
-            real, internal, and synthetic accounts first, safe test-account visibility second, and
-            no default surveillance of real-user details.
-          </p>
-        </div>
-        <div className="ff-card min-w-[17rem] p-4">
-          <p className="ff-kicker">Current mode</p>
-          <p className="mt-3 text-lg font-semibold tracking-[-0.02em]">
-            Aggregate-first across all tracked accounts
-          </p>
-        </div>
-      </header>
-
+    <div className="space-y-4">
       {!overview.ready ? (
-        <section className="ff-panel p-5 sm:p-6">
+        <section className="ff-panel p-4">
           <p className="ff-kicker">Admin setup note</p>
-          <p className="mt-4 max-w-3xl leading-7 text-[var(--muted)]">
+          <p className="mt-3 max-w-3xl leading-7 text-[var(--muted)]">
             The admin overview code is built, but the aggregate SQL helpers may not be in your
             Supabase project yet. Run the migration in
             <span className="font-medium text-[var(--foreground)]">
@@ -83,7 +63,7 @@ export default async function AdminOverviewPage() {
         </section>
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {overview.metricCards.map((metric) => (
           <MetricCard
             detail={metric.detail}
@@ -94,10 +74,10 @@ export default async function AdminOverviewPage() {
         ))}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="space-y-4">
+      <section className="grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="space-y-3">
           <SectionCard eyebrow="Pillar usage" title="Where users are creating signal">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-3">
               {overview.pillarUsageCards.map((card) => (
                 <MetricCard key={card.label} label={card.label} value={card.value} />
               ))}
@@ -106,7 +86,7 @@ export default async function AdminOverviewPage() {
 
           <SectionCard eyebrow="Common requests" title="What users are asking Frankie for">
             {overview.promptThemes.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {overview.promptThemes.map((theme) => (
                   <div className="flex items-center justify-between gap-6" key={theme.theme}>
                     <span className="text-sm text-[var(--muted)]">{theme.theme}</span>
@@ -144,7 +124,7 @@ export default async function AdminOverviewPage() {
           </SectionCard>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <SectionCard eyebrow="Test accounts" title="Safe accounts available for direct review">
             {overview.testAccounts.length > 0 ? (
               <div className="space-y-3">

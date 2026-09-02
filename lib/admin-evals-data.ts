@@ -1,5 +1,6 @@
 import type { CurrentAppContext } from "@/lib/profile";
 import { isAdminProfile } from "@/lib/admin";
+import { TUNING_REVIEW_CHECK_ID } from "@/lib/admin-evals";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -8,15 +9,58 @@ type EvalRunItemRow = Database["public"]["Tables"]["eval_run_items"]["Row"];
 type EvalReviewRow = Database["public"]["Tables"]["eval_reviews"]["Row"];
 type CoachSummaryRow = Database["public"]["Tables"]["coach_summaries"]["Row"];
 
+export type RunItemStatusCounts = {
+  total: number;
+  good: number;
+  warn: number;
+  bad: number;
+};
+
+export type CoachSummaryWithUser = CoachSummaryRow & {
+  userName: string | null;
+};
+
 export type AdminEvalsData = {
   ready: boolean;
   error: string | null;
   runs: EvalRunRow[];
+  runItemStatusCounts: Record<string, RunItemStatusCounts>;
   selectedRun: EvalRunRow | null;
   selectedRunItems: EvalRunItemRow[];
   reviews: EvalReviewRow[];
-  summaries: CoachSummaryRow[];
+  summaries: CoachSummaryWithUser[];
 };
+
+function classifyItemRunStatus(runStatus: string, flaggedForTuning: boolean): "good" | "warn" | "bad" {
+  if (flaggedForTuning) {
+    return "warn";
+  }
+
+  if (runStatus === "completed") {
+    return "good";
+  }
+
+  if (runStatus === "clarification") {
+    return "warn";
+  }
+
+  return "bad";
+}
+
+function buildRunItemStatusCounts(
+  items: Array<{ id: string; eval_run_id: string; run_status: string }>,
+  flaggedItemIds: Set<string>
+): Record<string, RunItemStatusCounts> {
+  const counts: Record<string, RunItemStatusCounts> = {};
+
+  for (const item of items) {
+    const bucket = (counts[item.eval_run_id] ??= { total: 0, good: 0, warn: 0, bad: 0 });
+    bucket.total += 1;
+    bucket[classifyItemRunStatus(item.run_status, flaggedItemIds.has(item.id))] += 1;
+  }
+
+  return counts;
+}
 
 function isMissingEvalTable(message: string | null | undefined) {
   if (!message) {
@@ -37,6 +81,7 @@ function buildEmptyEvalsData(error: string | null): AdminEvalsData {
     ready: false,
     error,
     runs: [],
+    runItemStatusCounts: {},
     selectedRun: null,
     selectedRunItems: [],
     reviews: [],
@@ -68,9 +113,11 @@ export async function getAdminEvalsData(input: {
   }
 
   const runs = runsResult.data ?? [];
-  const selectedRun =
-    runs.find((run) => run.id === input.selectedRunId) ?? runs[0] ?? null;
-  const [itemsResult, summariesResult] = await Promise.all([
+  const runIds = runs.map((run) => run.id);
+  const selectedRun = input.selectedRunId
+    ? (runs.find((run) => run.id === input.selectedRunId) ?? null)
+    : null;
+  const [itemsResult, statusCountsResult, summariesResult] = await Promise.all([
     selectedRun
       ? supabase
           .from("eval_run_items")
@@ -78,14 +125,24 @@ export async function getAdminEvalsData(input: {
           .eq("eval_run_id", selectedRun.id)
           .order("created_at", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
+    runIds.length > 0
+      ? supabase
+          .from("eval_run_items")
+          .select("id, eval_run_id, run_status")
+          .in("eval_run_id", runIds)
+      : Promise.resolve({ data: [], error: null }),
     supabase
       .from("coach_summaries")
-      .select("*")
+      .select("*, profiles ( full_name )")
       .order("created_at", { ascending: false })
       .limit(10)
   ]);
 
-  const firstError = itemsResult.error?.message ?? summariesResult.error?.message ?? null;
+  const firstError =
+    itemsResult.error?.message ??
+    statusCountsResult.error?.message ??
+    summariesResult.error?.message ??
+    null;
 
   if (firstError) {
     return buildEmptyEvalsData(firstError);
@@ -93,26 +150,53 @@ export async function getAdminEvalsData(input: {
 
   const selectedRunItems = itemsResult.data ?? [];
   const itemIds = selectedRunItems.map((item) => item.id);
-  const reviewsResult =
+  const allListedItemIds = (statusCountsResult.data ?? []).map((item) => item.id);
+  const [reviewsResult, flaggedReviewsResult] = await Promise.all([
     itemIds.length > 0
-      ? await supabase
+      ? supabase.from("eval_reviews").select("*").in("eval_run_item_id", itemIds)
+      : Promise.resolve({ data: [], error: null }),
+    allListedItemIds.length > 0
+      ? supabase
           .from("eval_reviews")
-          .select("*")
-          .in("eval_run_item_id", itemIds)
-      : { data: [], error: null };
+          .select("eval_run_item_id")
+          .in("eval_run_item_id", allListedItemIds)
+          .eq("review_check", TUNING_REVIEW_CHECK_ID)
+          .eq("status", "needs_work")
+      : Promise.resolve({ data: [], error: null })
+  ]);
 
   if (reviewsResult.error) {
     return buildEmptyEvalsData(reviewsResult.error.message);
   }
 
+  if (flaggedReviewsResult.error) {
+    return buildEmptyEvalsData(flaggedReviewsResult.error.message);
+  }
+
+  const flaggedItemIds = new Set(
+    (flaggedReviewsResult.data ?? []).map((review) => review.eval_run_item_id)
+  );
+
+  const summaries = (summariesResult.data ?? []).map((summary) => {
+    const { profiles, ...summaryRow } = summary as CoachSummaryRow & {
+      profiles: { full_name: string | null } | null;
+    };
+
+    return {
+      ...summaryRow,
+      userName: profiles?.full_name ?? null
+    };
+  });
+
   return {
     ready: true,
     error: null,
     runs,
+    runItemStatusCounts: buildRunItemStatusCounts(statusCountsResult.data ?? [], flaggedItemIds),
     selectedRun,
     selectedRunItems,
     reviews: reviewsResult.data ?? [],
-    summaries: summariesResult.data ?? []
+    summaries
   };
 }
 

@@ -75,8 +75,8 @@ function TabButton({
     <button
       className={
         active
-          ? "ff-button-primary px-4 py-2 text-sm"
-          : "ff-button-secondary px-4 py-2 text-sm"
+          ? "ff-button-primary px-3 py-1.5 text-sm"
+          : "ff-button-secondary px-3 py-1.5 text-sm"
       }
       onClick={onClick}
       type="button"
@@ -96,10 +96,10 @@ function SurfaceSection({
   children: ReactNode;
 }) {
   return (
-    <section className="ff-panel p-5 sm:p-6">
+    <section className="ff-panel p-4">
       <p className="ff-kicker">{eyebrow}</p>
-      <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em]">{title}</h2>
-      <div className="mt-4">{children}</div>
+      <h2 className="mt-2 text-base font-semibold tracking-[-0.02em]">{title}</h2>
+      <div className="mt-3">{children}</div>
     </section>
   );
 }
@@ -157,11 +157,11 @@ function LabelValueGrid({
   entries: Array<{ label: string; value: string }>;
 }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="grid gap-2.5 md:grid-cols-2">
       {entries.map((entry) => (
-        <div className="ff-card-soft p-4" key={entry.label}>
+        <div className="ff-card-soft p-3.5" key={entry.label}>
           <p className="ff-kicker">{entry.label}</p>
-          <p className="mt-3 text-sm leading-7">{entry.value}</p>
+          <p className="mt-2 text-sm leading-6">{entry.value}</p>
         </div>
       ))}
     </div>
@@ -495,8 +495,8 @@ export function DebugTraceInspector({
 
           {activeTab === "overview" ? (
             <div className="space-y-4">
-              <div className="grid gap-4 xl:grid-cols-2">
-                <div className="ff-card-soft p-5">
+              <div className="grid gap-3 xl:grid-cols-2">
+                <div className="ff-card-soft p-4">
                   <div className="flex items-start justify-between gap-3">
                     <p className="ff-kicker">User message</p>
                     <CopyButton
@@ -505,11 +505,11 @@ export function DebugTraceInspector({
                       value={selectedTrace.raw_user_message}
                     />
                   </div>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7">
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
                     {selectedTrace.raw_user_message}
                   </p>
                 </div>
-                <div className="ff-card-soft p-5">
+                <div className="ff-card-soft p-4">
                   <div className="flex items-start justify-between gap-3">
                     <p className="ff-kicker">Frankie reply</p>
                     <CopyButton
@@ -518,7 +518,7 @@ export function DebugTraceInspector({
                       value={selectedTrace.final_reply}
                     />
                   </div>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7">
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
                     {selectedTrace.final_reply}
                   </p>
                 </div>

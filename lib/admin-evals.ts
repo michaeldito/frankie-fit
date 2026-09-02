@@ -1,3 +1,5 @@
+export const TUNING_REVIEW_CHECK_ID = "model_tuning_note";
+
 export type EvalScenario = {
   id: string;
   label: string;

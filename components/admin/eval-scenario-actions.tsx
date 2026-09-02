@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
+import { useFormStatus } from "react-dom";
 import type { EvalReplayStep } from "@/lib/admin-evals";
 
 type ServerFormAction = (formData: FormData) => void | Promise<void>;
@@ -81,6 +82,22 @@ function ActionButton({
   );
 }
 
+function SubmitButton({
+  children,
+  disabled = false,
+  pendingLabel
+}: {
+  children: ReactNode;
+  disabled?: boolean;
+  pendingLabel: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <ActionButton disabled={disabled || pending}>{pending ? pendingLabel : children}</ActionButton>
+  );
+}
+
 function ReplayBullet({
   index,
   activeStep,
@@ -123,6 +140,7 @@ export function EvalScenarioActions({
   weeklySummaryAction
 }: EvalScenarioActionsProps) {
   const router = useRouter();
+  const [showInfo, setShowInfo] = useState(false);
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [completedSteps, setCompletedSteps] = useState(0);
   const [durations, setDurations] = useState<number[]>([]);
@@ -259,31 +277,120 @@ export function EvalScenarioActions({
   }
 
   return (
-    <div className="mt-5 grid gap-2">
-      <form action={runFullAction}>
-        <input name="scenarioId" type="hidden" value={scenarioId} />
-        <ActionButton disabled={!evalReady || isRunning}>
-          Reset, replay, summarize
-        </ActionButton>
-      </form>
-
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+    <div className="mt-3 flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <form action={runFullAction}>
+          <input name="scenarioId" type="hidden" value={scenarioId} />
+          <SubmitButton
+            disabled={!evalReady || isRunning}
+            pendingLabel="Working — resetting, replaying, and summarizing (can take a minute or two)..."
+          >
+            Reset, replay, summarize
+          </SubmitButton>
+        </form>
         <form action={resetAction}>
           <input name="scenarioId" type="hidden" value={scenarioId} />
-          <ActionButton disabled={!evalReady || isRunning}>Reset test data</ActionButton>
+          <SubmitButton disabled={!evalReady || isRunning} pendingLabel="Working — clearing test data...">
+            Reset test data
+          </SubmitButton>
         </form>
         <ActionButton disabled={!evalReady || isRunning} onClick={handleReplay} type="button">
           {isRunning ? "Running..." : "Replay messages"}
         </ActionButton>
         <form action={dailySummariesAction}>
           <input name="scenarioId" type="hidden" value={scenarioId} />
-          <ActionButton disabled={!evalReady || isRunning}>Daily summaries</ActionButton>
+          <SubmitButton
+            disabled={!evalReady || isRunning}
+            pendingLabel="Working — generating daily summaries..."
+          >
+            Daily summaries
+          </SubmitButton>
         </form>
         <form action={weeklySummaryAction}>
           <input name="scenarioId" type="hidden" value={scenarioId} />
-          <ActionButton disabled={!evalReady || isRunning}>Weekly summary</ActionButton>
+          <SubmitButton
+            disabled={!evalReady || isRunning}
+            pendingLabel="Working — generating weekly summary..."
+          >
+            Weekly summary
+          </SubmitButton>
         </form>
+        <button
+          aria-label="What do these actions do?"
+          className="flex h-6 w-6 flex-none cursor-pointer items-center justify-center rounded-full border border-[var(--border-strong)] font-serif text-xs font-bold italic text-[var(--muted)] transition hover:border-[rgba(147,197,253,0.6)] hover:text-[var(--foreground)]"
+          onClick={() => setShowInfo(true)}
+          type="button"
+        >
+          i
+        </button>
       </div>
+
+      {showInfo ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => setShowInfo(false)}
+        >
+          <div
+            className="ff-panel w-full max-w-md p-5"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="ff-kicker">Persona actions</p>
+                <h3 className="mt-1 text-base font-semibold">What each button does</h3>
+              </div>
+              <button
+                aria-label="Close"
+                className="ff-button-secondary h-7 w-7 shrink-0 cursor-pointer p-0 text-xs"
+                onClick={() => setShowInfo(false)}
+                type="button"
+              >
+                x
+              </button>
+            </div>
+
+            <dl className="mt-4 flex flex-col gap-3">
+              <div>
+                <dt className="text-sm font-semibold">Reset, replay, summarize</dt>
+                <dd className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                  Runs the full pipeline in one click: clears this persona&apos;s data, replays
+                  the whole week of messages through Frankie, then generates daily and weekly
+                  summaries. Use this for a clean end-to-end benchmark run.
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-semibold">Reset test data</dt>
+                <dd className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                  Deletes this persona&apos;s logged activity, diet, and wellness entries plus
+                  prior eval runs, so you can replay from a clean slate without affecting other
+                  personas.
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-semibold">Replay messages</dt>
+                <dd className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                  Sends the persona&apos;s scripted week of messages to Frankie one at a time,
+                  with live step-by-step progress below. Use this alone when you just want to
+                  watch the replay without resetting or summarizing.
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-semibold">Daily summaries</dt>
+                <dd className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                  Generates a short coaching summary for each day already logged for this
+                  persona.
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-semibold">Weekly summary</dt>
+                <dd className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                  Generates one coaching summary covering the persona&apos;s full logged week.
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      ) : null}
 
       {shouldShowProgress ? (
         <div

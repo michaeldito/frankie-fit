@@ -197,22 +197,22 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
     <>
       <div className="min-h-screen bg-[var(--background)]">
         <div className="flex h-screen overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent_20%),linear-gradient(180deg,var(--surface)_0%,color-mix(in_srgb,var(--surface-strong)_72%,black_28%)_100%)]">
-          <aside className="hidden w-[246px] flex-col border-r border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_90%,black_10%)] p-4 lg:flex">
-            <div className="flex items-center gap-3 px-2 py-2">
-              <div className="flex h-11 w-11 items-center justify-center rounded-[1rem] bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-sm font-semibold text-white shadow-[0_14px_28px_rgba(29,78,216,0.32)]">
+          <aside className="hidden w-[208px] flex-col border-r border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_90%,black_10%)] p-3 lg:flex">
+            <div className="flex items-center gap-2.5 px-1.5 py-1.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-[0.6rem] bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-xs font-semibold text-white shadow-[0_10px_20px_rgba(29,78,216,0.32)]">
                 FF
               </div>
               <div>
-                <p className="ff-kicker">Frankie Fit</p>
-                <p className="mt-1 text-sm text-[var(--muted)]">Calm performance coach</p>
+                <p className="text-sm font-semibold">Frankie Fit</p>
+                <p className="mt-0.5 text-[0.68rem] text-[var(--muted)]">Calm performance coach</p>
               </div>
             </div>
 
-            <div className="mt-8">
-              <p className="px-2 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+            <div className="mt-6">
+              <p className="px-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
                 Navigate
               </p>
-              <nav className="mt-3 flex flex-col gap-2">
+              <nav className="mt-2 flex flex-col gap-0.5">
                 <NavLink href="/app/chat">Chat</NavLink>
                 <NavLink href="/app/dashboard">Dashboard</NavLink>
                 {user.isAdmin ? <NavLink href="/app/admin" match="exact">Admin</NavLink> : null}
@@ -221,20 +221,20 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
               </nav>
             </div>
 
-            <div className="mt-8">
-              <p className="px-2 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+            <div className="mt-6">
+              <p className="px-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
                 Actions
               </p>
-              <div className="mt-3 flex flex-col gap-2">
+              <div className="mt-2 flex flex-col gap-0.5">
                 <button
-                  className="ff-button-secondary cursor-pointer justify-start px-4 py-3 text-sm"
+                  className="flex cursor-pointer items-center justify-between rounded-[0.55rem] px-3 py-2 text-left text-sm text-[var(--muted)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_60%,transparent)] hover:text-[var(--foreground)]"
                   onClick={() => setOverlayPanel("goal")}
                   type="button"
                 >
                   Open goal
                 </button>
                 <button
-                  className="ff-button-secondary cursor-pointer justify-start px-4 py-3 text-sm"
+                  className="flex cursor-pointer items-center justify-between rounded-[0.55rem] px-3 py-2 text-left text-sm text-[var(--muted)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_60%,transparent)] hover:text-[var(--foreground)]"
                   onClick={() => setOverlayPanel("next-step")}
                   type="button"
                 >
@@ -245,7 +245,7 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
 
             {!user.authConfigured ? (
               <div className="mt-auto">
-                <p className="ff-card-soft px-4 py-3 text-sm leading-6 text-[var(--muted)]">
+                <p className="ff-card-soft px-3 py-2.5 text-sm leading-6 text-[var(--muted)]">
                   Preview mode is active until Supabase env vars are connected.
                 </p>
               </div>
@@ -253,22 +253,22 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col">
-            <header className="border-b border-[var(--border)] px-4 py-4 sm:px-6">
+            <header className="border-b border-[var(--border)] px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="min-w-0">
                   {pageMeta.eyebrow ? <p className="ff-kicker">{pageMeta.eyebrow}</p> : null}
-                  <div className={pageMeta.eyebrow ? "mt-2" : ""}>
-                    <h1 className="text-lg font-semibold tracking-[-0.03em] sm:text-xl">
+                  <div className={pageMeta.eyebrow ? "mt-1" : ""}>
+                    <h1 className="text-base font-semibold tracking-[-0.02em] sm:text-lg">
                       {pageMeta.title}
                     </h1>
                   </div>
                   {pageMeta.subtitle ? (
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
+                    <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">
                       {pageMeta.subtitle}
                     </p>
                   ) : null}
                   {isDashboardRoute ? (
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
+                    <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">
                       {dashboardBody}
                     </p>
                   ) : null}
@@ -278,40 +278,51 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
                   {user.authConfigured ? (
                     <div className="relative" ref={profileMenuRef}>
                       <button
-                        className="ff-card cursor-pointer flex items-center gap-3 px-3 py-2.5"
+                        aria-expanded={profileMenuOpen}
+                        aria-label="Account menu"
+                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-sm font-semibold text-white shadow-[0_10px_22px_rgba(29,78,216,0.32)] transition hover:brightness-110"
                         onClick={() => setProfileMenuOpen((current) => !current)}
                         type="button"
                       >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-sm font-semibold text-white shadow-[0_10px_22px_rgba(29,78,216,0.32)]">
-                          {user.initials}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium tracking-[-0.01em]">
-                            {user.displayName}
-                          </p>
-                          <p className="truncate text-xs text-[var(--muted)]">{user.subtitle}</p>
-                        </div>
+                        {user.initials}
                       </button>
 
-                      {profileMenuOpen ? (
-                        <div className="ff-card absolute right-0 z-30 mt-3 min-w-[13rem] overflow-hidden p-2">
-                          <Link
-                            className="block rounded-[1rem] px-3 py-2.5 text-sm font-medium text-[var(--foreground)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)]"
-                            href="/app/profile"
-                            onClick={() => setProfileMenuOpen(false)}
-                          >
-                            Profile
-                          </Link>
-                          <form action={signOut}>
-                            <button
-                              className="mt-1 block w-full rounded-[1rem] px-3 py-2.5 text-left text-sm font-medium text-[var(--foreground)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)]"
-                              type="submit"
-                            >
-                              Log out
-                            </button>
-                          </form>
+                      <div
+                        aria-hidden={!profileMenuOpen}
+                        className={`ff-card absolute right-0 z-30 mt-2 w-60 origin-top-right overflow-hidden p-2 transition-all duration-200 ease-out ${
+                          profileMenuOpen
+                            ? "translate-y-0 scale-100 opacity-100"
+                            : "pointer-events-none -translate-y-1 scale-95 opacity-0"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 px-2 py-1.5">
+                          <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-sm font-semibold text-white shadow-[0_10px_22px_rgba(29,78,216,0.32)]">
+                            {user.initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium tracking-[-0.01em]">
+                              {user.displayName}
+                            </p>
+                            <p className="truncate text-xs text-[var(--muted)]">{user.subtitle}</p>
+                          </div>
                         </div>
-                      ) : null}
+                        <div className="my-1.5 border-t border-[var(--border)]" />
+                        <Link
+                          className="block rounded-[0.5rem] px-2.5 py-2 text-sm font-medium text-[var(--foreground)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)]"
+                          href="/app/profile"
+                          onClick={() => setProfileMenuOpen(false)}
+                        >
+                          Profile
+                        </Link>
+                        <form action={signOut}>
+                          <button
+                            className="mt-1 block w-full cursor-pointer rounded-[0.5rem] px-2.5 py-2 text-left text-sm font-medium text-[var(--foreground)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)]"
+                            type="submit"
+                          >
+                            Log out
+                          </button>
+                        </form>
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -327,7 +338,7 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
             </header>
 
             <main
-              className={`min-h-0 flex-1 px-4 py-4 sm:px-6 sm:py-5 ${
+              className={`min-h-0 flex-1 px-4 py-3 sm:px-5 sm:py-4 ${
                 managesOwnScroll ? "overflow-hidden" : "ff-scroll overflow-y-auto"
               }`}
             >

@@ -36,9 +36,9 @@ function getActiveTab(value: string | undefined): DashboardTabId {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="ff-card p-5">
+    <div className="ff-card p-4">
       <p className="text-sm text-[var(--muted)]">{label}</p>
-      <p className="mt-3 text-3xl font-semibold tracking-[-0.04em]">{value}</p>
+      <p className="mt-2 text-xl font-semibold tracking-[-0.02em]">{value}</p>
     </div>
   );
 }
@@ -53,10 +53,10 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="ff-panel p-5">
+    <section className="ff-panel p-4">
       <p className="ff-kicker">{eyebrow}</p>
-      <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em]">{title}</h2>
-      <div className="mt-4">{children}</div>
+      <h2 className="mt-2 text-base font-semibold tracking-[-0.02em]">{title}</h2>
+      <div className="mt-3">{children}</div>
     </section>
   );
 }
@@ -218,9 +218,9 @@ function ExerciseTab({ data }: { data: ExerciseDashboardData }) {
   }
 
   return (
-    <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-      <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
+    <section className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-3">
           {data.metrics.map((metric) => (
             <SummaryCard key={metric.label} label={metric.label} value={metric.value} />
           ))}
@@ -233,7 +233,7 @@ function ExerciseTab({ data }: { data: ExerciseDashboardData }) {
         />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <FrankieInsight body={data.insight} />
         <BreakdownList
           emptyCopy="As activity types show up, Frankie will summarize the mix here."
@@ -258,9 +258,9 @@ function DietTab({ data }: { data: DietDashboardData }) {
   }
 
   return (
-    <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-      <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
+    <section className="grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-3">
           {data.metrics.map((metric) => (
             <SummaryCard key={metric.label} label={metric.label} value={metric.value} />
           ))}
@@ -277,7 +277,7 @@ function DietTab({ data }: { data: DietDashboardData }) {
         />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <FrankieInsight body={data.insight} />
         <SectionCard eyebrow="Use this well" title="What good logging looks like">
           <p className="leading-7 text-[var(--muted)]">
@@ -303,9 +303,9 @@ function WellnessTab({ data }: { data: WellnessDashboardData }) {
   }
 
   return (
-    <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-      <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
+    <section className="grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-3">
           {data.metrics.map((metric) => (
             <SummaryCard key={metric.label} label={metric.label} value={metric.value} />
           ))}
@@ -318,7 +318,7 @@ function WellnessTab({ data }: { data: WellnessDashboardData }) {
         />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <FrankieInsight body={data.insight} />
         <SectionCard eyebrow="Keep it light" title="What to tell Frankie">
           <p className="leading-7 text-[var(--muted)]">
@@ -338,13 +338,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const dashboardData = await getDashboardData(context);
 
   return (
-    <div className="space-y-6 lg:space-y-7">
+    <div className="space-y-4">
       {!dashboardData.ready ? (
-        <section className="ff-panel p-5 sm:p-6">
+        <section className="ff-panel p-4">
           <p className="ff-kicker">
             Setup note
           </p>
-          <p className="mt-3 max-w-3xl leading-7 text-[var(--muted)]">
+          <p className="mt-2 max-w-3xl leading-7 text-[var(--muted)]">
             Frankie could not load one or more dashboard tables yet. If this is a fresh setup,
             make sure the full Supabase schema migration has been applied.
           </p>
@@ -354,16 +354,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </section>
       ) : null}
 
-      <div className="ff-card flex flex-wrap gap-3 p-3">
+      <nav className="flex gap-1 border-b border-[var(--border)]">
         {dashboardTabs.map((tab) => {
           const active = tab.id === activeTab;
 
           return (
             <Link
-              className={`rounded-full px-4 py-2.5 text-sm font-medium transition ${
+              className={`-mb-px rounded-t-[0.5rem] border border-b-0 px-3 py-2 text-sm font-semibold transition ${
                 active
-                  ? "bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-white shadow-[0_16px_30px_rgba(29,78,216,0.32)]"
-                  : "border border-transparent bg-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_70%,black_30%)] hover:text-[var(--foreground)]"
+                  ? "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--foreground)]"
+                  : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
               href={`/app/dashboard?tab=${tab.id}`}
               key={tab.id}
@@ -372,7 +372,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </Link>
           );
         })}
-      </div>
+      </nav>
 
       {activeTab === "exercise" ? <ExerciseTab data={dashboardData.exercise} /> : null}
       {activeTab === "diet" ? <DietTab data={dashboardData.diet} /> : null}

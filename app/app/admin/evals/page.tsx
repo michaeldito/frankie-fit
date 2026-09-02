@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { CoachingMemoryGrid } from "@/components/admin/coaching-memory-grid";
 import { EvalScenarioActions } from "@/components/admin/eval-scenario-actions";
 import { TuningNoteForm } from "@/components/admin/tuning-note-form";
 import { TuningNotesExportModal } from "@/components/admin/tuning-notes-export-modal";
 import {
   EVAL_SCENARIOS,
   getScenarioReplaySteps,
-  getScenarioUpdateCount
+  getScenarioUpdateCount,
+  TUNING_REVIEW_CHECK_ID
 } from "@/lib/admin-evals";
 import {
   resetScenarioUserAction,
@@ -14,12 +16,12 @@ import {
   runFullScenarioAction,
   runWeeklySummaryAction
 } from "@/app/app/admin/evals/actions";
-import { getAdminEvalsData } from "@/lib/admin-evals-data";
+import { getAdminEvalsData, type RunItemStatusCounts } from "@/lib/admin-evals-data";
 import { requireAdminContext } from "@/lib/admin";
 import { getCurrentAppContext } from "@/lib/profile";
-import type { Json } from "@/types/database";
+import type { Database, Json } from "@/types/database";
 
-const TUNING_REVIEW_CHECK_ID = "model_tuning_note";
+type EvalReviewRow = Database["public"]["Tables"]["eval_reviews"]["Row"];
 
 function SectionCard({
   eyebrow,
@@ -31,10 +33,10 @@ function SectionCard({
   children: ReactNode;
 }) {
   return (
-    <section className="ff-panel p-5">
+    <section className="ff-panel p-4">
       <p className="ff-kicker">{eyebrow}</p>
-      <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em]">{title}</h2>
-      <div className="mt-4">{children}</div>
+      <h2 className="mt-2 text-base font-semibold tracking-[-0.02em]">{title}</h2>
+      <div className="mt-3">{children}</div>
     </section>
   );
 }
@@ -122,12 +124,124 @@ function getRawModelExtraction(actual: Record<string, Json | undefined>) {
   return metadata?.rawModelExtraction ?? null;
 }
 
+function getInitials(name: string) {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+
+  return initials || "?";
+}
+
+const PERSONA_HUES = [217, 262, 172, 12, 292, 42, 152];
+
+function getPersonaHue(seed: string) {
+  let hash = 0;
+
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  }
+
+  return PERSONA_HUES[hash % PERSONA_HUES.length];
+}
+
+function PersonaAvatar({ name, size }: { name: string; size: "sm" | "lg" }) {
+  const hue = getPersonaHue(name);
+  const dimension = size === "lg" ? "h-14 w-14 text-lg" : "h-8 w-8 text-xs";
+
+  return (
+    <span
+      className={`flex flex-none items-center justify-center rounded-full font-semibold ${dimension}`}
+      style={{
+        backgroundColor: `hsl(${hue} 42% 24%)`,
+        color: `hsl(${hue} 85% 86%)`
+      }}
+    >
+      {getInitials(name)}
+    </span>
+  );
+}
+
 function formatDateTime(value: string | null) {
   if (!value) {
     return "Not completed";
   }
 
   return new Date(value).toLocaleString();
+}
+
+type StatusTone = "good" | "warn" | "bad";
+
+const STATUS_TONE_CLASSNAME: Record<StatusTone, string> = {
+  good: "border-emerald-300/30 bg-emerald-400/12 text-emerald-100",
+  warn: "border-amber-300/30 bg-amber-400/12 text-amber-100",
+  bad: "border-rose-300/30 bg-rose-400/12 text-rose-100"
+};
+
+const STATUS_TONE_DOT: Record<StatusTone, string> = {
+  good: "bg-emerald-300",
+  warn: "bg-amber-300",
+  bad: "bg-rose-300"
+};
+
+function StatusPill({ label, tone }: { label: string; tone: StatusTone }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${STATUS_TONE_CLASSNAME[tone]}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${STATUS_TONE_DOT[tone]}`} />
+      {label}
+    </span>
+  );
+}
+
+function getRunStatusTone(status: string): StatusTone {
+  if (status === "completed") {
+    return "good";
+  }
+
+  return status === "running" ? "warn" : "bad";
+}
+
+function getItemStatusInfo(runStatus: string, reviewStatus?: EvalReviewRow["status"]) {
+  if (reviewStatus === "needs_work") {
+    return { tone: "warn" as const, label: "Needs review" };
+  }
+
+  if (runStatus === "completed") {
+    return { tone: "good" as const, label: "Persisted" };
+  }
+
+  if (runStatus === "clarification") {
+    return { tone: "warn" as const, label: "Needs review" };
+  }
+
+  return { tone: "bad" as const, label: "Error" };
+}
+
+function ItemBar({ counts }: { counts: RunItemStatusCounts | undefined }) {
+  if (!counts || counts.total === 0) {
+    return <span className="text-xs text-[var(--muted)]">No items</span>;
+  }
+
+  const ticks: StatusTone[] = [
+    ...Array<StatusTone>(counts.good).fill("good"),
+    ...Array<StatusTone>(counts.warn).fill("warn"),
+    ...Array<StatusTone>(counts.bad).fill("bad")
+  ];
+
+  return (
+    <span
+      className="flex flex-wrap items-center gap-[2px]"
+      title={`${counts.good} persisted, ${counts.warn} need review, ${counts.bad} errors`}
+    >
+      {ticks.map((tone, index) => (
+        <span className={`h-3.5 w-[5px] rounded-[2px] ${STATUS_TONE_DOT[tone]}`} key={index} />
+      ))}
+    </span>
+  );
 }
 
 function AttentionPill({
@@ -427,6 +541,13 @@ export default async function AdminEvalsPage({
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const selectedRunId =
     typeof resolvedSearchParams?.run === "string" ? resolvedSearchParams.run : null;
+  const activeTab = resolvedSearchParams?.tab === "memory" ? "memory" : "runs";
+  const selectedScenarioId =
+    typeof resolvedSearchParams?.scenario === "string" ? resolvedSearchParams.scenario : null;
+  const selectedScenario =
+    EVAL_SCENARIOS.find((scenario) => scenario.id === selectedScenarioId) ??
+    EVAL_SCENARIOS[0] ??
+    null;
   const message =
     typeof resolvedSearchParams?.message === "string" ? resolvedSearchParams.message : "";
   const context = await getCurrentAppContext();
@@ -435,52 +556,37 @@ export default async function AdminEvalsPage({
     context,
     selectedRunId
   });
-  const totalMessages = EVAL_SCENARIOS.reduce(
-    (sum, scenario) => sum + getScenarioUpdateCount(scenario),
-    0
-  );
   const reviewByItemAndCheck = new Map(
     evalData.reviews.map((review) => [
       `${review.eval_run_item_id}:${review.review_check}`,
       review
     ])
   );
+  const runStats = evalData.runs.reduce(
+    (totals, run) => {
+      const counts = evalData.runItemStatusCounts[run.id];
+
+      return {
+        items: totals.items + (counts?.total ?? 0),
+        flagged: totals.flagged + (counts?.warn ?? 0),
+        failedRuns: totals.failedRuns + (run.status === "failed" ? 1 : 0)
+      };
+    },
+    { items: 0, flagged: 0, failedRuns: 0 }
+  );
 
   return (
-    <div className="space-y-6 lg:space-y-7">
-      <header className="ff-panel-strong flex flex-col gap-5 p-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-3">
-          <p className="ff-kicker">Admin Evals</p>
-          <h1 className="max-w-4xl text-3xl font-semibold tracking-[-0.04em] sm:text-[2.35rem]">
-            A repeatable lab for making Frankie smarter without guessing.
-          </h1>
-          <p className="max-w-3xl leading-7 text-[var(--muted)]">
-            Start with three controlled benchmark users, replay one week of activity, diet, and
-            wellness updates, then inspect the model extraction, sanitizer output, persisted logs,
-            and coaching reply in one place.
-          </p>
-        </div>
-        <div className="ff-card min-w-[17rem] p-4">
-          <p className="ff-kicker">V1 suite</p>
-          <p className="mt-3 text-lg font-semibold tracking-[-0.02em]">
-            {EVAL_SCENARIOS.length} scenarios / {totalMessages} user updates
-          </p>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            Seven days, three pillars per day, replayed through Frankie.
-          </p>
-        </div>
-      </header>
-
+    <div className="space-y-4">
       {message ? (
-        <section className="ff-panel border-[rgba(96,165,250,0.28)] bg-[rgba(59,130,246,0.08)] p-4 text-sm leading-6">
+        <section className="ff-panel border-[rgba(96,165,250,0.28)] bg-[rgba(59,130,246,0.08)] p-3.5 text-sm leading-6">
           {message}
         </section>
       ) : null}
 
       {!evalData.ready ? (
-        <section className="ff-panel p-5 sm:p-6">
+        <section className="ff-panel p-4">
           <p className="ff-kicker">Eval setup note</p>
-          <p className="mt-4 max-w-3xl leading-7 text-[var(--muted)]">
+          <p className="mt-3 max-w-3xl leading-7 text-[var(--muted)]">
             The eval UI is built, but the eval tables may not exist in Supabase yet. Run the
             migration in
             <span className="font-medium text-[var(--foreground)]">
@@ -495,222 +601,337 @@ export default async function AdminEvalsPage({
         </section>
       ) : null}
 
-      <section className="grid gap-4 xl:grid-cols-3">
-        {EVAL_SCENARIOS.map((scenario) => (
-          <article className="ff-panel p-5" key={scenario.id}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="ff-pill text-[0.72rem] uppercase tracking-[0.15em]">
-                {scenario.pathLabel}
-              </span>
-              <span className="text-sm text-[var(--muted)]">
-                {getScenarioUpdateCount(scenario)} updates
-              </span>
-            </div>
-            <h2 className="mt-4 text-xl font-semibold tracking-[-0.03em]">{scenario.label}</h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-              {scenario.userName} / {scenario.userEmail}
-            </p>
-            <p className="mt-4 leading-7 text-[var(--muted)]">{scenario.description}</p>
+      <section>
+        <p className="ff-kicker">Benchmark personas</p>
+        <h2 className="mt-1 text-base font-semibold tracking-[-0.02em]">Choose a test persona</h2>
 
-            <div className="mt-5 space-y-3">
-              <p className="ff-kicker">Week shape</p>
-              {scenario.weeklyShape.map((item) => (
-                <p
-                  className="ff-card-soft px-4 py-3 text-sm leading-6 text-[var(--muted)]"
-                  key={item}
-                >
-                  {item}
-                </p>
-              ))}
-            </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {EVAL_SCENARIOS.map((scenario) => {
+            const isActive = scenario.id === selectedScenario?.id;
 
-            <EvalScenarioActions
-              dailySummariesAction={runDailySummariesAction}
-              evalReady={evalData.ready}
-              replaySteps={getScenarioReplaySteps(scenario)}
-              resetAction={resetScenarioUserAction}
-              runFullAction={runFullScenarioAction}
-              scenarioId={scenario.id}
-              scenarioLabel={scenario.label}
-              weeklySummaryAction={runWeeklySummaryAction}
-            />
-          </article>
-        ))}
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <SectionCard eyebrow="Recent runs" title="Replay history">
-          {evalData.runs.length > 0 ? (
-            <div className="space-y-3">
-              {evalData.runs.map((run) => (
-                <Link
-                  className={`block rounded-[1.15rem] border px-4 py-3 transition ${
-                    run.id === evalData.selectedRun?.id
-                      ? "border-[rgba(96,165,250,0.42)] bg-[rgba(59,130,246,0.12)]"
-                      : "border-[var(--border)] bg-[var(--surface-elevated)] hover:border-[rgba(96,165,250,0.26)]"
-                  }`}
-                  href={`/app/admin/evals?run=${run.id}`}
-                  key={run.id}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="font-medium">{run.scenario_id ?? "Eval suite"}</p>
-                    <span className="ff-pill text-[0.72rem] uppercase tracking-[0.15em]">
-                      {run.status}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                    {run.model_name ?? "model not recorded"} /{" "}
-                    {run.prompt_version ?? "prompt not recorded"}
-                  </p>
-                  <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
-                    Started {formatDateTime(run.started_at)}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="leading-7 text-[var(--muted)]">
-              No eval runs yet. Pick a scenario and run the full replay when you are ready.
-            </p>
-          )}
-        </SectionCard>
-
-        <SectionCard eyebrow="Recent summaries" title="Daily and weekly coaching memory">
-          {evalData.summaries.length > 0 ? (
-            <div className="space-y-3">
-              {evalData.summaries.map((summary) => (
-                <article className="ff-card-soft p-4" key={summary.id}>
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="font-medium">
-                      {summary.summary_type} / {summary.period_start}
-                      {summary.period_end !== summary.period_start
-                        ? ` to ${summary.period_end}`
-                        : ""}
-                    </p>
-                    <span className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
-                      {summary.prompt_version ?? "no prompt"}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                    {summary.summary_text}
-                  </p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="leading-7 text-[var(--muted)]">
-              Daily and weekly summaries will appear after a summary action runs.
-            </p>
-          )}
-        </SectionCard>
-      </section>
-
-      <SectionCard eyebrow="Tuning workbench" title="Selected run items">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm leading-6 text-[var(--muted)]">
-            Review model behavior, add tuning notes, then export the notes as Markdown when you want
-            a grouped fix pass.
-          </p>
-          <TuningNotesExportModal
-            items={evalData.selectedRunItems}
-            reviews={evalData.reviews}
-            run={evalData.selectedRun}
-            tuningReviewCheckId={TUNING_REVIEW_CHECK_ID}
-          />
+            return (
+              <Link
+                className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 transition ${
+                  isActive
+                    ? "border-[rgba(147,197,253,0.5)] bg-[rgba(147,197,253,0.1)]"
+                    : "border-[var(--border)] bg-transparent hover:border-[rgba(147,197,253,0.28)] hover:bg-[var(--surface-elevated)]"
+                }`}
+                href={`/app/admin/evals?scenario=${scenario.id}`}
+                key={scenario.id}
+              >
+                <PersonaAvatar name={scenario.userName} size="sm" />
+                <span>
+                  <span className="block text-sm font-medium leading-tight">
+                    {scenario.userName}
+                  </span>
+                  <span className="block text-[0.62rem] uppercase tracking-[0.1em] text-[var(--muted)]">
+                    {scenario.pathLabel}
+                  </span>
+                </span>
+              </Link>
+            );
+          })}
         </div>
-        {evalData.selectedRun && evalData.selectedRunItems.length > 0 ? (
-          <div className="space-y-4">
-            {evalData.selectedRunItems.map((item) => {
-              const expected = getJsonObject(item.expected_json);
-              const coreFacts = getJsonStringArray(expected.coreFacts);
-              const shouldNotInfer = getJsonStringArray(expected.shouldNotInfer);
-              const tuningReview = reviewByItemAndCheck.get(
-                `${item.id}:${TUNING_REVIEW_CHECK_ID}`
-              );
 
-              return (
-                <details className="ff-card-soft p-4" key={item.id}>
-                  <summary className="cursor-pointer list-none">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <p className="ff-kicker">
-                          Day {item.day_index ?? "?"} / {item.pillar}
-                        </p>
-                        <p className="mt-2 max-w-3xl font-medium leading-6">
-                          {item.input_message}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="ff-pill text-[0.72rem] uppercase tracking-[0.15em]">
-                          {item.run_status.replaceAll("_", " ")}
-                        </span>
-                        {item.trace_id ? (
-                          <Link
-                            className="ff-pill cursor-pointer text-[0.72rem] uppercase tracking-[0.15em]"
-                            href={`/app/admin/debug?trace=${item.trace_id}`}
-                          >
-                            Trace
+        {selectedScenario ? (
+          <div className="mt-4 border-t border-[var(--border)] pt-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <PersonaAvatar name={selectedScenario.userName} size="lg" />
+                <div>
+                  <h3 className="text-lg font-semibold tracking-[-0.02em]">
+                    {selectedScenario.userName}
+                  </h3>
+                  <p className="mt-0.5 text-sm text-[var(--muted)]">
+                    {selectedScenario.label} &middot; {selectedScenario.userEmail}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1.5">
+                <span className="ff-pill text-[0.68rem] uppercase tracking-[0.14em]">
+                  {selectedScenario.pathLabel}
+                </span>
+                <span className="text-xs text-[var(--muted)]">
+                  {getScenarioUpdateCount(selectedScenario)} updates
+                </span>
+              </div>
+            </div>
+
+            <p className="mt-3 max-w-[46rem] leading-7 text-[var(--muted)]">
+              {selectedScenario.description}
+            </p>
+
+            <div className="mt-4">
+              <p className="ff-kicker">Week shape</p>
+              <ul className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {selectedScenario.weeklyShape.map((item) => (
+                  <li className="flex items-start gap-2 text-sm leading-6 text-[var(--muted)]" key={item}>
+                    <span
+                      className="mt-[0.5rem] h-1.5 w-1.5 flex-none rounded-full"
+                      style={{ backgroundColor: `hsl(${getPersonaHue(selectedScenario.userName)} 70% 68%)` }}
+                    />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mt-4 border-t border-[var(--border)] pt-3.5">
+              <EvalScenarioActions
+                dailySummariesAction={runDailySummariesAction}
+                evalReady={evalData.ready}
+                replaySteps={getScenarioReplaySteps(selectedScenario)}
+                resetAction={resetScenarioUserAction}
+                runFullAction={runFullScenarioAction}
+                scenarioId={selectedScenario.id}
+                scenarioLabel={selectedScenario.label}
+                weeklySummaryAction={runWeeklySummaryAction}
+              />
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <nav className="flex gap-1 border-b border-[var(--border)]">
+        <Link
+          className={`-mb-px rounded-t-[0.5rem] border border-b-0 px-3 py-2 text-sm font-semibold transition ${
+            activeTab === "runs"
+              ? "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--foreground)]"
+              : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+          }`}
+          href="/app/admin/evals?tab=runs"
+        >
+          Eval runs <span className="text-xs text-[var(--muted)]">{evalData.runs.length}</span>
+        </Link>
+        <Link
+          className={`-mb-px rounded-t-[0.5rem] border border-b-0 px-3 py-2 text-sm font-semibold transition ${
+            activeTab === "memory"
+              ? "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--foreground)]"
+              : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+          }`}
+          href="/app/admin/evals?tab=memory"
+        >
+          Coaching memory{" "}
+          <span className="text-xs text-[var(--muted)]">{evalData.summaries.length}</span>
+        </Link>
+      </nav>
+
+      {activeTab === "runs" ? (
+        <>
+          <section className="grid gap-2.5 sm:grid-cols-4">
+            <div className="ff-card-soft px-3.5 py-2.5">
+              <p className="ff-kicker">Runs listed</p>
+              <p className="mt-1 text-lg font-semibold">{evalData.runs.length}</p>
+            </div>
+            <div className="ff-card-soft px-3.5 py-2.5">
+              <p className="ff-kicker">Items reviewed</p>
+              <p className="mt-1 text-lg font-semibold">{runStats.items}</p>
+            </div>
+            <div className="ff-card-soft px-3.5 py-2.5">
+              <p className="ff-kicker">Flagged for tuning</p>
+              <p className="mt-1 text-lg font-semibold text-amber-200">{runStats.flagged}</p>
+            </div>
+            <div className="ff-card-soft px-3.5 py-2.5">
+              <p className="ff-kicker">Failed runs</p>
+              <p className="mt-1 text-lg font-semibold text-rose-200">{runStats.failedRuns}</p>
+            </div>
+          </section>
+
+          <SectionCard eyebrow="Replay history" title="Eval runs">
+            {evalData.runs.length === 0 ? (
+              <p className="leading-7 text-[var(--muted)]">
+                No eval runs yet. Pick a scenario above and run the full replay when you are ready.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="min-w-[42rem]">
+                  <div className="grid grid-cols-[1.8fr_0.9fr_1.1fr_1fr_1.2fr_1.75rem] gap-3 border-b border-[var(--border)] px-3 pb-2 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">
+                    <span>Scenario</span>
+                    <span>Status</span>
+                    <span>Model / prompt</span>
+                    <span>Started</span>
+                    <span>Items</span>
+                    <span aria-hidden="true" />
+                  </div>
+
+                  {evalData.runs.map((run) => {
+                    const scenario = EVAL_SCENARIOS.find((entry) => entry.id === run.scenario_id);
+                    const isSelected = run.id === evalData.selectedRun?.id;
+                    const toggleHref = isSelected
+                      ? "/app/admin/evals?tab=runs"
+                      : `/app/admin/evals?tab=runs&run=${run.id}`;
+
+                    return (
+                      <div key={run.id}>
+                        <div
+                          className={`grid grid-cols-[1.8fr_0.9fr_1.1fr_1fr_1.2fr_1.75rem] items-center gap-3 border-b border-[var(--border)] px-3 py-3 text-sm transition hover:bg-[rgba(147,197,253,0.06)] ${
+                            isSelected ? "bg-[rgba(147,197,253,0.08)]" : ""
+                          }`}
+                        >
+                          <Link className="contents" href={toggleHref}>
+                            <span>
+                              <span className="block font-medium">
+                                {scenario?.label ?? run.scenario_id ?? "Eval suite"}
+                              </span>
+                              {scenario ? (
+                                <span className="mt-0.5 block text-xs text-[var(--muted)]">
+                                  {scenario.userName} &middot; {scenario.userEmail}
+                                </span>
+                              ) : null}
+                            </span>
+                            <span>
+                              <StatusPill label={run.status} tone={getRunStatusTone(run.status)} />
+                            </span>
+                            <span className="text-xs leading-5 text-[var(--muted)]">
+                              {run.model_name ?? "model not recorded"}
+                              <br />
+                              {run.prompt_version ?? "prompt not recorded"}
+                            </span>
+                            <span className="text-xs text-[var(--muted)]">
+                              {formatDateTime(run.started_at)}
+                            </span>
+                            <ItemBar counts={evalData.runItemStatusCounts[run.id]} />
                           </Link>
+                          <Link
+                            aria-label={isSelected ? "Collapse run details" : "Expand run details"}
+                            className="flex h-7 w-7 items-center justify-center justify-self-end rounded-full border border-[var(--border)] text-[var(--muted)] transition hover:border-[rgba(147,197,253,0.4)] hover:text-[var(--foreground)]"
+                            href={toggleHref}
+                          >
+                            <svg
+                              className={`transition-transform ${isSelected ? "rotate-90" : ""}`}
+                              fill="none"
+                              height="14"
+                              viewBox="0 0 16 16"
+                              width="14"
+                            >
+                              <path
+                                d="M6 3l5 5-5 5"
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="1.6"
+                              />
+                            </svg>
+                          </Link>
+                        </div>
+
+                        {isSelected ? (
+                          <div className="border-b border-[var(--border)] bg-[rgba(9,15,36,0.2)] px-3 py-4">
+                            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                              <p className="ff-kicker">
+                                {evalData.selectedRunItems.length} item
+                                {evalData.selectedRunItems.length === 1 ? "" : "s"}
+                                {(() => {
+                                  const counts = evalData.runItemStatusCounts[run.id];
+                                  return counts
+                                    ? ` · ${counts.good} persisted · ${counts.warn} flagged`
+                                    : "";
+                                })()}
+                              </p>
+                              <TuningNotesExportModal
+                                items={evalData.selectedRunItems}
+                                reviews={evalData.reviews}
+                                run={evalData.selectedRun}
+                                tuningReviewCheckId={TUNING_REVIEW_CHECK_ID}
+                              />
+                            </div>
+
+                            {evalData.selectedRunItems.length === 0 ? (
+                              <p className="leading-7 text-[var(--muted)]">
+                                No items recorded for this run yet.
+                              </p>
+                            ) : (
+                              <div className="space-y-2">
+                                {evalData.selectedRunItems.map((item) => {
+                                  const expected = getJsonObject(item.expected_json);
+                                  const coreFacts = getJsonStringArray(expected.coreFacts);
+                                  const shouldNotInfer = getJsonStringArray(expected.shouldNotInfer);
+                                  const tuningReview = reviewByItemAndCheck.get(
+                                    `${item.id}:${TUNING_REVIEW_CHECK_ID}`
+                                  );
+                                  const itemStatus = getItemStatusInfo(
+                                    item.run_status,
+                                    tuningReview?.status
+                                  );
+
+                                  return (
+                                    <details className="rounded-[0.85rem] border border-[var(--border)] bg-[var(--surface-elevated)]" key={item.id}>
+                                      <summary className="grid cursor-pointer list-none grid-cols-[5rem_1fr_auto_auto] items-center gap-3 px-3 py-2.5 text-sm">
+                                        <span className="text-xs uppercase tracking-[0.08em] text-[var(--muted)]">
+                                          Day {item.day_index ?? "?"} &middot; {item.pillar}
+                                        </span>
+                                        <span className="truncate leading-5">{item.input_message}</span>
+                                        <StatusPill label={itemStatus.label} tone={itemStatus.tone} />
+                                        {item.trace_id ? (
+                                          <Link
+                                            className="ff-pill cursor-pointer text-[0.68rem] uppercase tracking-[0.12em]"
+                                            href={`/app/admin/debug?trace=${item.trace_id}`}
+                                          >
+                                            Trace
+                                          </Link>
+                                        ) : (
+                                          <span />
+                                        )}
+                                      </summary>
+
+                                      <div className="border-t border-[var(--border)] p-4">
+                                        <div className="space-y-5">
+                                          <div>
+                                            <p className="ff-kicker">Expected</p>
+                                            <div className="mt-3 space-y-2">
+                                              {coreFacts.map((fact) => (
+                                                <p
+                                                  className="rounded-[1rem] border border-[var(--border)] px-3 py-2 text-xs leading-5 text-[var(--muted)]"
+                                                  key={fact}
+                                                >
+                                                  {fact}
+                                                </p>
+                                              ))}
+                                            </div>
+                                            {shouldNotInfer.length > 0 ? (
+                                              <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
+                                                Should not infer: {shouldNotInfer.join(", ")}
+                                              </p>
+                                            ) : null}
+                                          </div>
+
+                                          <ActualExtractionSummary actualJson={item.actual_json} />
+
+                                          <div>
+                                            <p className="ff-kicker">Frankie reply</p>
+                                            <p className="mt-3 rounded-[1rem] border border-[var(--border)] px-4 py-3 text-sm leading-6 text-[var(--muted)]">
+                                              {item.assistant_reply ?? item.error_message ?? "No reply recorded."}
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        <TuningNoteForm
+                                          itemId={item.id}
+                                          review={tuningReview ?? null}
+                                          reviewCheck={TUNING_REVIEW_CHECK_ID}
+                                        />
+                                      </div>
+                                    </details>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         ) : null}
                       </div>
-                    </div>
-                  </summary>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </SectionCard>
+        </>
+      ) : (
+        <SectionCard eyebrow="Independent of any single replay" title="Coaching memory">
+          <CoachingMemoryGrid summaries={evalData.summaries} />
+        </SectionCard>
+      )}
 
-                  <div className="mt-5 space-y-5">
-                    <div>
-                      <p className="ff-kicker">Expected</p>
-                      <div className="mt-3 space-y-2">
-                        {coreFacts.map((fact) => (
-                          <p
-                            className="rounded-[1rem] border border-[var(--border)] px-3 py-2 text-xs leading-5 text-[var(--muted)]"
-                            key={fact}
-                          >
-                            {fact}
-                          </p>
-                        ))}
-                      </div>
-                      {shouldNotInfer.length > 0 ? (
-                        <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
-                          Should not infer: {shouldNotInfer.join(", ")}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <ActualExtractionSummary actualJson={item.actual_json} />
-
-                    <div>
-                      <p className="ff-kicker">Frankie reply</p>
-                      <p className="mt-3 rounded-[1rem] border border-[var(--border)] px-4 py-3 text-sm leading-6 text-[var(--muted)]">
-                        {item.assistant_reply ?? item.error_message ?? "No reply recorded."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <TuningNoteForm
-                    itemId={item.id}
-                    review={tuningReview ?? null}
-                    reviewCheck={TUNING_REVIEW_CHECK_ID}
-                  />
-                </details>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="leading-7 text-[var(--muted)]">
-            Select or create an eval run to inspect model behavior.
-          </p>
-        )}
-      </SectionCard>
-
-      <SectionCard eyebrow="Source of truth" title="Design doc">
-        <p className="leading-7 text-[var(--muted)]">
-          The eval loop contract, seed shape, review checks, and future data model are captured in
-          the design doc so future tuning work has something stable to point at.
-        </p>
-        <p className="ff-card-soft mt-5 px-4 py-3 text-sm font-medium">
-          docs/frankie-eval-loop-design.md
-        </p>
-      </SectionCard>
     </div>
   );
 }

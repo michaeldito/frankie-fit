@@ -49,7 +49,7 @@ function TraceLink({
 
   return (
     <Link
-      className={`block rounded-[1.15rem] border px-4 py-3 transition ${
+      className={`block rounded-[0.65rem] border px-3 py-2.5 transition ${
         active
           ? "border-[rgba(96,165,250,0.42)] bg-[rgba(59,130,246,0.12)]"
           : "border-[var(--border)] bg-[var(--surface-elevated)] hover:border-[rgba(96,165,250,0.26)]"
@@ -98,25 +98,11 @@ export default async function AdminDebugPage({
   const selectedTrace = debugData.selectedTrace;
 
   return (
-    <div className="space-y-6 lg:space-y-7">
-      <header className="ff-panel-strong flex flex-col gap-5 p-6">
-        <div className="space-y-3">
-          <p className="ff-kicker">Admin Debug</p>
-          <h1 className="max-w-4xl text-3xl font-semibold tracking-[-0.04em] sm:text-[2.35rem]">
-            Turn-by-turn trace inspection for weird Frankie behavior.
-          </h1>
-          <p className="max-w-3xl leading-7 text-[var(--muted)]">
-            This view is meant for debugging real chat behavior: what the user said, what Frankie
-            extracted, what got written, what replied, and whether the model or fallback path was
-            responsible.
-          </p>
-        </div>
-      </header>
-
+    <div className="space-y-4">
       {!debugData.ready ? (
-        <section className="ff-panel p-5 sm:p-6">
+        <section className="ff-panel p-4">
           <p className="ff-kicker">Debug setup note</p>
-          <p className="mt-4 max-w-3xl leading-7 text-[var(--muted)]">
+          <p className="mt-3 max-w-3xl leading-7 text-[var(--muted)]">
             The admin debug UI is built, but the trace table may not exist in Supabase yet. Run
             the migration in
             <span className="font-medium text-[var(--foreground)]">
@@ -131,12 +117,12 @@ export default async function AdminDebugPage({
         </section>
       ) : null}
 
-      <section className="grid gap-4 xl:grid-cols-[0.82fr_1.38fr]">
-        <div className="ff-panel p-5">
-          <div className="flex flex-col gap-4">
+      <section className="grid gap-3 xl:grid-cols-[0.82fr_1.38fr]">
+        <div className="ff-panel p-4">
+          <div className="flex flex-col gap-3">
             <div>
               <p className="ff-kicker">Search traces</p>
-              <form className="mt-3 flex gap-3" method="get">
+              <form className="mt-2 flex gap-2" method="get">
                 <input
                   className="ff-input flex-1"
                   defaultValue={query}
@@ -146,7 +132,7 @@ export default async function AdminDebugPage({
                 />
                 <button
                   aria-label="Search traces"
-                  className="ff-button-primary h-11 w-11 shrink-0 p-0 text-sm"
+                  className="ff-button-primary h-9 w-9 shrink-0 p-0 text-sm"
                   title="Search traces"
                   type="submit"
                 >
@@ -178,7 +164,7 @@ export default async function AdminDebugPage({
               ) : null}
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {debugData.traces.length > 0 ? (
                 debugData.traces.map((trace) => (
                   <TraceLink
