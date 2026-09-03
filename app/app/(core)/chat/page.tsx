@@ -69,6 +69,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
           assistantCardClass={assistantCardClass}
           followupMessage={followupMessage}
           initialMessages={chatExperience.messages}
+          initialPersona={context.profile?.coach_persona ?? null}
           introMessage={introMessage}
           schemaReady={chatExperience.schemaReady}
           userCardClass={userCardClass}

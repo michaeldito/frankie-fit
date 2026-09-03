@@ -8,6 +8,7 @@ import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
 import { logWellnessCheckin } from "@/lib/ai/tools/log-wellness";
 import { getChatExperience, MAX_CHAT_MESSAGE_LENGTH } from "@/lib/chat";
+import { PERSONAS } from "@/lib/ai/prompts/personas";
 import { getCurrentAppContext, getDisplayName } from "@/lib/profile";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -61,7 +62,30 @@ export async function POST(request: NextRequest) {
     action?: unknown;
     message?: unknown;
     sourceMessageId?: unknown;
+    personaId?: unknown;
   } | null;
+
+  if (body?.action === "set_persona") {
+    const personaId = typeof body.personaId === "string" ? body.personaId.trim() : "";
+    const isKnownPersona = PERSONAS.some((persona) => persona.id === personaId);
+
+    if (personaId && !isKnownPersona) {
+      return NextResponse.json({ error: "Unknown coach persona." }, { status: 400 });
+    }
+
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase
+      .from("profiles")
+      .update({ coach_persona: personaId || null })
+      .eq("id", context.user.id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ error: null, personaId: personaId || null });
+  }
+
   const action =
     body?.action === "save_message" || body?.action === "generate_reply"
       ? body.action

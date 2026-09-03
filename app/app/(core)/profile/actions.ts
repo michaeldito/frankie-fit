@@ -79,6 +79,7 @@ export async function saveProfile(formData: FormData) {
     health_considerations: parseTextList(getStringValue(formData, "healthConsiderations")),
     avoidances: parseTextList(getStringValue(formData, "avoidances")),
     coaching_style: coachingStyle,
+    coach_persona: getStringValue(formData, "coachPersona") || null,
     preferred_checkin_style: getStringValue(formData, "preferredCheckinStyle") || null,
     safety_acknowledged: context.profile?.safety_acknowledged ?? true,
     onboarding_completed: context.profile?.onboarding_completed ?? true,

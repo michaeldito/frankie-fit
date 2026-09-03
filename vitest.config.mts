@@ -20,6 +20,7 @@ export default defineConfig({
         "lib/ai/orchestrator/frankie-orchestrator.ts",
         "lib/ai/prompts/coach-response.ts",
         "lib/ai/prompts/extract-user-update.ts",
+        "lib/ai/prompts/personas.ts",
         "lib/ai/schemas/extracted-user-update.ts",
         "lib/ai/tools/shared.ts",
         "lib/programs/enroll-in-program.ts",

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { saveProfile } from "@/app/app/(core)/profile/actions";
+import { PERSONAS } from "@/lib/ai/prompts/personas";
 import {
   formatScheduleNotes,
   getAccountLabel,
@@ -575,6 +576,22 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 {coachingStyleOptions.map((option) => (
                   <option key={option} value={option}>
                     {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-sm font-medium">Coach persona</span>
+              <select
+                className="ff-select"
+                defaultValue={context.profile?.coach_persona ?? ""}
+                name="coachPersona"
+              >
+                <option value="">Default Frankie voice</option>
+                {PERSONAS.map((persona) => (
+                  <option key={persona.id} value={persona.id}>
+                    {persona.displayName}
                   </option>
                 ))}
               </select>

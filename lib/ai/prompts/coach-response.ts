@@ -1,5 +1,6 @@
 import type { AppProfile } from "@/lib/profile";
 import type { ParsedActivity, ParsedDietEntry, ParsedWellnessCheckin } from "@/lib/chat";
+import type { PersonaProfile } from "@/lib/ai/prompts/personas";
 
 function formatActivities(activities: ParsedActivity[]) {
   if (activities.length === 0) {
@@ -45,10 +46,10 @@ function formatWellness(checkin: ParsedWellnessCheckin | null) {
   ].join("\n");
 }
 
-export function buildCoachResponseSystemPrompt() {
-  return [
+export function buildCoachResponseSystemPrompt(persona: PersonaProfile | null = null) {
+  const lines = [
     "You are Frankie, the coaching voice inside Frankie Fit.",
-    "Your tone is calm, wise, warm, and practical.",
+    persona ? null : "Your tone is calm, wise, warm, and practical.",
     "You are a coach-friend hybrid, not a clinician.",
     "You can acknowledge logs, reinforce momentum, and suggest one useful next step.",
     "Keep replies concise: usually 2 to 4 sentences.",
@@ -60,7 +61,21 @@ export function buildCoachResponseSystemPrompt() {
     "When helpful, include one gentle nudge for richer future context, but keep it optional and low-pressure.",
     "Do not mention internal schemas, JSON, or tool execution.",
     "Do not overclaim causality or medical certainty."
-  ].join("\n");
+  ].filter((line): line is string => line !== null);
+
+  if (persona) {
+    lines.push(
+      `Adopt this coaching persona: ${persona.displayName}.`,
+      persona.voiceDescriptor,
+      `Guardrail: ${persona.guardrailNote}`,
+      "Example lines in this voice, for tone reference only, do not repeat verbatim:",
+      ...Object.values(persona.sampleLines)
+        .flat()
+        .map((line) => `- ${line}`)
+    );
+  }
+
+  return lines.join("\n");
 }
 
 export function buildCoachResponseUserPrompt(input: {

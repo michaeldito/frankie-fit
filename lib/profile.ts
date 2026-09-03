@@ -29,6 +29,7 @@ const profileSelect = `
   health_considerations,
   avoidances,
   coaching_style,
+  coach_persona,
   preferred_checkin_style,
   safety_acknowledged,
   onboarding_completed,
@@ -62,6 +63,7 @@ export type AppProfile = {
   health_considerations: string[];
   avoidances: string[];
   coaching_style: string | null;
+  coach_persona: string | null;
   preferred_checkin_style: string | null;
   safety_acknowledged: boolean;
   onboarding_completed: boolean;

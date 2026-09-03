@@ -1,7 +1,25 @@
 import { describe, expect, it } from "vitest";
 import type { AppProfile } from "@/lib/profile";
 import type { ParsedActivity, ParsedDietEntry, ParsedWellnessCheckin } from "@/lib/chat";
+import type { PersonaProfile } from "@/lib/ai/prompts/personas";
 import { buildCoachResponseSystemPrompt, buildCoachResponseUserPrompt } from "./coach-response";
+
+function persona(overrides: Partial<PersonaProfile> = {}): PersonaProfile {
+  return {
+    id: "arnold",
+    displayName: "Arnold",
+    voiceDescriptor: "Speaks in short, blunt declaratives.",
+    sampleLines: {
+      encouragement: ["Push harder."],
+      correction: ["Fix your form."],
+      celebration: ["New record."],
+      reminder: ["Don't skip today."],
+      smallTalk: ["How's the body feeling?"]
+    },
+    guardrailNote: "Never demeaning.",
+    ...overrides
+  };
+}
 
 function activity(overrides: Partial<ParsedActivity> = {}): ParsedActivity {
   return {
@@ -63,6 +81,26 @@ function baseInput(overrides: Partial<Parameters<typeof buildCoachResponseUserPr
 describe("buildCoachResponseSystemPrompt", () => {
   it("stays stable to avoid unnoticed prompt drift", () => {
     expect(buildCoachResponseSystemPrompt()).toMatchSnapshot();
+  });
+
+  it("omits the default tone line and appends the persona voice when a persona is given", () => {
+    const prompt = buildCoachResponseSystemPrompt(persona());
+
+    expect(prompt).not.toContain("Your tone is calm, wise, warm, and practical.");
+    expect(prompt).toContain("Adopt this coaching persona: Arnold.");
+    expect(prompt).toContain("Speaks in short, blunt declaratives.");
+    expect(prompt).toContain("Guardrail: Never demeaning.");
+    expect(prompt).toContain("- Push harder.");
+    expect(prompt).toContain("- How's the body feeling?");
+  });
+
+  it("keeps every existing guardrail line intact when a persona is given", () => {
+    const prompt = buildCoachResponseSystemPrompt(persona());
+
+    expect(prompt).toContain("Do not overclaim causality or medical certainty.");
+    expect(prompt).toContain(
+      "Only mention concrete durations, intensities, counts, foods, or wellness scores if they appear in the structured updates for this turn."
+    );
   });
 });
 
