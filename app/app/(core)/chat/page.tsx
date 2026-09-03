@@ -36,19 +36,6 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
-      <section className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
-          <p className="ff-kicker">Conversation</p>
-          <h2 className="text-2xl font-semibold tracking-[-0.04em] sm:text-[2rem]">
-            Good to see you, {firstName}.
-          </h2>
-          <p className="max-w-3xl leading-7 text-[var(--muted)]">
-            Stay loose with the wording. Frankie can now read activity, meals, and wellness from
-            the same update without forcing you into tidy inputs.
-          </p>
-        </div>
-      </section>
-
       {!chatExperience.schemaReady ? (
         <section className="ff-panel p-5 sm:p-6">
           <p className="ff-kicker">Setup note</p>
@@ -78,25 +65,11 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
       ) : null}
 
       <section className="ff-panel min-h-0 flex flex-1 flex-col overflow-hidden">
-        <div className="border-b border-[var(--border)] px-5 py-4 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="ff-kicker">Live chat</p>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                Log what happened, what you ate, how you feel, or ask Frankie to help shape the
-                next step.
-              </p>
-            </div>
-            <span className="ff-pill">Thread memory active</span>
-          </div>
-        </div>
-
         <WebChatExperience
           assistantCardClass={assistantCardClass}
           followupMessage={followupMessage}
           initialMessages={chatExperience.messages}
           introMessage={introMessage}
-          primaryGoal={primaryGoal}
           schemaReady={chatExperience.schemaReady}
           userCardClass={userCardClass}
         />

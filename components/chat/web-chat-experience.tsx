@@ -20,10 +20,20 @@ type WebChatExperienceProps = {
   followupMessage: string;
   introMessage: string;
   initialMessages: ChatMessage[];
-  primaryGoal: string | null;
   schemaReady: boolean;
   userCardClass: string;
 };
+
+const QUICK_START_PLACEHOLDER = "[fill in]";
+
+const QUICK_START_OPTIONS: Array<{ label: string; template: string }> = [
+  { label: "Exercise", template: `Today I exercised, what I did was ${QUICK_START_PLACEHOLDER}` },
+  { label: "Food", template: `Today I ate, what I had was ${QUICK_START_PLACEHOLDER}` },
+  {
+    label: "Wellness",
+    template: `Today I'm checking in, how I'm feeling is ${QUICK_START_PLACEHOLDER}`
+  }
+];
 
 async function chatApiFetch<T>(input: RequestInfo, init?: RequestInit) {
   const response = await fetch(input, {
@@ -47,12 +57,12 @@ export function WebChatExperience({
   followupMessage,
   introMessage,
   initialMessages,
-  primaryGoal,
   schemaReady,
   userCardClass
 }: WebChatExperienceProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState(initialMessages);
@@ -115,6 +125,33 @@ export function WebChatExperience({
     setIsThinking(false);
   }
 
+  function handleQuickStart(template: string) {
+    if (!schemaReady || isBusy) {
+      return;
+    }
+
+    setDraft(template);
+    window.requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+
+      if (!textarea) {
+        return;
+      }
+
+      textarea.focus();
+      const placeholderIndex = template.indexOf(QUICK_START_PLACEHOLDER);
+
+      if (placeholderIndex >= 0) {
+        textarea.setSelectionRange(
+          placeholderIndex,
+          placeholderIndex + QUICK_START_PLACEHOLDER.length
+        );
+      } else {
+        textarea.setSelectionRange(template.length, template.length);
+      }
+    });
+  }
+
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
       return;
@@ -155,9 +192,22 @@ export function WebChatExperience({
         ref={formRef}
       >
         <label className="block">
-          <span className="mb-3 block text-sm font-semibold tracking-[-0.01em]">
-            Tell Frankie what you did, ate, or how you are feeling.
-          </span>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold tracking-[-0.01em]">
+              Tell Frankie anything about your
+            </span>
+            {QUICK_START_OPTIONS.map((option) => (
+              <button
+                className="cursor-pointer rounded-full border border-[var(--border-strong)] bg-[var(--surface-strong)] px-3 py-1.5 text-sm font-medium text-[var(--muted-strong)] transition hover:border-[rgba(147,197,253,0.5)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!schemaReady || isBusy}
+                key={option.label}
+                onClick={() => handleQuickStart(option.template)}
+                type="button"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <textarea
             className="ff-textarea min-h-32"
             disabled={!schemaReady || isBusy}
@@ -166,20 +216,15 @@ export function WebChatExperience({
             onKeyDown={handleComposerKeyDown}
             placeholder={
               schemaReady
-                ? primaryGoal
-                  ? `I want to stay on track with ${primaryGoal.toLowerCase()}, and today looked like...`
-                  : "I had eggs and fruit for breakfast, walked for an hour, and motivation feels a little low."
+                ? "I ran 30 minutes this morning, had eggs and toast after, and my energy's been solid today."
                 : "Run the Supabase schema first, then Frankie can start saving chat and logs."
             }
+            ref={textareaRef}
             required
             value={draft}
           />
         </label>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="max-w-xl text-sm leading-6 text-[var(--muted)]">
-            Say it however you would normally say it. Frankie is meant to handle the messy
-            version now.
-          </p>
+        <div className="mt-4 flex justify-end">
           <button
             className="ff-button-primary min-w-28 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             disabled={!schemaReady || isBusy || !draft.trim()}
