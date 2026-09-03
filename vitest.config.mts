@@ -28,14 +28,13 @@ export default defineConfig({
         "packages/dashboard-core/pacific-date.ts",
         "packages/workout-core/exercise-catalog.ts"
       ],
-      // Set just below the current baseline (as of this commit: ~70% stmts/lines, ~75% funcs,
-      // ~59% branches) so CI catches a real regression without blocking on frankie-orchestrator.ts's
-      // many still-untested internal branches. Ratchet these up as coverage there improves.
+      // Set just below the current baseline (as of this commit: ~85% stmts/lines, ~89% funcs,
+      // ~70% branches) so CI catches a real regression. Ratchet these up as coverage improves.
       thresholds: {
-        lines: 65,
-        statements: 65,
-        functions: 70,
-        branches: 55
+        lines: 80,
+        statements: 80,
+        functions: 85,
+        branches: 65
       }
     }
   },
