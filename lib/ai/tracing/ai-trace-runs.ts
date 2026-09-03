@@ -168,7 +168,16 @@ export async function recordAiTraceRun(input: {
   }).select("id").single();
 
   if (error) {
-    console.error("Failed to record ai_trace_run", error.message);
+    console.error("Failed to record ai_trace_run", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      userId: input.userId,
+      threadId: input.threadId,
+      sourceMessageId: input.sourceMessageId,
+      assistantMessageId: input.assistantMessageId ?? null
+    });
     return null;
   }
 

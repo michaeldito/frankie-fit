@@ -67,11 +67,12 @@ export async function getAdminDebugData(input: {
     return buildEmptyDebugData(reviewableProfilesError.message);
   }
 
-  const reviewableUserIds = (reviewableProfiles ?? []).map((profile) => profile.id);
-
-  if (reviewableUserIds.length === 0) {
-    return { ready: true, error: null, traces: [], selectedTrace: null, threadTimeline: [] };
-  }
+  const reviewableUserIds = Array.from(
+    new Set([
+      ...(reviewableProfiles ?? []).map((profile) => profile.id),
+      input.context.user.id
+    ])
+  );
 
   const { data, error } = await supabase
     .from("ai_trace_runs")

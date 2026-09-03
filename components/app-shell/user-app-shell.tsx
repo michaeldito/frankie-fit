@@ -93,7 +93,7 @@ function getPageMeta(pathname: string) {
   if (pathname.startsWith("/app/admin")) {
     return {
       eyebrow: "Founder View",
-      title: "Admin",
+      title: "Insights",
       subtitle: "Aggregate product health, safely surfaced."
     };
   }
@@ -226,16 +226,11 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
 
             <div className="mt-6">
               <p className="px-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                Navigate
+                App
               </p>
               <nav className="mt-2 flex flex-col gap-0.5">
                 <NavLink href="/app/chat">Chat</NavLink>
                 <NavLink href="/app/dashboard">Dashboard</NavLink>
-                <NavLink href="/app/workouts">Workouts</NavLink>
-                <NavLink href="/app/programs">Programs</NavLink>
-                {user.isAdmin ? <NavLink href="/app/admin" match="exact">Admin</NavLink> : null}
-                {user.isAdmin ? <NavLink href="/app/admin/debug">Debug</NavLink> : null}
-                {user.isAdmin ? <NavLink href="/app/admin/evals">Evals</NavLink> : null}
               </nav>
             </div>
 
@@ -245,14 +240,14 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
               </p>
               <div className="mt-2 flex flex-col gap-0.5">
                 <button
-                  className="flex cursor-pointer items-center justify-between rounded-[0.55rem] px-3 py-2 text-left text-sm text-[var(--muted)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_60%,transparent)] hover:text-[var(--foreground)]"
+                  className="flex cursor-pointer items-center justify-between rounded-[0.55rem] px-3 py-2 text-left text-sm font-medium text-[var(--muted)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_60%,transparent)] hover:text-[var(--foreground)]"
                   onClick={() => setOverlayPanel("goal")}
                   type="button"
                 >
                   Open goal
                 </button>
                 <button
-                  className="flex cursor-pointer items-center justify-between rounded-[0.55rem] px-3 py-2 text-left text-sm text-[var(--muted)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_60%,transparent)] hover:text-[var(--foreground)]"
+                  className="flex cursor-pointer items-center justify-between rounded-[0.55rem] px-3 py-2 text-left text-sm font-medium text-[var(--muted)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_60%,transparent)] hover:text-[var(--foreground)]"
                   onClick={() => setOverlayPanel("next-step")}
                   type="button"
                 >
@@ -260,6 +255,29 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
                 </button>
               </div>
             </div>
+
+            <div className="mt-6">
+              <p className="px-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                Beta
+              </p>
+              <nav className="mt-2 flex flex-col gap-0.5">
+                <NavLink href="/app/workouts">Workouts</NavLink>
+                <NavLink href="/app/programs">Programs</NavLink>
+              </nav>
+            </div>
+
+            {user.isAdmin ? (
+              <div className="mt-6">
+                <p className="px-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                  Admin
+                </p>
+                <nav className="mt-2 flex flex-col gap-0.5">
+                  <NavLink href="/app/admin" match="exact">Insights</NavLink>
+                  <NavLink href="/app/admin/debug">Debug</NavLink>
+                  <NavLink href="/app/admin/evals">Evals</NavLink>
+                </nav>
+              </div>
+            ) : null}
 
             {!user.authConfigured ? (
               <div className="mt-auto">
@@ -346,14 +364,26 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
                 </div>
               </div>
 
-              <div className="mt-4 flex gap-2 overflow-x-auto lg:hidden">
+              <div className="mt-4 flex items-center gap-2 overflow-x-auto lg:hidden">
                 <NavLink href="/app/chat">Chat</NavLink>
                 <NavLink href="/app/dashboard">Dashboard</NavLink>
+                <span className="mx-1 h-4 flex-none border-l border-[var(--border)]" />
+                <span className="flex-none text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                  Beta
+                </span>
                 <NavLink href="/app/workouts">Workouts</NavLink>
                 <NavLink href="/app/programs">Programs</NavLink>
-                {user.isAdmin ? <NavLink href="/app/admin" match="exact">Admin</NavLink> : null}
-                {user.isAdmin ? <NavLink href="/app/admin/debug">Debug</NavLink> : null}
-                {user.isAdmin ? <NavLink href="/app/admin/evals">Evals</NavLink> : null}
+                {user.isAdmin ? (
+                  <>
+                    <span className="mx-1 h-4 flex-none border-l border-[var(--border)]" />
+                    <span className="flex-none text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                      Admin
+                    </span>
+                    <NavLink href="/app/admin" match="exact">Insights</NavLink>
+                    <NavLink href="/app/admin/debug">Debug</NavLink>
+                    <NavLink href="/app/admin/evals">Evals</NavLink>
+                  </>
+                ) : null}
               </div>
             </header>
 
