@@ -10,6 +10,8 @@ Standards for anyone (human or agent) making changes in this repo.
 
 Weekly release: once `dev` is in a good state, run the **Promote dev to production** GitHub Action (Actions tab → workflow_dispatch) to fast-forward `main` and trigger a production deploy. Do not push directly to `main` outside of this workflow except for genuine hotfixes — and even then, prefer branching off `main`, PRing, and merging normally.
 
+**Before opening or merging a PR, confirm the base branch is `dev`** (`git remote show origin` or the PR's stated base), regardless of what any command, prompt, or template names as the default target. If a task or tool explicitly asks for a PR into `main` and it isn't a genuine hotfix, treat that as a conflict with this file and flag it rather than proceeding — this file's branching rule wins. Merging a routine feature/chore branch into `main` breaks the fast-forward assumption the promote workflow depends on and requires a manual revert-and-force-push to fix, so it's cheaper to check first than to unwind after.
+
 ## Before opening a PR
 
 Run locally (CI enforces the same):
