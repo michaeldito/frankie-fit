@@ -38,7 +38,7 @@ type ChatContextSnapshot = {
 };
 
 const DEFAULT_OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
-export const FRANKIE_PROMPT_VERSION = "frankie-orchestrator-v8";
+export const FRANKIE_PROMPT_VERSION = "frankie-orchestrator-v10";
 const BLOCKING_ACTIVITY_MISSING_FIELDS = new Set([
   "activityType",
   "loggedForDate",
@@ -53,8 +53,13 @@ const ALLOWED_ACTIVITY_MISSING_FIELDS = new Set([
   "movementFocus"
 ]);
 
+export type PendingClarification = {
+  originalMessage: string;
+  clarificationQuestion: string;
+};
+
 export type FrankieOrchestrationResult = {
-  assistantMessageType: "chat" | "log_confirmation";
+  assistantMessageType: "chat" | "log_confirmation" | "clarification_request";
   parsedActivities: ParsedActivity[];
   parsedDietEntries: ParsedDietEntry[];
   parsedWellnessCheckin: ParsedWellnessCheckin | null;
@@ -76,6 +81,7 @@ export type FrankieOrchestrationResult = {
     promptVersion: string;
     contextSnapshot?: ChatContextSnapshot;
     rawModelExtraction?: ExtractedUserUpdate;
+    pendingClarification?: PendingClarification;
   };
 };
 
@@ -112,11 +118,74 @@ function buildRuleBasedFallback(
   };
 }
 
+function transpositionDistance(wordA: string, wordB: string) {
+  const rows = wordA.length + 1;
+  const cols = wordB.length + 1;
+  const distances: number[][] = Array.from({ length: rows }, () => new Array(cols).fill(0));
+
+  for (let row = 0; row <= wordA.length; row += 1) {
+    distances[row][0] = row;
+  }
+
+  for (let col = 0; col <= wordB.length; col += 1) {
+    distances[0][col] = col;
+  }
+
+  for (let row = 1; row <= wordA.length; row += 1) {
+    for (let col = 1; col <= wordB.length; col += 1) {
+      const cost = wordA[row - 1] === wordB[col - 1] ? 0 : 1;
+
+      distances[row][col] = Math.min(
+        distances[row - 1][col] + 1,
+        distances[row][col - 1] + 1,
+        distances[row - 1][col - 1] + cost
+      );
+
+      if (
+        row > 1 &&
+        col > 1 &&
+        wordA[row - 1] === wordB[col - 2] &&
+        wordA[row - 2] === wordB[col - 1]
+      ) {
+        distances[row][col] = Math.min(distances[row][col], distances[row - 2][col - 2] + 1);
+      }
+    }
+  }
+
+  return distances[wordA.length][wordB.length];
+}
+
+// Tolerates a single typo or adjacent-letter swap ("minuets" -> "minutes", "lunhc" -> "lunch")
+// without a wider distance that would also match unrelated words ("lunges" is 2 edits from "lunch").
+function isFuzzyWordMatch(word: string, target: string, maxDistance = 1) {
+  if (Math.abs(word.length - target.length) > maxDistance) {
+    return false;
+  }
+
+  return transpositionDistance(word, target) <= maxDistance;
+}
+
 function hasDurationMention(value: string) {
-  return (
+  if (
     /\b\d+\s*(?:minutes?|mins?|min|hours?|hrs?|hr)\b/i.test(value) ||
     /\b(?:about|around|roughly)?\s*(?:an|one)\s+hour\b/i.test(value)
-  );
+  ) {
+    return true;
+  }
+
+  const durationUnitTargets = ["minutes", "hours"];
+  const numberWithWordPattern = /\b\d+\s*([a-z]+)\b/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = numberWithWordPattern.exec(value))) {
+    const token = match[1]?.toLowerCase();
+
+    if (token && durationUnitTargets.some((target) => isFuzzyWordMatch(token, target))) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function hasIntensityMention(value: string) {
@@ -124,24 +193,90 @@ function hasIntensityMention(value: string) {
 }
 
 function hasExplicitMealTypeEvidence(value: string) {
-  return /\b(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b/i.test(value);
+  if (/\b(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b/i.test(value)) {
+    return true;
+  }
+
+  const mealTypeTargets = ["breakfast", "brunch", "lunch", "dinner", "supper", "snack", "dessert"];
+  const words = value.toLowerCase().match(/[a-z]+/g) ?? [];
+
+  return words.some((word) => mealTypeTargets.some((target) => isFuzzyWordMatch(word, target)));
 }
 
-function hasNumericScoreEvidence(value: string, cues: readonly string[]) {
-  return splitEvidenceClauses(value).some((clause) =>
-    cues.some((cue) => {
-      const escapedCue = cue.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const afterCue = new RegExp(
-        `\\b${escapedCue}\\b[^\\d]{0,16}[1-5](?:\\s*(?:\\/|out of)\\s*5)?`,
-        "i"
-      );
-      const beforeCue = new RegExp(
-        `[1-5](?:\\s*(?:\\/|out of)\\s*5)?[^\\d]{0,16}\\b${escapedCue}\\b`,
-        "i"
-      );
+const WELLNESS_SIGNAL_DEFINITIONS = [
+  { key: "energy", cues: ["energy", "energized", "energised", "tired", "fatigued"] },
+  { key: "soreness", cues: ["soreness", "sore", "aches", "achy"] },
+  { key: "mood", cues: ["mood", "positive", "calm", "good", "down", "off"] },
+  { key: "stress", cues: ["stress", "stressed"] },
+  { key: "motivation", cues: ["motivation", "motivated", "drive"] }
+] as const;
 
-      return afterCue.test(clause) || beforeCue.test(clause);
-    })
+const NEAREST_CUE_MAX_DISTANCE = 16;
+
+function escapeRegExpToken(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function findCueOccurrences(clause: string) {
+  const occurrences: Array<{ index: number; signalKey: string }> = [];
+
+  for (const signal of WELLNESS_SIGNAL_DEFINITIONS) {
+    for (const cue of signal.cues) {
+      const pattern = new RegExp(`\\b${escapeRegExpToken(cue)}\\b`, "gi");
+      let match: RegExpExecArray | null;
+
+      while ((match = pattern.exec(clause))) {
+        occurrences.push({ index: match.index, signalKey: signal.key });
+      }
+    }
+  }
+
+  return occurrences;
+}
+
+function findScoreOccurrences(clause: string) {
+  const pattern = /[1-5](?:\s*(?:\/|out of)\s*5)?/g;
+  const occurrences: Array<{ index: number }> = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(clause))) {
+    occurrences.push({ index: match.index });
+  }
+
+  return occurrences;
+}
+
+// A number is only attributed to the cue nearest to it, not any cue within range, so
+// "energy 2 sleep bad sore af" attaches the 2 to energy instead of also crediting soreness.
+function resolveScoreOwnersForClause(clause: string) {
+  const cueOccurrences = findCueOccurrences(clause);
+  const scoreOccurrences = findScoreOccurrences(clause);
+  const owningSignalKeys = new Set<string>();
+
+  for (const score of scoreOccurrences) {
+    let nearestSignalKey: string | null = null;
+    let nearestDistance = Infinity;
+
+    for (const cue of cueOccurrences) {
+      const distance = Math.abs(cue.index - score.index);
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestSignalKey = cue.signalKey;
+      }
+    }
+
+    if (nearestSignalKey && nearestDistance <= NEAREST_CUE_MAX_DISTANCE) {
+      owningSignalKeys.add(nearestSignalKey);
+    }
+  }
+
+  return owningSignalKeys;
+}
+
+function hasNumericScoreEvidence(value: string, signalKey: string) {
+  return splitEvidenceClauses(value).some((clause) =>
+    resolveScoreOwnersForClause(clause).has(signalKey)
   );
 }
 
@@ -258,16 +393,10 @@ function findActivityEvidence(message: string, activity: ParsedActivity) {
 
 function findDietEvidence(message: string, entry: ParsedDietEntry) {
   const clauses = splitEvidenceClauses(message);
-  const timeReferenceText = entry.timeReferenceText?.trim().toLowerCase();
 
-  if (timeReferenceText) {
-    const byTime = clauses.find((clause) => clause.toLowerCase().includes(timeReferenceText));
-
-    if (byTime) {
-      return byTime;
-    }
-  }
-
+  // Description is checked first because it's specific to this entry; a generic time word like
+  // "today" can appear in an unrelated clause of a multi-clause message and would otherwise win
+  // by accident (matches findActivityEvidence's ordering for the same reason).
   const description = entry.description.trim().toLowerCase();
 
   if (description) {
@@ -275,6 +404,16 @@ function findDietEvidence(message: string, entry: ParsedDietEntry) {
 
     if (byDescription) {
       return byDescription;
+    }
+  }
+
+  const timeReferenceText = entry.timeReferenceText?.trim().toLowerCase();
+
+  if (timeReferenceText) {
+    const byTime = clauses.find((clause) => clause.toLowerCase().includes(timeReferenceText));
+
+    if (byTime) {
+      return byTime;
     }
   }
 
@@ -461,7 +600,10 @@ function supplementMissingActivityClauses(
   activities: ParsedActivity[],
   message: string
 ) {
-  if (!/\b(?:and then|then|later)\b/i.test(message)) {
+  // Only look for an additional clause the model may have missed once the model has already
+  // confirmed the message is about activity at all — otherwise the legacy keyword parser below
+  // can fabricate an activity from an unrelated use of a trigger word (e.g. "meetings ran long").
+  if (activities.length === 0 || !/\b(?:and then|then|later)\b/i.test(message)) {
     return activities;
   }
 
@@ -730,47 +872,33 @@ function sanitizeWellnessCheckin(
     return null;
   }
 
-  const wellnessSignals = [
-    { key: "energy", cues: ["energy", "energized", "energised", "tired", "fatigued"] },
-    { key: "soreness", cues: ["soreness", "sore", "aches", "achy"] },
-    { key: "mood", cues: ["mood", "positive", "calm", "good", "down", "off"] },
-    { key: "stress", cues: ["stress", "stressed"] },
-    { key: "motivation", cues: ["motivation", "motivated", "drive"] }
-  ] as const;
   const detectedSignals = new Set(checkin.detectedSignals);
 
-  for (const signal of wellnessSignals) {
+  for (const signal of WELLNESS_SIGNAL_DEFINITIONS) {
     if (hasWellnessSignalEvidence(message, signal.cues)) {
       detectedSignals.add(signal.key);
     }
   }
 
-  const energyScore = hasNumericScoreEvidence(message, wellnessSignals[0].cues)
-    ? checkin.energyScore
-    : null;
-  const sorenessScore = hasNumericScoreEvidence(message, wellnessSignals[1].cues)
-    ? checkin.sorenessScore
-    : null;
-  const moodScore = hasNumericScoreEvidence(message, wellnessSignals[2].cues)
-    ? checkin.moodScore
-    : null;
-  const stressScore = hasNumericScoreEvidence(message, wellnessSignals[3].cues)
-    ? checkin.stressScore
-    : null;
-  const motivationScore = hasNumericScoreEvidence(message, wellnessSignals[4].cues)
+  const energyScore = hasNumericScoreEvidence(message, "energy") ? checkin.energyScore : null;
+  const sorenessScore = hasNumericScoreEvidence(message, "soreness") ? checkin.sorenessScore : null;
+  const moodScore = hasNumericScoreEvidence(message, "mood") ? checkin.moodScore : null;
+  const stressScore = hasNumericScoreEvidence(message, "stress") ? checkin.stressScore : null;
+  const motivationScore = hasNumericScoreEvidence(message, "motivation")
     ? checkin.motivationScore
     : null;
   const normalizedSignals = Array.from(detectedSignals);
   const notes = checkin.notes ?? (normalizedSignals.length > 0 ? message.trim() : null);
 
+  // A model-supplied notes string alone (with no detected signal and no verified score) is not
+  // real wellness evidence — it's often just incidental color on an activity/diet message.
   if (
     normalizedSignals.length === 0 &&
     !energyScore &&
     !sorenessScore &&
     !moodScore &&
     !stressScore &&
-    !motivationScore &&
-    !notes
+    !motivationScore
   ) {
     return null;
   }
@@ -875,11 +1003,30 @@ function hasPersistableData(input: {
   );
 }
 
+// When `pendingClarification` is set, only these two labeled lines are combined for
+// extraction — deliberately not the wider conversation history, per the extraction prompt's
+// "stay grounded in the current message" rule (see buildExtractUserUpdatePrompt).
+function buildExtractionUserPrompt(input: {
+  message: string;
+  pendingClarification?: PendingClarification;
+}) {
+  if (!input.pendingClarification) {
+    return input.message;
+  }
+
+  return [
+    `Previous message: "${input.pendingClarification.originalMessage}"`,
+    `Frankie asked: "${input.pendingClarification.clarificationQuestion}"`,
+    `User's answer: "${input.message}"`
+  ].join("\n");
+}
+
 export async function orchestrateFrankieReply(input: {
   profile: AppProfile | null;
   message: string;
   recentMessages: ChatMessage[];
   skipCoachResponse?: boolean;
+  pendingClarification?: PendingClarification;
 }): Promise<FrankieOrchestrationResult> {
   if (!hasOpenAiApiKey()) {
     return buildRuleBasedFallback(
@@ -895,8 +1042,13 @@ export async function orchestrateFrankieReply(input: {
       recentMessages: input.recentMessages
     });
     const extractedUnknown = await createStructuredOpenAiResponse({
-      systemPrompt: buildExtractUserUpdatePrompt(),
-      userPrompt: input.message,
+      systemPrompt: buildExtractUserUpdatePrompt({
+        isAnsweringClarification: Boolean(input.pendingClarification)
+      }),
+      userPrompt: buildExtractionUserPrompt({
+        message: input.message,
+        pendingClarification: input.pendingClarification
+      }),
       schemaName: "frankie_user_update",
       schema: extractedUserUpdateJsonSchema
     });
@@ -932,16 +1084,17 @@ export async function orchestrateFrankieReply(input: {
         dietEntries: parsedDietEntries.length > 0,
         wellnessCheckin: Boolean(parsedWellnessCheckin)
       };
+      const reply = `${buildPartialPersistencePrefix({
+        parsedDietEntries,
+        parsedWellnessCheckin
+      })}${buildBlockingClarificationReply(parsedActivities)}`;
 
       return {
-        assistantMessageType: "chat",
+        assistantMessageType: "clarification_request",
         parsedActivities,
         parsedDietEntries,
         parsedWellnessCheckin,
-        reply: `${buildPartialPersistencePrefix({
-          parsedDietEntries,
-          parsedWellnessCheckin
-        })}${buildBlockingClarificationReply(parsedActivities)}`,
+        reply,
         orchestrationMode: "model",
         shouldPersistStructuredData: persistPlan.dietEntries || persistPlan.wellnessCheckin,
         persistPlan,
@@ -953,18 +1106,21 @@ export async function orchestrateFrankieReply(input: {
           intent: extracted.intent,
           needsClarification: true,
           contextSnapshot: context,
-          rawModelExtraction: extracted
+          rawModelExtraction: extracted,
+          pendingClarification: { originalMessage: input.message, clarificationQuestion: reply }
         }
       };
     }
 
     if (extracted.needsClarification && extracted.clarificationQuestion.trim() && !usableData) {
+      const reply = extracted.clarificationQuestion.trim();
+
       return {
-        assistantMessageType: "chat",
+        assistantMessageType: "clarification_request",
         parsedActivities,
         parsedDietEntries,
         parsedWellnessCheckin,
-        reply: extracted.clarificationQuestion.trim(),
+        reply,
         orchestrationMode: "model",
         shouldPersistStructuredData: false,
         persistPlan: {
@@ -980,7 +1136,8 @@ export async function orchestrateFrankieReply(input: {
           intent: extracted.intent,
           needsClarification: true,
           contextSnapshot: context,
-          rawModelExtraction: extracted
+          rawModelExtraction: extracted,
+          pendingClarification: { originalMessage: input.message, clarificationQuestion: reply }
         }
       };
     }

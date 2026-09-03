@@ -162,7 +162,8 @@ export type Database = {
             | "summary"
             | "recommendation"
             | "checkin_prompt"
-            | "system_event";
+            | "system_event"
+            | "clarification_request";
           content: string;
           structured_payload: Json;
           created_at: string;
@@ -179,7 +180,8 @@ export type Database = {
             | "summary"
             | "recommendation"
             | "checkin_prompt"
-            | "system_event";
+            | "system_event"
+            | "clarification_request";
           content: string;
           structured_payload?: Json;
           created_at?: string;
@@ -196,7 +198,8 @@ export type Database = {
             | "summary"
             | "recommendation"
             | "checkin_prompt"
-            | "system_event";
+            | "system_event"
+            | "clarification_request";
           content?: string;
           structured_payload?: Json;
           created_at?: string;

@@ -54,8 +54,16 @@ export function DefaultProfileToggle() {
       <input
         className="h-4 w-4 accent-[var(--brand)]"
         onChange={(event) => {
-          if (event.target.checked && event.target.form) {
-            applyDefaults(event.target.form);
+          const form = event.target.form;
+          if (!form) return;
+
+          const sections = form.querySelector<HTMLElement>("#onboarding-sections");
+
+          if (event.target.checked) {
+            applyDefaults(form);
+            sections?.classList.add("hidden");
+          } else {
+            sections?.classList.remove("hidden");
           }
         }}
         type="checkbox"

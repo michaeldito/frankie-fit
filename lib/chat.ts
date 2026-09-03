@@ -337,6 +337,12 @@ function mapWeekdayTokenToIndex(token: string) {
 export function extractTimeReferenceText(text: string) {
   const normalizedText = text.toLowerCase();
 
+  const explicitDateMatch = normalizedText.match(/\b\d{4}-\d{2}-\d{2}\b/);
+
+  if (explicitDateMatch) {
+    return explicitDateMatch[0];
+  }
+
   const relativeMatch = normalizedText.match(
     /\b(?:today|yesterday|this morning|this afternoon|tonight|last night|\d+\s+days?\s+ago)\b/i
   );

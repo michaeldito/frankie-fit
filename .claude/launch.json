@@ -3,9 +3,10 @@
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "C:\\Users\\mcdit\\AppData\\Local\\OpenAI\\Codex\\bin\\5b9024f90663758b\\node.exe",
-      "runtimeArgs": ["node_modules/next/dist/bin/next", "dev", "--webpack"],
-      "port": 3000
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

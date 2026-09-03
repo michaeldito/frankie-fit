@@ -47,8 +47,11 @@ function loadEnvFile(fileName) {
 }
 
 function resolveExistingPath(basePath) {
+  if (fs.existsSync(basePath) && fs.statSync(basePath).isFile()) {
+    return basePath;
+  }
+
   const candidates = [
-    basePath,
     `${basePath}.ts`,
     `${basePath}.tsx`,
     `${basePath}.js`,
@@ -91,6 +94,21 @@ function registerAliasHook() {
           return {
             shortCircuit: true,
             url: pathToFileURL(resolvedAlias).href
+          };
+        }
+      }
+
+      if (specifier.startsWith("./") || specifier.startsWith("../")) {
+        const parentPath = context.parentURL ? fileURLToPath(context.parentURL) : null;
+        const basePath = parentPath
+          ? path.resolve(path.dirname(parentPath), specifier)
+          : path.resolve(projectRoot, specifier);
+        const resolvedRelative = resolveExistingPath(basePath);
+
+        if (resolvedRelative) {
+          return {
+            shortCircuit: true,
+            url: pathToFileURL(resolvedRelative).href
           };
         }
       }
@@ -242,6 +260,44 @@ function createDifficultMixedBenchmarkProfile() {
   };
 }
 
+function createMessyInputBenchmarkProfile() {
+  return {
+    account_type: "internal_test",
+    activity_level: "Somewhat active",
+    age_range: "25-34",
+    available_equipment: ["Bodyweight only", "Gym access"],
+    avoidances: ["Rigid form-like clarification"],
+    coaching_style: "Casual and quick",
+    current_activities: ["Gym sessions", "Running"],
+    diet_preferences: ["Flexible"],
+    diet_restrictions: [],
+    energy_baseline: "Variable",
+    fitness_experience: "Intermediate",
+    full_name: "Jordan Kim",
+    health_considerations: [],
+    injuries_limitations: [],
+    nutrition_goal: "keep logging low-effort",
+    onboarding_completed: true,
+    onboarding_summary:
+      "Jordan types fast, casual, and sloppy: typos, shorthand, run-on sentences, and vague low-context updates. Frankie should stay grounded in what was actually said instead of guessing at missing detail.",
+    preferred_activities: ["Running", "Strength training"],
+    preferred_checkin_style: "Both",
+    preferred_schedule: {
+      notes: "Logs whenever, often in one quick messy message."
+    },
+    primary_goal: "Keep logging consistent without needing to type carefully",
+    role: "user",
+    safety_acknowledged: true,
+    secondary_goals: ["Consistency"],
+    stress_baseline: "Moderate",
+    target_training_days: 4,
+    typical_session_length: 40,
+    training_environment: "Mixed",
+    wellness_checkin_opt_in: true,
+    wellness_support_focus: ["Energy", "Consistency"]
+  };
+}
+
 function formatValue(value) {
   return typeof value === "string" ? value : JSON.stringify(value);
 }
@@ -305,6 +361,12 @@ async function main() {
   const { DIFFICULT_MIXED_PATH_INTELLIGENCE_CASES } = await import(
     "../lib/evals/intelligence/difficult-mixed-path.ts"
   );
+  const { MESSY_INPUT_PATH_INTELLIGENCE_CASES } = await import(
+    "../lib/evals/intelligence/messy-input-path.ts"
+  );
+  const { CLARIFICATION_FOLLOWTHROUGH_PATH_INTELLIGENCE_CASES } = await import(
+    "../lib/evals/intelligence/clarification-followthrough-path.ts"
+  );
   const { buildActualSnapshot, compareIntelligenceCase, summarizeFixAreas } = await import(
     "../lib/evals/intelligence/compare.ts"
   );
@@ -326,6 +388,18 @@ async function main() {
       id: "difficult-mixed-path",
       label: "Difficult mixed path",
       profile: createDifficultMixedBenchmarkProfile()
+    },
+    {
+      cases: MESSY_INPUT_PATH_INTELLIGENCE_CASES,
+      id: "messy-input-path",
+      label: "Messy input path",
+      profile: createMessyInputBenchmarkProfile()
+    },
+    {
+      cases: CLARIFICATION_FOLLOWTHROUGH_PATH_INTELLIGENCE_CASES,
+      id: "clarification-followthrough-path",
+      label: "Clarification follow-through path",
+      profile: createMessyInputBenchmarkProfile()
     }
   ];
   const selectedScenarios = options.scenarioId
@@ -359,11 +433,26 @@ async function main() {
   const results = [];
 
   for (const { scenario, testCase } of cases) {
+    let pendingClarification;
+
+    for (const precedingMessage of testCase.precedingMessages ?? []) {
+      const precedingResult = await orchestrateFrankieReply({
+        message: precedingMessage,
+        profile: scenario.profile,
+        recentMessages: [],
+        skipCoachResponse: true,
+        pendingClarification
+      });
+
+      pendingClarification = precedingResult.metadata.pendingClarification;
+    }
+
     const orchestrationResult = await orchestrateFrankieReply({
       message: testCase.message,
       profile: scenario.profile,
       recentMessages: [],
-      skipCoachResponse: true
+      skipCoachResponse: true,
+      pendingClarification
     });
     const actual = buildActualSnapshot(orchestrationResult);
     const diffs = compareIntelligenceCase({

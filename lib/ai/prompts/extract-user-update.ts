@@ -1,4 +1,4 @@
-export function buildExtractUserUpdatePrompt() {
+export function buildExtractUserUpdatePrompt(input?: { isAnsweringClarification?: boolean }) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Los_Angeles",
     year: "numeric",
@@ -17,6 +17,12 @@ export function buildExtractUserUpdatePrompt() {
     "Do not use profile preferences, prior conversation, or likely defaults to fill missing facts.",
     "A message may contain activity, diet, and wellness updates at the same time.",
     `Assume today's local date is ${todayDate} in America/Los_Angeles.`,
+    ...(input?.isAnsweringClarification
+      ? [
+          "",
+          "The user prompt below has two labeled lines: the previous message and Frankie's clarification question, followed by the user's answer. Combine only those two lines into one complete update. Do not use any other prior conversation history."
+        ]
+      : []),
     "",
     "Activities:",
     "- The activity itself is the core fact. Duration, intensity, distance, sets/reps, and movement focus are useful but optional.",
@@ -32,7 +38,8 @@ export function buildExtractUserUpdatePrompt() {
     "- Use movementFocus in missingFields only for vague strength work. Never use it for running, walking, cycling, yoga, sports, or other non-strength activities.",
     "- If the user gives timing, duration, or intensity but does not name the activity, include activityType in missingFields.",
     "- If one total count spans multiple dates and the split is unclear, include sessionSplit in missingFields and grouped_session_count_without_distribution in ambiguityFlags.",
-    "- Do not create activity entries for food-only or drink-only statements.",
+    "- Do not create activity entries for food-only or drink-only statements. Food and drink items (eggs, coffee, a sandwich, a shake) belong only in dietEntries, never in activities, even in the same message as a real activity.",
+    "- Example: \"ran 5k this morning, had eggs after\" has exactly one activity (running) and one diet entry (eggs). Do not also add eggs, or any other food or drink word, as a second activity.",
     "",
     "Diet:",
     "- The food or drink is the core fact. Meal type, timing, portion size, calories, and macros are useful but optional.",

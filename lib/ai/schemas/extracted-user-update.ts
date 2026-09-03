@@ -10,6 +10,7 @@ import {
   extractTimeReferenceText,
   resolveLoggedForDateFromTimeReference
 } from "@/lib/chat";
+import { getPacificDateKey } from "../../../packages/dashboard-core";
 
 const intensityOptions = ["unknown", "Light", "Moderate", "Hard"] as const;
 const mealTypeOptions = ["unknown", "breakfast", "lunch", "dinner", "snack"] as const;
@@ -245,15 +246,16 @@ function mapActivityTimePrecision(value: string): ActivityTimePrecision {
 }
 
 function mapActivityTimePrecisionWithDateFallback(input: {
-  loggedForDate: string;
   timePrecision: string;
+  resolvedLoggedForDate: string;
 }) {
   const mappedPrecision = mapActivityTimePrecision(input.timePrecision);
 
-  if (
-    mappedPrecision === "implicit_today" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(input.loggedForDate.trim())
-  ) {
+  // "implicit_today" is only an honest label when the resolved date actually is today (e.g. a
+  // later clause in a multi-activity message, like "...and later walked 20 minutes", that
+  // doesn't repeat the weekday but still inherits the message's explicit date). A resolved date
+  // that lands anywhere else can't truly be "implicit today", regardless of local phrasing.
+  if (mappedPrecision === "implicit_today" && input.resolvedLoggedForDate !== getPacificDateKey()) {
     return "explicit_day";
   }
 
@@ -338,6 +340,35 @@ export function parseExtractedUserUpdate(value: unknown): ExtractedUserUpdate {
   }
 
   throw firstPass.error;
+}
+
+// Avoids feeding canonicalizeActivityType a doubled string ("rnu rnu", "legs legs workout")
+// when the model's activityType and description already say the same thing.
+function buildActivityTypeCandidate(rawActivityType: string, description: string) {
+  if (!rawActivityType) {
+    return description;
+  }
+
+  if (!description) {
+    return rawActivityType;
+  }
+
+  const lowerType = rawActivityType.toLowerCase();
+  const lowerDescription = description.toLowerCase();
+  // Tolerate simple singular/plural mismatches ("legs" vs. "leg workout") so they still count
+  // as overlapping instead of producing a duplicated "legs leg workout" concatenation.
+  const singularType = lowerType.replace(/s\b/g, "");
+  const singularDescription = lowerDescription.replace(/s\b/g, "");
+
+  if (lowerDescription.includes(lowerType) || singularDescription.includes(singularType)) {
+    return description;
+  }
+
+  if (lowerType.includes(lowerDescription) || singularType.includes(singularDescription)) {
+    return rawActivityType;
+  }
+
+  return `${rawActivityType} ${description}`;
 }
 
 function canonicalizeActivityType(value: string) {
@@ -425,10 +456,32 @@ function canonicalizeActivityCategory(activityType: string, category: string) {
   return category;
 }
 
+// The model sometimes emits a placeholder activity (activityType literally "unknown"/blank)
+// alongside a genuine one — for incidental text ("felt great"), double-counted food ("eggs"),
+// or rest-day input ("...but stretched for 10 minutes" also producing a stub "rested" entry).
+// Left in, its ambiguity flags can block persistence of the real activity next to it.
+// Note: neither `confidence` nor `missingFields` is used as a signal here — both are set
+// inconsistently by the model run to run, including on fully legitimate activities and on
+// placeholders that don't self-flag "activityType" as missing. The type value itself, checked
+// only when a genuine sibling activity exists (see the length > 1 guard below), is more
+// reliable than either.
+function isPlaceholderActivity(activity: ExtractedUserUpdate["activities"][number]) {
+  const normalizedType = activity.activityType.trim().toLowerCase();
+
+  return normalizedType === "" || normalizedType === "unknown";
+}
+
 export function mapExtractedActivities(
   extracted: ExtractedUserUpdate["activities"]
 ): ParsedActivity[] {
-  return extracted.map((activity, index) => {
+  // Only drop a placeholder when it's redundant alongside a genuine activity in the same
+  // message. A lone placeholder is the model's legitimate way of saying "there's an activity
+  // here but I don't know what it is," which should still reach the "what activity was it?"
+  // clarification instead of being silently dropped.
+  const activitiesToMap =
+    extracted.length > 1 ? extracted.filter((activity) => !isPlaceholderActivity(activity)) : extracted;
+
+  return activitiesToMap.map((activity, index) => {
     const description =
       cleanActivityDescription(activity.description) ||
       activity.activityType.trim() ||
@@ -436,8 +489,12 @@ export function mapExtractedActivities(
     const timeReferenceText =
       activity.timeReferenceText.trim() || extractTimeReferenceText(description) || null;
     const activityType =
-      canonicalizeActivityType(`${activity.activityType.trim()} ${description}`) ||
+      canonicalizeActivityType(buildActivityTypeCandidate(activity.activityType.trim(), description)) ||
       `Activity ${index + 1}`;
+    const loggedForDate = resolveLoggedForDateFromTimeReference(
+      timeReferenceText,
+      mapLoggedForDate(activity.loggedForDate)
+    );
 
     return {
       activityType,
@@ -451,13 +508,10 @@ export function mapExtractedActivities(
       intensity: mapIntensity(activity.intensity),
       timeReferenceText,
       detectedKeyword: "model_extraction",
-      loggedForDate: resolveLoggedForDateFromTimeReference(
-        timeReferenceText,
-        mapLoggedForDate(activity.loggedForDate)
-      ),
+      loggedForDate,
       timePrecision: mapActivityTimePrecisionWithDateFallback({
-        loggedForDate: activity.loggedForDate,
-        timePrecision: activity.timePrecision
+        timePrecision: activity.timePrecision,
+        resolvedLoggedForDate: loggedForDate
       }),
       confidence: activity.confidence > 0 ? activity.confidence : 0.7,
       missingFields: activity.missingFields.map((field) => field.trim()).filter(Boolean),

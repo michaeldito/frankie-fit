@@ -189,6 +189,7 @@ export default async function OnboardingPage({
 
           <DefaultProfileToggle />
 
+          <div className="space-y-6" id="onboarding-sections">
           <Section
             description="Enough context to make Frankie useful on day one, without turning this into a giant intake form."
             eyebrow="Goals"
@@ -560,6 +561,7 @@ export default async function OnboardingPage({
               </span>
             </label>
           </Section>
+          </div>
 
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-5">
             <p className="max-w-2xl text-sm leading-6 text-[var(--muted)]">

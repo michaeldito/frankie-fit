@@ -3,7 +3,7 @@
 import type { FormEvent, KeyboardEvent } from "react";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChatTranscript } from "@/components/chat/chat-transcript";
+import { ChatTranscript, type LoggedEntryKind } from "@/components/chat/chat-transcript";
 import type { Database } from "@/types/database";
 
 type ChatMessage = Database["public"]["Tables"]["conversation_messages"]["Row"];
@@ -115,6 +115,66 @@ export function WebChatExperience({
     setIsThinking(false);
   }
 
+  const loggedEntryRoutes: Record<LoggedEntryKind, string> = {
+    activity: "/api/logs/activity",
+    diet: "/api/logs/diet",
+    wellness: "/api/logs/wellness"
+  };
+  const loggedEntryPayloadKeys: Record<LoggedEntryKind, string> = {
+    activity: "activitiesLogged",
+    diet: "dietLogged",
+    wellness: "wellnessLogged"
+  };
+
+  async function handleRemoveLoggedEntry(
+    messageId: string,
+    kind: LoggedEntryKind,
+    entryId: string
+  ) {
+    setError(null);
+
+    try {
+      await chatApiFetch(`${loggedEntryRoutes[kind]}/${entryId}`, { method: "DELETE" });
+    } catch (removeError) {
+      setError(
+        removeError instanceof Error
+          ? removeError.message
+          : "Frankie could not remove that log."
+      );
+      return;
+    }
+
+    setMessages((currentMessages) =>
+      currentMessages.map((currentMessage) => {
+        if (currentMessage.id !== messageId) {
+          return currentMessage;
+        }
+
+        const payloadKey = loggedEntryPayloadKeys[kind];
+        const payload = currentMessage.structured_payload as Record<string, unknown> | null;
+
+        if (!payload || !(payloadKey in payload)) {
+          return currentMessage;
+        }
+
+        const updatedValue =
+          kind === "wellness"
+            ? null
+            : (payload[payloadKey] as Array<{ id: string | null }>).filter(
+                (entry) => entry.id !== entryId
+              );
+
+        return {
+          ...currentMessage,
+          structured_payload: {
+            ...payload,
+            [payloadKey]: updatedValue
+          } as ChatMessage["structured_payload"]
+        };
+      })
+    );
+  }
+
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
       return;
@@ -145,6 +205,7 @@ export function WebChatExperience({
         introMessage={introMessage}
         isThinking={isThinking}
         messages={messages}
+        onRemoveLoggedEntry={handleRemoveLoggedEntry}
         pendingMessage={pendingMessage}
         userCardClass={userCardClass}
       />

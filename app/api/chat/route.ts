@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { orchestrateFrankieReply } from "@/lib/ai/orchestrator/frankie-orchestrator";
+import {
+  orchestrateFrankieReply,
+  type PendingClarification
+} from "@/lib/ai/orchestrator/frankie-orchestrator";
 import { recordAiTraceRun } from "@/lib/ai/tracing/ai-trace-runs";
 import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
@@ -161,10 +164,17 @@ export async function POST(request: NextRequest) {
   }
 
   const startedAt = Date.now();
+  const previousMessage = chatExperience.messages.at(-1);
+  const pendingClarification =
+    previousMessage?.role === "assistant" && previousMessage.message_type === "clarification_request"
+      ? (previousMessage.structured_payload as { pendingClarification?: PendingClarification } | null)
+          ?.pendingClarification
+      : undefined;
   const reply = await orchestrateFrankieReply({
     profile: context.profile,
     message: messageForReply,
-    recentMessages: chatExperience.messages
+    recentMessages: chatExperience.messages,
+    pendingClarification
   });
   const persistedLogIds = {
     activityLogIds: [] as string[],
@@ -235,14 +245,16 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const structuredPayload =
-    reply.shouldPersistStructuredData &&
-    (reply.parsedActivities.length > 0 ||
-      reply.parsedDietEntries.length > 0 ||
-      reply.parsedWellnessCheckin)
+  const structuredPayload = reply.metadata.pendingClarification
+    ? { pendingClarification: reply.metadata.pendingClarification }
+    : reply.shouldPersistStructuredData &&
+      (reply.parsedActivities.length > 0 ||
+        reply.parsedDietEntries.length > 0 ||
+        reply.parsedWellnessCheckin)
       ? {
           activitiesLogged: reply.persistPlan.activities
-            ? reply.parsedActivities.map((activity) => ({
+            ? reply.parsedActivities.map((activity, index) => ({
+            id: persistedLogIds.activityLogIds[index] ?? null,
             activityType: activity.activityType,
             activityCategory: activity.activityCategory,
             sessionCount: activity.sessionCount,
@@ -257,7 +269,8 @@ export async function POST(request: NextRequest) {
           }))
             : [],
           dietLogged: reply.persistPlan.dietEntries
-            ? reply.parsedDietEntries.map((entry) => ({
+            ? reply.parsedDietEntries.map((entry, index) => ({
+            id: persistedLogIds.dietLogIds[index] ?? null,
             confidence: entry.confidence,
             description: entry.description,
             mealType: entry.mealType,
@@ -268,6 +281,7 @@ export async function POST(request: NextRequest) {
           orchestration: reply.metadata,
           wellnessLogged: reply.persistPlan.wellnessCheckin && reply.parsedWellnessCheckin
             ? {
+                id: persistedLogIds.wellnessCheckinIds[0] ?? null,
                 detectedSignals: reply.parsedWellnessCheckin.detectedSignals,
                 energyScore: reply.parsedWellnessCheckin.energyScore,
                 loggedForDate: reply.parsedWellnessCheckin.loggedForDate,
