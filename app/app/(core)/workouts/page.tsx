@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { WorkoutLogger } from "@/components/workouts/workout-logger";
 import { getCurrentAppContext } from "@/lib/profile";
 import { getRecentWorkoutSessions } from "@/lib/workouts/get-recent-sessions";
@@ -18,7 +19,9 @@ export default async function WorkoutsPage() {
       </section>
 
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <WorkoutLogger />
+        <Suspense fallback={null}>
+          <WorkoutLogger />
+        </Suspense>
 
         <section className="ff-panel p-5">
           <p className="ff-kicker">Recent logs</p>
