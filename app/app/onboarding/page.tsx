@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { saveOnboarding } from "@/app/app/onboarding/actions";
+import { DefaultProfileToggle } from "@/components/onboarding/default-profile-toggle";
 import { getCurrentAppContext, getDisplayName } from "@/lib/profile";
 
 type OnboardingPageProps = {
@@ -185,6 +186,8 @@ export default async function OnboardingPage({
       ) : (
         <form action={saveOnboarding} className="space-y-6">
           <input defaultValue={displayName} name="fullName" type="hidden" />
+
+          <DefaultProfileToggle />
 
           <Section
             description="Enough context to make Frankie useful on day one, without turning this into a giant intake form."

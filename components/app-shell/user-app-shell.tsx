@@ -50,6 +50,22 @@ function getPageMeta(pathname: string) {
     };
   }
 
+  if (pathname.startsWith("/app/workouts")) {
+    return {
+      eyebrow: "",
+      title: "Workouts",
+      subtitle: "Log a strength or conditioning session set by set."
+    };
+  }
+
+  if (pathname.startsWith("/app/programs")) {
+    return {
+      eyebrow: "",
+      title: "Programs",
+      subtitle: "Follow a structured program day by day."
+    };
+  }
+
   if (pathname.startsWith("/app/profile")) {
     return {
       eyebrow: "",
@@ -215,6 +231,8 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
               <nav className="mt-2 flex flex-col gap-0.5">
                 <NavLink href="/app/chat">Chat</NavLink>
                 <NavLink href="/app/dashboard">Dashboard</NavLink>
+                <NavLink href="/app/workouts">Workouts</NavLink>
+                <NavLink href="/app/programs">Programs</NavLink>
                 {user.isAdmin ? <NavLink href="/app/admin" match="exact">Admin</NavLink> : null}
                 {user.isAdmin ? <NavLink href="/app/admin/debug">Debug</NavLink> : null}
                 {user.isAdmin ? <NavLink href="/app/admin/evals">Evals</NavLink> : null}
@@ -331,6 +349,8 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
               <div className="mt-4 flex gap-2 overflow-x-auto lg:hidden">
                 <NavLink href="/app/chat">Chat</NavLink>
                 <NavLink href="/app/dashboard">Dashboard</NavLink>
+                <NavLink href="/app/workouts">Workouts</NavLink>
+                <NavLink href="/app/programs">Programs</NavLink>
                 {user.isAdmin ? <NavLink href="/app/admin" match="exact">Admin</NavLink> : null}
                 {user.isAdmin ? <NavLink href="/app/admin/debug">Debug</NavLink> : null}
                 {user.isAdmin ? <NavLink href="/app/admin/evals">Evals</NavLink> : null}

@@ -720,6 +720,147 @@ export type Database = {
           }
         ];
       };
+      workout_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          activity_log_id: string | null;
+          session_type: "simple" | "circuit";
+          title: string | null;
+          notes: string | null;
+          wod_template_slug: string | null;
+          rounds_count: number | null;
+          for_time: boolean;
+          total_time_seconds: number | null;
+          logged_for_date: string;
+          program_slug: string | null;
+          program_day: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          activity_log_id?: string | null;
+          session_type?: "simple" | "circuit";
+          title?: string | null;
+          notes?: string | null;
+          wod_template_slug?: string | null;
+          rounds_count?: number | null;
+          for_time?: boolean;
+          total_time_seconds?: number | null;
+          logged_for_date?: string;
+          program_slug?: string | null;
+          program_day?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          activity_log_id?: string | null;
+          session_type?: "simple" | "circuit";
+          title?: string | null;
+          notes?: string | null;
+          wod_template_slug?: string | null;
+          rounds_count?: number | null;
+          for_time?: boolean;
+          total_time_seconds?: number | null;
+          logged_for_date?: string;
+          program_slug?: string | null;
+          program_day?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      program_enrollments: {
+        Row: {
+          id: string;
+          user_id: string;
+          program_slug: string;
+          start_date: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          program_slug: string;
+          start_date: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          program_slug?: string;
+          start_date?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      workout_exercises: {
+        Row: {
+          id: string;
+          session_id: string;
+          exercise_slug: string;
+          exercise_name: string;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          exercise_slug: string;
+          exercise_name: string;
+          position?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          exercise_slug?: string;
+          exercise_name?: string;
+          position?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      workout_sets: {
+        Row: {
+          id: string;
+          workout_exercise_id: string;
+          set_number: number;
+          reps: number | null;
+          weight: number | null;
+          weight_unit: "lb" | "kg";
+          duration_seconds: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workout_exercise_id: string;
+          set_number: number;
+          reps?: number | null;
+          weight?: number | null;
+          weight_unit?: "lb" | "kg";
+          duration_seconds?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          workout_exercise_id?: string;
+          set_number?: number;
+          reps?: number | null;
+          weight?: number | null;
+          weight_unit?: "lb" | "kg";
+          duration_seconds?: number | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
