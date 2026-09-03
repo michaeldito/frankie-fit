@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "eval:intelligence": "node --no-warnings scripts/eval-intelligence.mjs",
     "seed:demo": "node scripts/seed-demo-data.mjs",
     "seed:demo:dry": "node scripts/seed-demo-data.mjs --dry-run",
@@ -37,9 +38,11 @@
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.2.4",
     "tailwindcss": "^4.2.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
   }
 }
