@@ -3,7 +3,7 @@ import nextTypeScript from "eslint-config-next/typescript";
 
 const config = [
   {
-    ignores: ["apps/mobile/**"]
+    ignores: ["apps/mobile/**", "coverage/**"]
   },
   ...nextVitals,
   ...nextTypeScript
