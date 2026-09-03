@@ -8,6 +8,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "eval:intelligence": "node --no-warnings scripts/eval-intelligence.mjs",
     "seed:demo": "node scripts/seed-demo-data.mjs",
     "seed:demo:dry": "node scripts/seed-demo-data.mjs --dry-run",
