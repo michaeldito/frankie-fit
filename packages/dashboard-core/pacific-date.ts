@@ -26,6 +26,11 @@ export function getPacificToday(): Date {
   return fromDateKey(getPacificDateKey());
 }
 
+/** Yesterday's Pacific calendar date, anchored the same way as {@link getPacificToday}. */
+export function getPacificYesterday(): Date {
+  return addDays(getPacificToday(), -1);
+}
+
 export function addDays(value: Date, amount: number): Date {
   const nextValue = new Date(value);
   nextValue.setUTCDate(nextValue.getUTCDate() + amount);
@@ -39,6 +44,33 @@ export function toDateKey(value: Date): string {
 export function fromDateKey(value: string): Date {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1, 12));
+}
+
+function getPacificUtcOffsetMinutes(date: Date): number {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: FRANKIE_TIME_ZONE,
+    timeZoneName: "shortOffset"
+  });
+  const offsetPart = formatter.formatToParts(date).find((part) => part.type === "timeZoneName")?.value ?? "GMT-8";
+  const match = offsetPart.match(/GMT([+-]\d+)/);
+
+  return match ? Number(match[1]) * 60 : -480;
+}
+
+/**
+ * The [start, end) UTC instant range covering one Pacific calendar day, for
+ * comparing against timestamptz columns (e.g. "did the user send a chat
+ * message yesterday, Pacific time?").
+ */
+export function getPacificDayUtcRange(dateKey: string): { startUtcIso: string; endUtcIso: string } {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const referenceUtc = new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1, 12));
+  const offsetMinutes = getPacificUtcOffsetMinutes(referenceUtc);
+  const naiveUtcMidnight = Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1, 0, 0, 0);
+  const startUtc = new Date(naiveUtcMidnight - offsetMinutes * 60000);
+  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000);
+
+  return { startUtcIso: startUtc.toISOString(), endUtcIso: endUtc.toISOString() };
 }
 
 export function getWeekStart(value: Date = getPacificToday()): Date {

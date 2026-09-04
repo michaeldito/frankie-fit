@@ -109,7 +109,7 @@ export async function resolveEvalScenarioUserIds(scenarios: EvalScenario[]) {
     .filter((id): id is string => Boolean(id));
 }
 
-async function loadProfile(userId: string) {
+export async function loadProfile(userId: string) {
   const supabase = createSupabaseServiceRoleClient();
   const { data, error } = await supabase
     .from("profiles")

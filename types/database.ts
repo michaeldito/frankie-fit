@@ -719,7 +719,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
-          type: "checkin_reminder";
+          type: "checkin_reminder" | "daily_summary" | "weekly_summary";
           title: string;
           body: string;
           action_url: string | null;
@@ -730,7 +730,7 @@ export type Database = {
         Insert: {
           id?: string;
           user_id: string;
-          type: "checkin_reminder";
+          type: "checkin_reminder" | "daily_summary" | "weekly_summary";
           title: string;
           body: string;
           action_url?: string | null;
@@ -741,7 +741,7 @@ export type Database = {
         Update: {
           id?: string;
           user_id?: string;
-          type?: "checkin_reminder";
+          type?: "checkin_reminder" | "daily_summary" | "weekly_summary";
           title?: string;
           body?: string;
           action_url?: string | null;
