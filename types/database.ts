@@ -368,7 +368,7 @@ export type Database = {
           scenario_id: string;
           user_id: string;
           day_index: number | null;
-          pillar: "activity" | "diet" | "wellness" | "summary";
+          pillar: "activity" | "diet" | "lifestyle" | "wellness" | "summary";
           input_message: string;
           expected_json: Json;
           trace_id: string | null;
@@ -386,7 +386,7 @@ export type Database = {
           scenario_id: string;
           user_id: string;
           day_index?: number | null;
-          pillar: "activity" | "diet" | "wellness" | "summary";
+          pillar: "activity" | "diet" | "lifestyle" | "wellness" | "summary";
           input_message: string;
           expected_json?: Json;
           trace_id?: string | null;
@@ -404,7 +404,7 @@ export type Database = {
           scenario_id?: string;
           user_id?: string;
           day_index?: number | null;
-          pillar?: "activity" | "diet" | "wellness" | "summary";
+          pillar?: "activity" | "diet" | "lifestyle" | "wellness" | "summary";
           input_message?: string;
           expected_json?: Json;
           trace_id?: string | null;

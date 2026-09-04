@@ -291,7 +291,7 @@ async function insertEvalRunItem(input: {
   evalRunId: string;
   expectedJson: Json;
   inputMessage: string;
-  pillar: "activity" | "diet" | "wellness" | "summary";
+  pillar: "activity" | "diet" | "lifestyle" | "wellness" | "summary";
   runStatus: string;
   scenarioId: string;
   sourceMessageId: string | null;
