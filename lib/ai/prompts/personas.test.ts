@@ -18,11 +18,11 @@ describe("getPersona", () => {
   it("returns the matching persona for a known id", () => {
     const persona = getPersona("arnold");
     expect(persona?.id).toBe("arnold");
-    expect(persona?.displayName).toBe("Arnold");
+    expect(persona?.displayName).toBe("Arnold Schwarzenegger");
   });
 
-  it("has all three personas with non-empty voice descriptors and sample lines", () => {
-    expect(PERSONAS).toHaveLength(3);
+  it("has all four personas with non-empty voice descriptors and sample lines", () => {
+    expect(PERSONAS).toHaveLength(4);
 
     for (const persona of PERSONAS) {
       expect(persona.voiceDescriptor.length).toBeGreaterThan(0);

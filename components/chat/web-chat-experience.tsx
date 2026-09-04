@@ -32,7 +32,7 @@ type WebChatExperienceProps = {
   userCardClass: string;
 };
 
-const DEFAULT_PERSONA_LABEL = "Default Frankie";
+const DEFAULT_PERSONA_LABEL = "Frankie";
 
 async function chatApiFetch<T>(input: RequestInfo, init?: RequestInit) {
   const response = await fetch(input, {
@@ -396,7 +396,7 @@ export function WebChatExperience({
 
             <div
               aria-hidden={!personaMenuOpen}
-              className={`ff-card absolute left-0 z-30 max-h-60 w-52 origin-bottom-left overflow-y-auto p-1.5 transition-all duration-200 ease-out ${
+              className={`ff-card absolute left-0 z-30 max-h-60 w-max min-w-52 max-w-64 origin-bottom-left overflow-y-auto p-1.5 transition-all duration-200 ease-out ${
                 personaMenuOpen
                   ? "translate-y-0 scale-100 opacity-100"
                   : "pointer-events-none translate-y-1 scale-95 opacity-0"
@@ -404,8 +404,10 @@ export function WebChatExperience({
               style={{ bottom: "calc(100% + 0.5rem)" }}
             >
               <button
-                className={`block w-full cursor-pointer rounded-[0.5rem] px-2.5 py-2 text-left text-sm font-medium transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)] ${
-                  personaId === null ? "text-[var(--foreground)]" : "text-[var(--muted-strong)]"
+                className={`block w-full truncate rounded-[0.55rem] px-2.5 py-2 text-left text-sm font-medium transition ${
+                  personaId === null
+                    ? "border border-transparent bg-[color:color-mix(in_srgb,var(--brand)_86%,white_14%)] text-white shadow-[0_16px_32px_rgba(29,78,216,0.34)]"
+                    : "cursor-pointer border border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_74%,black_26%)] hover:text-[var(--foreground)]"
                 }`}
                 onClick={() => handleSelectPersona(null)}
                 type="button"
@@ -414,8 +416,10 @@ export function WebChatExperience({
               </button>
               {PERSONAS.map((persona) => (
                 <button
-                  className={`block w-full cursor-pointer rounded-[0.5rem] px-2.5 py-2 text-left text-sm font-medium transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)] ${
-                    personaId === persona.id ? "text-[var(--foreground)]" : "text-[var(--muted-strong)]"
+                  className={`block w-full truncate rounded-[0.55rem] px-2.5 py-2 text-left text-sm font-medium transition ${
+                    personaId === persona.id
+                      ? "border border-transparent bg-[color:color-mix(in_srgb,var(--brand)_86%,white_14%)] text-white shadow-[0_16px_32px_rgba(29,78,216,0.34)]"
+                      : "cursor-pointer border border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_74%,black_26%)] hover:text-[var(--foreground)]"
                   }`}
                   key={persona.id}
                   onClick={() => handleSelectPersona(persona.id)}
