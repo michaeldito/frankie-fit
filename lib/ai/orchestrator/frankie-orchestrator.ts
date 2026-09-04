@@ -445,16 +445,18 @@ function normalizeDietEvidence(value: string) {
     .trim();
 }
 
-function joinDietDescriptions(entries: ParsedDietEntry[]) {
-  const descriptions = entries
-    .map((entry) => entry.description.trim())
-    .filter(Boolean);
+function joinDescriptions(rawDescriptions: string[]) {
+  const descriptions = rawDescriptions.map((description) => description.trim()).filter(Boolean);
 
   if (descriptions.length <= 1) {
     return descriptions[0] ?? "";
   }
 
   return `${descriptions.slice(0, -1).join(", ")} and ${descriptions[descriptions.length - 1]}`;
+}
+
+function joinDietDescriptions(entries: ParsedDietEntry[]) {
+  return joinDescriptions(entries.map((entry) => entry.description));
 }
 
 function getSkippedMealEntries(message: string): ParsedDietEntry[] {
@@ -722,7 +724,100 @@ function dedupeActivities(activities: ParsedActivity[]) {
     deduped.set(key, existing ? mergeActivity(existing, activity) : activity);
   }
 
-  return Array.from(deduped.values());
+  return consolidateSameSessionActivities(Array.from(deduped.values()));
+}
+
+// Catches a shape the two passes above don't: several *distinctly* named exercises (so they
+// don't share a duplicateKey/key above) that were all described as part of one session with one
+// overall duration/intensity, e.g. "did deadlifts, squats, and shoulders today, 120 min, hard."
+// Left alone, each of those activityLogs rows would carry the full session duration, inflating
+// the dashboard's weekly minutes total by however many exercises were named.
+function getSameSessionKey(activity: ParsedActivity) {
+  // durationMinutes is the required trigger: it's a real explicit number when present, so a
+  // coincidental match across genuinely unrelated activities is unlikely. intensity only has 3
+  // possible values plus null, so it rides along as an equality-matched field rather than an
+  // independent trigger — requiring it too would miss the common case of a shared session
+  // duration with no stated intensity.
+  if (activity.durationMinutes == null) {
+    return null;
+  }
+
+  return [
+    activity.loggedForDate,
+    activity.timeReferenceText?.toLowerCase().trim() ?? "",
+    activity.durationMinutes,
+    activity.intensity ?? "",
+    activity.activityCategory?.trim().toLowerCase() ?? ""
+  ].join("::");
+}
+
+function chooseConsolidatedActivityType(group: ParsedActivity[]) {
+  if (group.every((activity) => activity.activityCategory?.trim().toLowerCase() === "strength")) {
+    return "weight lifting";
+  }
+
+  const typeCounts = new Map<string, number>();
+
+  for (const activity of group) {
+    typeCounts.set(activity.activityType, (typeCounts.get(activity.activityType) ?? 0) + 1);
+  }
+
+  let bestType = group[0].activityType;
+  let bestCount = 0;
+
+  for (const activity of group) {
+    const count = typeCounts.get(activity.activityType) ?? 0;
+
+    if (count > bestCount) {
+      bestCount = count;
+      bestType = activity.activityType;
+    }
+  }
+
+  return bestType;
+}
+
+function mergeSameSessionActivityGroup(group: ParsedActivity[]): ParsedActivity {
+  if (group.length === 1) {
+    return group[0];
+  }
+
+  const [firstActivity] = group;
+
+  return {
+    ...firstActivity,
+    activityType: chooseConsolidatedActivityType(group),
+    description: joinDescriptions(group.map((activity) => activity.description)),
+    sessionCount: Math.max(...group.map((activity) => activity.sessionCount ?? 1)),
+    confidence: Math.max(...group.map((activity) => activity.confidence ?? 0.7)),
+    missingFields: Array.from(new Set(group.flatMap((activity) => activity.missingFields))),
+    ambiguityFlags: Array.from(new Set(group.flatMap((activity) => activity.ambiguityFlags)))
+  };
+}
+
+function consolidateSameSessionActivities(activities: ParsedActivity[]) {
+  const sessionGroups = new Map<string, ParsedActivity[]>();
+  const ungrouped: ParsedActivity[] = [];
+
+  for (const activity of activities) {
+    const key = getSameSessionKey(activity);
+
+    if (!key) {
+      ungrouped.push(activity);
+      continue;
+    }
+
+    const existingGroup = sessionGroups.get(key);
+
+    if (existingGroup) {
+      existingGroup.push(activity);
+      continue;
+    }
+
+    sessionGroups.set(key, [activity]);
+  }
+
+  return [...Array.from(sessionGroups.values()).map(mergeSameSessionActivityGroup), ...ungrouped];
 }
 
 function ensureField(fields: string[], field: string) {

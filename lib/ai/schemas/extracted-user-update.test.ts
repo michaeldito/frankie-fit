@@ -99,6 +99,23 @@ describe("mapExtractedActivities", () => {
     expect(mapped.activityType).toBe("weight lifting");
   });
 
+  it.each([
+    "squats",
+    "deadlifts",
+    "shoulders",
+    "lunges",
+    "rows",
+    "overhead press",
+    "planks",
+    "arms",
+    "bench press"
+  ])("keeps a specific named movement (%s) as its own activity type", (movement) => {
+    const [mapped] = mapExtractedActivities([
+      baseActivity({ activityType: movement, description: movement })
+    ]);
+    expect(mapped.activityType).toBe(movement);
+  });
+
   it("drops a redundant placeholder activity alongside a genuine one", () => {
     const mapped = mapExtractedActivities([
       baseActivity({ activityType: "unknown", description: "felt great" }),

@@ -402,8 +402,15 @@ function canonicalizeActivityType(value: string) {
     { pattern: /\bsoccer\b/, label: "soccer" },
     { pattern: /\bpilates\b/, label: "pilates" },
     {
-      pattern:
-        /\b(?:lift(?:ed|ing)?|strength|weights?|bench(?:\s+press)?|squats?|deadlifts?|lunges?|rows?|overhead\s+press|planks?|arms?|shoulders?)\b/,
+      // Only genuinely generic/vague strength language belongs here — synonyms for "did some
+      // strength training" with no specific movement named, the same way run/jog/walk are
+      // synonyms for one cardio activity. Named movements (squats, deadlifts, bench press,
+      // lunges, rows, overhead press, planks, arms, shoulders) must NOT collapse into this
+      // bucket: doing so force-renames genuinely distinct exercises to the identical literal
+      // string "weight lifting", which then makes downstream same-exercise dedup logic
+      // (dedupeActivities in frankie-orchestrator.ts) treat them as duplicates of each other
+      // and silently drop all but one.
+      pattern: /\b(?:lift(?:ed|ing)?|strength|weights?)\b/,
       label: "weight lifting"
     },
     { pattern: /\b(?:mobility|stretch(?:ed|ing)?)\b/, label: "mobility" }
