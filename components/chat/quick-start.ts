@@ -14,13 +14,17 @@ export const QUICK_START_OPTIONS: QuickStartOption[] = [
     template: "Today I did [fill in] for [fill in] minutes at [light/moderate/hard] intensity"
   },
   {
-    label: "Food",
+    label: "Diet",
     template: "For [breakfast/lunch/dinner/snack], I ate [fill in]"
   },
   {
     label: "Wellness",
     template:
       "Checking in — energy: [1-5], stress: [1-5], soreness: [1-5], mood: [1-5], motivation: [1-5]"
+  },
+  {
+    label: "Lifestyle",
+    template: "Today I [fill in], and it made me feel [fill in]"
   }
 ];
 

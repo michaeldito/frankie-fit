@@ -119,6 +119,72 @@ textarea::placeholder {
     color: var(--muted);
   }
 
+  .ff-markdown > :first-child {
+    margin-top: 0;
+  }
+
+  .ff-markdown > :last-child {
+    margin-bottom: 0;
+  }
+
+  .ff-markdown p {
+    margin: 0.6em 0;
+  }
+
+  .ff-markdown ul,
+  .ff-markdown ol {
+    margin: 0.6em 0;
+    padding-left: 1.25em;
+  }
+
+  .ff-markdown ul {
+    list-style-type: disc;
+  }
+
+  .ff-markdown ol {
+    list-style-type: decimal;
+  }
+
+  .ff-markdown li {
+    margin: 0.25em 0;
+  }
+
+  .ff-markdown li > p {
+    margin: 0;
+  }
+
+  .ff-markdown strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
+  .ff-markdown h1,
+  .ff-markdown h2,
+  .ff-markdown h3 {
+    color: var(--foreground);
+    font-weight: 600;
+    margin: 0.8em 0 0.4em;
+  }
+
+  .ff-markdown h1 {
+    font-size: 1.05rem;
+  }
+
+  .ff-markdown h2 {
+    font-size: 1rem;
+  }
+
+  .ff-markdown h3 {
+    font-size: 0.92rem;
+  }
+
+  .ff-markdown code {
+    background: color-mix(in srgb, var(--surface-strong) 80%, black 20%);
+    border-radius: 0.3rem;
+    padding: 0.1em 0.35em;
+    font-size: 0.85em;
+  }
+
   .ff-pill {
     display: inline-flex;
     align-items: center;
@@ -186,7 +252,8 @@ textarea::placeholder {
 
   .ff-input:focus,
   .ff-select:focus,
-  .ff-textarea:focus {
+  .ff-textarea:focus,
+  .ff-textarea:focus-within {
     border-color: color-mix(in srgb, var(--brand) 68%, white 32%);
     box-shadow:
       0 0 0 4px rgba(59, 130, 246, 0.16),

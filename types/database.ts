@@ -368,7 +368,7 @@ export type Database = {
           scenario_id: string;
           user_id: string;
           day_index: number | null;
-          pillar: "activity" | "diet" | "wellness" | "summary";
+          pillar: "activity" | "diet" | "lifestyle" | "wellness" | "summary";
           input_message: string;
           expected_json: Json;
           trace_id: string | null;
@@ -386,7 +386,7 @@ export type Database = {
           scenario_id: string;
           user_id: string;
           day_index?: number | null;
-          pillar: "activity" | "diet" | "wellness" | "summary";
+          pillar: "activity" | "diet" | "lifestyle" | "wellness" | "summary";
           input_message: string;
           expected_json?: Json;
           trace_id?: string | null;
@@ -404,7 +404,7 @@ export type Database = {
           scenario_id?: string;
           user_id?: string;
           day_index?: number | null;
-          pillar?: "activity" | "diet" | "wellness" | "summary";
+          pillar?: "activity" | "diet" | "lifestyle" | "wellness" | "summary";
           input_message?: string;
           expected_json?: Json;
           trace_id?: string | null;
@@ -676,6 +676,78 @@ export type Database = {
           logged_for_date?: string;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      lifestyle_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          source_message_id: string | null;
+          category: string;
+          description: string;
+          logged_for_date: string;
+          metadata_json: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          source_message_id?: string | null;
+          category: string;
+          description: string;
+          logged_for_date?: string;
+          metadata_json?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          source_message_id?: string | null;
+          category?: string;
+          description?: string;
+          logged_for_date?: string;
+          metadata_json?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: "checkin_reminder";
+          title: string;
+          body: string;
+          action_url: string | null;
+          metadata_json: Json;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type: "checkin_reminder";
+          title: string;
+          body: string;
+          action_url?: string | null;
+          metadata_json?: Json;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          type?: "checkin_reminder";
+          title?: string;
+          body?: string;
+          action_url?: string | null;
+          metadata_json?: Json;
+          read_at?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };

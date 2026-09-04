@@ -9,6 +9,7 @@ import {
   resolveLoggedForDateFromTimeReference,
   type ParsedActivity,
   type ParsedDietEntry,
+  type ParsedLifestyleEntry,
   type ParsedWellnessCheckin
 } from "@/lib/chat";
 import { buildChatContext } from "@/lib/ai/context/load-chat-context";
@@ -28,6 +29,7 @@ import {
   type ExtractedUserUpdate,
   mapExtractedActivities,
   mapExtractedDietEntries,
+  mapExtractedLifestyleEntries,
   mapExtractedWellnessCheckin,
   parseExtractedUserUpdate
 } from "@/lib/ai/schemas/extracted-user-update";
@@ -64,6 +66,7 @@ export type FrankieOrchestrationResult = {
   assistantMessageType: "chat" | "log_confirmation" | "clarification_request";
   parsedActivities: ParsedActivity[];
   parsedDietEntries: ParsedDietEntry[];
+  parsedLifestyleEntries: ParsedLifestyleEntry[];
   parsedWellnessCheckin: ParsedWellnessCheckin | null;
   reply: string;
   orchestrationMode: "model" | "unavailable";
@@ -71,6 +74,7 @@ export type FrankieOrchestrationResult = {
   persistPlan: {
     activities: boolean;
     dietEntries: boolean;
+    lifestyleEntries: boolean;
     wellnessCheckin: boolean;
   };
   metadata: {
@@ -92,6 +96,7 @@ function buildUnavailableReply(fallbackReason: string): FrankieOrchestrationResu
     assistantMessageType: "chat",
     parsedActivities: [],
     parsedDietEntries: [],
+    parsedLifestyleEntries: [],
     parsedWellnessCheckin: null,
     reply: FRANKIE_UNAVAILABLE_REPLY,
     orchestrationMode: "unavailable",
@@ -99,6 +104,7 @@ function buildUnavailableReply(fallbackReason: string): FrankieOrchestrationResu
     persistPlan: {
       activities: false,
       dietEntries: false,
+      lifestyleEntries: false,
       wellnessCheckin: false
     },
     metadata: {
@@ -445,16 +451,18 @@ function normalizeDietEvidence(value: string) {
     .trim();
 }
 
-function joinDietDescriptions(entries: ParsedDietEntry[]) {
-  const descriptions = entries
-    .map((entry) => entry.description.trim())
-    .filter(Boolean);
+function joinDescriptions(rawDescriptions: string[]) {
+  const descriptions = rawDescriptions.map((description) => description.trim()).filter(Boolean);
 
   if (descriptions.length <= 1) {
     return descriptions[0] ?? "";
   }
 
   return `${descriptions.slice(0, -1).join(", ")} and ${descriptions[descriptions.length - 1]}`;
+}
+
+function joinDietDescriptions(entries: ParsedDietEntry[]) {
+  return joinDescriptions(entries.map((entry) => entry.description));
 }
 
 function getSkippedMealEntries(message: string): ParsedDietEntry[] {
@@ -722,7 +730,100 @@ function dedupeActivities(activities: ParsedActivity[]) {
     deduped.set(key, existing ? mergeActivity(existing, activity) : activity);
   }
 
-  return Array.from(deduped.values());
+  return consolidateSameSessionActivities(Array.from(deduped.values()));
+}
+
+// Catches a shape the two passes above don't: several *distinctly* named exercises (so they
+// don't share a duplicateKey/key above) that were all described as part of one session with one
+// overall duration/intensity, e.g. "did deadlifts, squats, and shoulders today, 120 min, hard."
+// Left alone, each of those activityLogs rows would carry the full session duration, inflating
+// the dashboard's weekly minutes total by however many exercises were named.
+function getSameSessionKey(activity: ParsedActivity) {
+  // durationMinutes is the required trigger: it's a real explicit number when present, so a
+  // coincidental match across genuinely unrelated activities is unlikely. intensity only has 3
+  // possible values plus null, so it rides along as an equality-matched field rather than an
+  // independent trigger — requiring it too would miss the common case of a shared session
+  // duration with no stated intensity.
+  if (activity.durationMinutes == null) {
+    return null;
+  }
+
+  return [
+    activity.loggedForDate,
+    activity.timeReferenceText?.toLowerCase().trim() ?? "",
+    activity.durationMinutes,
+    activity.intensity ?? "",
+    activity.activityCategory?.trim().toLowerCase() ?? ""
+  ].join("::");
+}
+
+function chooseConsolidatedActivityType(group: ParsedActivity[]) {
+  if (group.every((activity) => activity.activityCategory?.trim().toLowerCase() === "strength")) {
+    return "weight lifting";
+  }
+
+  const typeCounts = new Map<string, number>();
+
+  for (const activity of group) {
+    typeCounts.set(activity.activityType, (typeCounts.get(activity.activityType) ?? 0) + 1);
+  }
+
+  let bestType = group[0].activityType;
+  let bestCount = 0;
+
+  for (const activity of group) {
+    const count = typeCounts.get(activity.activityType) ?? 0;
+
+    if (count > bestCount) {
+      bestCount = count;
+      bestType = activity.activityType;
+    }
+  }
+
+  return bestType;
+}
+
+function mergeSameSessionActivityGroup(group: ParsedActivity[]): ParsedActivity {
+  if (group.length === 1) {
+    return group[0];
+  }
+
+  const [firstActivity] = group;
+
+  return {
+    ...firstActivity,
+    activityType: chooseConsolidatedActivityType(group),
+    description: joinDescriptions(group.map((activity) => activity.description)),
+    sessionCount: Math.max(...group.map((activity) => activity.sessionCount ?? 1)),
+    confidence: Math.max(...group.map((activity) => activity.confidence ?? 0.7)),
+    missingFields: Array.from(new Set(group.flatMap((activity) => activity.missingFields))),
+    ambiguityFlags: Array.from(new Set(group.flatMap((activity) => activity.ambiguityFlags)))
+  };
+}
+
+function consolidateSameSessionActivities(activities: ParsedActivity[]) {
+  const sessionGroups = new Map<string, ParsedActivity[]>();
+  const ungrouped: ParsedActivity[] = [];
+
+  for (const activity of activities) {
+    const key = getSameSessionKey(activity);
+
+    if (!key) {
+      ungrouped.push(activity);
+      continue;
+    }
+
+    const existingGroup = sessionGroups.get(key);
+
+    if (existingGroup) {
+      existingGroup.push(activity);
+      continue;
+    }
+
+    sessionGroups.set(key, [activity]);
+  }
+
+  return [...Array.from(sessionGroups.values()).map(mergeSameSessionActivityGroup), ...ungrouped];
 }
 
 function ensureField(fields: string[], field: string) {
@@ -860,6 +961,27 @@ function sanitizeDietEntries(entries: ParsedDietEntry[], message: string) {
   }).filter((entry): entry is ParsedDietEntry => Boolean(entry));
 }
 
+function sanitizeLifestyleEntries(entries: ParsedLifestyleEntry[]) {
+  const seenKeys = new Set<string>();
+
+  return entries.filter((entry) => {
+    if (!entry.description.trim()) {
+      return false;
+    }
+
+    const key = [entry.loggedForDate, entry.category ?? "", entry.description.toLowerCase().trim()].join(
+      "::"
+    );
+
+    if (seenKeys.has(key)) {
+      return false;
+    }
+
+    seenKeys.add(key);
+    return true;
+  });
+}
+
 function sanitizeWellnessCheckin(
   checkin: ParsedWellnessCheckin | null,
   message: string
@@ -972,12 +1094,17 @@ function buildDietLabel(entry: ParsedDietEntry) {
 
 function buildPartialPersistencePrefix(input: {
   parsedDietEntries: ParsedDietEntry[];
+  parsedLifestyleEntries: ParsedLifestyleEntry[];
   parsedWellnessCheckin: ParsedWellnessCheckin | null;
 }) {
   const parts: string[] = [];
 
   if (input.parsedDietEntries.length > 0) {
     parts.push(`I logged ${input.parsedDietEntries.map(buildDietLabel).join(", ")}.`);
+  }
+
+  if (input.parsedLifestyleEntries.length > 0) {
+    parts.push(`I logged ${input.parsedLifestyleEntries.map((entry) => entry.description).join(", ")}.`);
   }
 
   if (input.parsedWellnessCheckin) {
@@ -990,11 +1117,13 @@ function buildPartialPersistencePrefix(input: {
 function hasPersistableData(input: {
   activities: ParsedActivity[];
   dietEntries: ParsedDietEntry[];
+  lifestyleEntries: ParsedLifestyleEntry[];
   wellnessCheckin: ParsedWellnessCheckin | null;
 }) {
   return (
     input.activities.length > 0 ||
     input.dietEntries.length > 0 ||
+    input.lifestyleEntries.length > 0 ||
     Boolean(input.wellnessCheckin)
   );
 }
@@ -1053,6 +1182,9 @@ export async function orchestrateFrankieReply(input: {
       mapExtractedDietEntries(extracted.dietEntries),
       input.message
     );
+    const parsedLifestyleEntries = sanitizeLifestyleEntries(
+      mapExtractedLifestyleEntries(extracted.lifestyleEntries)
+    );
     const parsedWellnessCheckin = sanitizeWellnessCheckin(
       mapExtractedWellnessCheckin(extracted.wellness),
       input.message
@@ -1061,12 +1193,14 @@ export async function orchestrateFrankieReply(input: {
       input.profile,
       parsedActivities,
       parsedDietEntries,
-      parsedWellnessCheckin
+      parsedWellnessCheckin,
+      parsedLifestyleEntries
     );
     const blockingActivityIssue = hasBlockingActivityIssue(parsedActivities);
     const usableData = hasPersistableData({
       activities: parsedActivities,
       dietEntries: parsedDietEntries,
+      lifestyleEntries: parsedLifestyleEntries,
       wellnessCheckin: parsedWellnessCheckin
     });
 
@@ -1074,10 +1208,12 @@ export async function orchestrateFrankieReply(input: {
       const persistPlan = {
         activities: false,
         dietEntries: parsedDietEntries.length > 0,
+        lifestyleEntries: parsedLifestyleEntries.length > 0,
         wellnessCheckin: Boolean(parsedWellnessCheckin)
       };
       const reply = `${buildPartialPersistencePrefix({
         parsedDietEntries,
+        parsedLifestyleEntries,
         parsedWellnessCheckin
       })}${buildBlockingClarificationReply(parsedActivities)}`;
 
@@ -1085,10 +1221,12 @@ export async function orchestrateFrankieReply(input: {
         assistantMessageType: "clarification_request",
         parsedActivities,
         parsedDietEntries,
+        parsedLifestyleEntries,
         parsedWellnessCheckin,
         reply,
         orchestrationMode: "model",
-        shouldPersistStructuredData: persistPlan.dietEntries || persistPlan.wellnessCheckin,
+        shouldPersistStructuredData:
+          persistPlan.dietEntries || persistPlan.lifestyleEntries || persistPlan.wellnessCheckin,
         persistPlan,
         metadata: {
           extractionSource: "model",
@@ -1111,6 +1249,7 @@ export async function orchestrateFrankieReply(input: {
         assistantMessageType: "clarification_request",
         parsedActivities,
         parsedDietEntries,
+        parsedLifestyleEntries,
         parsedWellnessCheckin,
         reply,
         orchestrationMode: "model",
@@ -1118,6 +1257,7 @@ export async function orchestrateFrankieReply(input: {
         persistPlan: {
           activities: false,
           dietEntries: false,
+          lifestyleEntries: false,
           wellnessCheckin: false
         },
         metadata: {
@@ -1144,6 +1284,7 @@ export async function orchestrateFrankieReply(input: {
             recentConversation: context.recentConversation,
             activities: parsedActivities,
             dietEntries: parsedDietEntries,
+            lifestyleEntries: parsedLifestyleEntries,
             wellnessCheckin: parsedWellnessCheckin
           })
         });
@@ -1152,6 +1293,7 @@ export async function orchestrateFrankieReply(input: {
       assistantMessageType: structuredFallback ? "log_confirmation" : "chat",
       parsedActivities,
       parsedDietEntries,
+      parsedLifestyleEntries,
       parsedWellnessCheckin,
       reply: reply || structuredFallback?.reply || FRANKIE_UNAVAILABLE_REPLY,
       orchestrationMode: "model",
@@ -1159,6 +1301,7 @@ export async function orchestrateFrankieReply(input: {
       persistPlan: {
         activities: parsedActivities.length > 0,
         dietEntries: parsedDietEntries.length > 0,
+        lifestyleEntries: parsedLifestyleEntries.length > 0,
         wellnessCheckin: Boolean(parsedWellnessCheckin)
       },
       metadata: {

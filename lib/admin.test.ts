@@ -101,7 +101,7 @@ describe("getAdminOverviewData", () => {
             activeUsers7d: 40,
             activeUsers30d: 90,
             conversationVolume7d: 250,
-            pillarUsage30d: { activity: 10, diet: 20, wellness: 5 }
+            pillarUsage30d: { activity: 10, diet: 20, lifestyle: 8, wellness: 5 }
           },
           error: null
         });
@@ -131,6 +131,7 @@ describe("getAdminOverviewData", () => {
     expect(result.pillarUsageCards).toEqual([
       { label: "Exercise", value: "10" },
       { label: "Diet", value: "20" },
+      { label: "Lifestyle", value: "8" },
       { label: "Wellness", value: "5" }
     ]);
   });

@@ -13,6 +13,13 @@ export type LoggedDietEntry = {
   loggedForDate: string | null;
 };
 
+export type LoggedLifestyleEntry = {
+  id: string | null;
+  description: string;
+  category: string | null;
+  loggedForDate: string | null;
+};
+
 export type LoggedWellnessCheckin = {
   id: string | null;
   energyScore: number | null;
@@ -25,6 +32,11 @@ export type LoggedWellnessCheckin = {
 
 export function capitalize(value: string) {
   return value.slice(0, 1).toUpperCase() + value.slice(1);
+}
+
+export function formatLoggedDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return match ? `${match[2]}-${match[3]}-${match[1]}` : value;
 }
 
 export function formatActivityTitle(activity: LoggedActivity) {
@@ -50,6 +62,14 @@ export function formatDietTitle(entry: LoggedDietEntry) {
 }
 
 export function formatDietDetail(entry: LoggedDietEntry) {
+  return entry.description || null;
+}
+
+export function formatLifestyleTitle(entry: LoggedLifestyleEntry) {
+  return entry.category ? capitalize(entry.category.replace(/_/g, " ")) : "Lifestyle";
+}
+
+export function formatLifestyleDetail(entry: LoggedLifestyleEntry) {
   return entry.description || null;
 }
 

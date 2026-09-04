@@ -4,12 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getEvalScenarioById } from "@/lib/admin-evals";
 import { requireAdminContext } from "@/lib/admin";
-import {
-  resetEvalScenarioUser,
-  runEvalScenarioDailySummaries,
-  runEvalScenarioWeeklySummary,
-  runFullEvalScenario
-} from "@/lib/admin-eval-runner";
+import { resetEvalScenarioUser } from "@/lib/admin-eval-runner";
 import { getCurrentAppContext } from "@/lib/profile";
 
 function getStringValue(formData: FormData, key: string) {
@@ -39,11 +34,15 @@ async function requireAdminUserId() {
   return context.user.id;
 }
 
-function redirectToEvals(message: string, runId?: string) {
+function redirectToEvals(message: string, options?: { runId?: string; scenarioId?: string }) {
   const params = new URLSearchParams({ message });
 
-  if (runId) {
-    params.set("run", runId);
+  if (options?.runId) {
+    params.set("run", options.runId);
+  }
+
+  if (options?.scenarioId) {
+    params.set("scenario", options.scenarioId);
   }
 
   redirect(`/app/admin/evals?${params.toString()}`);
@@ -56,36 +55,7 @@ export async function resetScenarioUserAction(formData: FormData) {
 
   revalidatePath("/app/admin/evals");
   redirectToEvals(
-    `Reset ${scenario.userName}; removed ${result.deletedThreadCount} thread(s) and ${result.deletedEvalRunCount} eval run(s).`
+    `Reset ${scenario.userName}; removed chat histories (${result.deletedThreadCount}) and eval runs (${result.deletedEvalRunCount}).`,
+    { scenarioId: scenario.id }
   );
-}
-
-export async function runDailySummariesAction(formData: FormData) {
-  const scenario = getScenarioFromForm(formData);
-  await requireAdminUserId();
-  const summaries = await runEvalScenarioDailySummaries(scenario);
-
-  revalidatePath("/app/admin/evals");
-  redirectToEvals(`Generated ${summaries.length} daily summaries for ${scenario.label}.`);
-}
-
-export async function runWeeklySummaryAction(formData: FormData) {
-  const scenario = getScenarioFromForm(formData);
-  await requireAdminUserId();
-  await runEvalScenarioWeeklySummary(scenario);
-
-  revalidatePath("/app/admin/evals");
-  redirectToEvals(`Generated weekly summary for ${scenario.label}.`);
-}
-
-export async function runFullScenarioAction(formData: FormData) {
-  const scenario = getScenarioFromForm(formData);
-  const adminUserId = await requireAdminUserId();
-  const result = await runFullEvalScenario({
-    adminUserId,
-    scenario
-  });
-
-  revalidatePath("/app/admin/evals");
-  redirectToEvals(`Ran full eval scenario for ${scenario.label}.`, result.evalRunId);
 }

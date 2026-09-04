@@ -25,6 +25,7 @@ function baseExtraction(overrides: Record<string, unknown> = {}) {
     notes: "",
     activities: [],
     dietEntries: [],
+    lifestyleEntries: [],
     wellness: {
       present: false,
       energyScore: 0,
@@ -63,6 +64,17 @@ function dietEntry(overrides: Record<string, unknown> = {}) {
   return {
     mealType: "dinner",
     description: "steak and potatoes",
+    loggedForDate: "2026-01-15",
+    timeReferenceText: "",
+    confidence: 0.9,
+    ...overrides
+  };
+}
+
+function lifestyleEntry(overrides: Record<string, unknown> = {}) {
+  return {
+    description: "went to an arcade on a date",
+    category: "social",
     loggedForDate: "2026-01-15",
     timeReferenceText: "",
     confidence: 0.9,
@@ -194,6 +206,54 @@ describe("orchestrateFrankieReply", () => {
     expect(result.shouldPersistStructuredData).toBe(false);
   });
 
+  it("returns a log_confirmation reply for a clean lifestyle-only extraction", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({ lifestyleEntries: [lifestyleEntry()] })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Sounds like a fun night!");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "went on a date to the arcade tonight",
+      recentMessages
+    });
+
+    expect(result.assistantMessageType).toBe("log_confirmation");
+    expect(result.shouldPersistStructuredData).toBe(true);
+    expect(result.persistPlan.lifestyleEntries).toBe(true);
+    expect(result.parsedLifestyleEntries).toHaveLength(1);
+    expect(result.parsedLifestyleEntries[0].category).toBe("social");
+    expect(result.reply).toBe("Sounds like a fun night!");
+  });
+
+  it("keeps an activity persisting alongside a same-message substance lifestyle entry", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [activity({ description: "squats and deadlifts" })],
+        lifestyleEntries: [
+          lifestyleEntry({ description: "smoked a bowl beforehand", category: "substance_cannabis" })
+        ]
+      })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Nice PR!");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "squats and deadlifts for 50 minutes, hit a new PR. smoked a bowl beforehand",
+      recentMessages
+    });
+
+    expect(result.persistPlan.activities).toBe(true);
+    expect(result.persistPlan.lifestyleEntries).toBe(true);
+    expect(result.parsedActivities).toHaveLength(1);
+    expect(result.parsedLifestyleEntries).toHaveLength(1);
+    expect(result.parsedLifestyleEntries[0].category).toBe("substance_cannabis");
+  });
+
   it("skips the coach response call when skipCoachResponse is set", async () => {
     hasOpenAiApiKey.mockReturnValue(true);
     createStructuredOpenAiResponse.mockResolvedValue(
@@ -215,6 +275,25 @@ describe("orchestrateFrankieReply", () => {
 });
 
 describe("orchestrateFrankieReply sanitization and dedup", () => {
+  it("collapses two identically-described lifestyle entries the model returned twice into one", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        lifestyleEntries: [lifestyleEntry(), lifestyleEntry()]
+      })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Nice!");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "went on a date to the arcade",
+      recentMessages
+    });
+
+    expect(result.parsedLifestyleEntries).toHaveLength(1);
+  });
+
   it("collapses two identically-described activities the model returned twice into one", async () => {
     hasOpenAiApiKey.mockReturnValue(true);
     createStructuredOpenAiResponse.mockResolvedValue(
@@ -424,5 +503,187 @@ describe("orchestrateFrankieReply sanitization and dedup", () => {
 
     expect(result.assistantMessageType).toBe("clarification_request");
     expect(result.reply).toContain("when did it happen");
+  });
+
+  it("consolidates a multi-exercise session sharing one overall duration and intensity into one entry", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    const exerciseNames = ["deadlifts", "squats", "arnold press", "dips", "tris", "shoulders"];
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: exerciseNames.map((name) =>
+          activity({
+            activityType: name,
+            description: name,
+            activityCategory: "strength",
+            durationMinutes: 120,
+            intensity: "Hard",
+            timeReferenceText: "today"
+          })
+        )
+      })
+    );
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "did deadlifts, squats, arnold press, dips, tris, and shoulders today, 120 min, hard.",
+      recentMessages,
+      skipCoachResponse: true
+    });
+
+    expect(result.parsedActivities).toHaveLength(1);
+    expect(result.parsedActivities[0].activityType).toBe("weight lifting");
+    expect(result.parsedActivities[0].durationMinutes).toBe(120);
+    expect(result.parsedActivities[0].intensity).toBe("Hard");
+    expect(result.parsedActivities[0].sessionCount).toBe(1);
+    exerciseNames.forEach((name) => {
+      expect(result.parsedActivities[0].description.toLowerCase()).toContain(name);
+    });
+  });
+
+  it("does not merge activities from different categories even when duration and intensity coincidentally match", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({
+            activityType: "squats",
+            description: "squats",
+            activityCategory: "strength",
+            durationMinutes: 30,
+            intensity: "Moderate",
+            timeReferenceText: "today"
+          }),
+          activity({
+            activityType: "walking",
+            description: "walked",
+            activityCategory: "cardio",
+            durationMinutes: 30,
+            intensity: "Moderate",
+            timeReferenceText: "today"
+          })
+        ]
+      })
+    );
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "did squats for 30 minutes moderate, also walked for 30 minutes moderate today",
+      recentMessages,
+      skipCoachResponse: true
+    });
+
+    expect(result.parsedActivities).toHaveLength(2);
+  });
+
+  it("does not merge activities from different times of day even with matching duration and intensity", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({
+            activityType: "squats",
+            description: "squats",
+            activityCategory: "strength",
+            durationMinutes: 45,
+            intensity: "Hard",
+            timeReferenceText: "this morning"
+          }),
+          activity({
+            activityType: "deadlifts",
+            description: "deadlifts",
+            activityCategory: "strength",
+            durationMinutes: 45,
+            intensity: "Hard",
+            timeReferenceText: "this evening"
+          })
+        ]
+      })
+    );
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "did squats this morning for 45 min hard, deadlifts this evening for 45 min hard",
+      recentMessages,
+      skipCoachResponse: true
+    });
+
+    expect(result.parsedActivities).toHaveLength(2);
+  });
+
+  it("never treats two vague activities with no stated duration as the same session", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({
+            activityType: "yoga",
+            description: "did yoga",
+            activityCategory: "mind_body",
+            durationMinutes: 0,
+            intensity: "unknown",
+            timeReferenceText: "today"
+          }),
+          activity({
+            activityType: "walking",
+            description: "went for a walk",
+            activityCategory: "cardio",
+            durationMinutes: 0,
+            intensity: "unknown",
+            timeReferenceText: "today"
+          })
+        ]
+      })
+    );
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "did yoga and went for a walk today",
+      recentMessages,
+      skipCoachResponse: true
+    });
+
+    expect(result.parsedActivities).toHaveLength(2);
+  });
+
+  it("consolidates a shared session duration even when no intensity is stated", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({
+            activityType: "squats",
+            description: "squats",
+            activityCategory: "strength",
+            durationMinutes: 45,
+            intensity: "unknown",
+            timeReferenceText: ""
+          }),
+          activity({
+            activityType: "bench press",
+            description: "bench press",
+            activityCategory: "strength",
+            durationMinutes: 45,
+            intensity: "unknown",
+            timeReferenceText: ""
+          })
+        ]
+      })
+    );
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "Wednesday 2026-05-06 I lifted: squats and bench press for 45 minutes.",
+      recentMessages,
+      skipCoachResponse: true
+    });
+
+    expect(result.parsedActivities).toHaveLength(1);
+    expect(result.parsedActivities[0].durationMinutes).toBe(45);
+    expect(result.parsedActivities[0].intensity).toBeNull();
   });
 });

@@ -11,7 +11,6 @@ import { runFrankieTurn } from "@/lib/ai/run-frankie-turn";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-type ChatMessage = Database["public"]["Tables"]["conversation_messages"]["Row"];
 
 function toAppProfile(row: ProfileRow | null): AppProfile | null {
   if (!row) {
@@ -87,6 +86,29 @@ async function resolveTargetUser(email: string) {
   return targetUser;
 }
 
+// Resolves every scenario's user in one listUsers() call instead of one per scenario, and
+// skips (rather than throws on) a scenario whose benchmark account doesn't exist yet — a
+// missing account shouldn't break admin pages that just want to scope data to known personas.
+export async function resolveEvalScenarioUserIds(scenarios: EvalScenario[]) {
+  const supabase = createSupabaseServiceRoleClient();
+  const { data, error } = await supabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const emailToId = new Map(
+    data.users.filter((user) => user.email).map((user) => [user.email!.toLowerCase(), user.id])
+  );
+
+  return scenarios
+    .map((scenario) => emailToId.get(scenario.userEmail.toLowerCase()))
+    .filter((id): id is string => Boolean(id));
+}
+
 async function loadProfile(userId: string) {
   const supabase = createSupabaseServiceRoleClient();
   const { data, error } = await supabase
@@ -133,6 +155,7 @@ export async function resetEvalScenarioUser(scenario: EvalScenario) {
 
   await supabase.from("activity_logs").delete().eq("user_id", targetUser.id);
   await supabase.from("diet_logs").delete().eq("user_id", targetUser.id);
+  await supabase.from("lifestyle_logs").delete().eq("user_id", targetUser.id);
   await supabase.from("wellness_checkins").delete().eq("user_id", targetUser.id);
   await supabase.from("recommendations").delete().eq("user_id", targetUser.id);
   await supabase.from("weekly_summaries").delete().eq("user_id", targetUser.id);
@@ -268,7 +291,7 @@ async function insertEvalRunItem(input: {
   evalRunId: string;
   expectedJson: Json;
   inputMessage: string;
-  pillar: "activity" | "diet" | "wellness" | "summary";
+  pillar: "activity" | "diet" | "lifestyle" | "wellness" | "summary";
   runStatus: string;
   scenarioId: string;
   sourceMessageId: string | null;
@@ -467,107 +490,27 @@ export async function finishEvalScenarioReplay(input: {
   };
 }
 
-export async function runEvalScenarioMessages(input: {
-  adminUserId: string;
-  resetFirst?: boolean;
+export async function runEvalScenarioDailySummaryStep(input: {
+  dayIndex: number;
   scenario: EvalScenario;
 }) {
-  if (input.resetFirst) {
-    await resetEvalScenarioUser(input.scenario);
+  const day = input.scenario.days.find((candidate) => candidate.dayIndex === input.dayIndex);
+
+  if (!day) {
+    throw new Error("Daily summary step index is out of range.");
   }
 
-  const supabase = createSupabaseServiceRoleClient();
   const targetUser = await resolveTargetUser(input.scenario.userEmail);
   const profile = await loadProfile(targetUser.id);
-  const evalRun = await createEvalRun({
-    adminUserId: input.adminUserId,
-    scenario: input.scenario
-  });
-  const { thread, initialMessage } = await createEvalThread({
-    scenario: input.scenario,
-    user: targetUser,
-    profile
-  });
-  const recentMessages: ChatMessage[] = [initialMessage];
-  let hasItemError = false;
-
-  for (const day of input.scenario.days) {
-    for (const update of day.updates) {
-      const result = await runFrankieTurn({
-        supabase,
-        userId: targetUser.id,
-        userEmail: targetUser.email ?? input.scenario.userEmail,
-        displayName: input.scenario.userName,
-        profile,
-        threadId: thread.id,
-        threadTitle: thread.title,
-        message: update.message,
-        recentMessages
-      });
-
-      if (result.errorMessage) {
-        hasItemError = true;
-      }
-
-      await insertEvalRunItem({
-        evalRunId: evalRun.id,
-        scenarioId: input.scenario.id,
-        userId: targetUser.id,
-        dayIndex: day.dayIndex,
-        pillar: update.pillar,
-        inputMessage: update.message,
-        expectedJson: {
-          ...update.expected,
-          scenarioDate: day.date,
-          dayLabel: day.label
-        } as Json,
-        traceId: result.traceId,
-        sourceMessageId: result.userMessage.id,
-        assistantMessageId: result.assistantMessage?.id ?? null,
-        assistantReply: result.assistantReply,
-        actualJson: result.actualJson,
-        runStatus: result.runStatus,
-        errorMessage: result.errorMessage
-      });
-
-      recentMessages.push(result.userMessage);
-
-      if (result.assistantMessage) {
-        recentMessages.push(result.assistantMessage);
-      }
-    }
-  }
-
-  await updateEvalRun({
-    runId: evalRun.id,
-    status: hasItemError ? "failed" : "completed",
-    errorMessage: hasItemError ? "One or more eval items failed." : null
-  });
-
-  return {
-    evalRunId: evalRun.id,
-    userId: targetUser.id
-  };
-}
-
-export async function runEvalScenarioDailySummaries(scenario: EvalScenario) {
-  const targetUser = await resolveTargetUser(scenario.userEmail);
-  const profile = await loadProfile(targetUser.id);
   const supabase = createSupabaseServiceRoleClient();
-  const summaries = [];
+  const summary = await generateDailyCoachSummary({
+    supabase,
+    userId: targetUser.id,
+    profile,
+    date: day.date
+  });
 
-  for (const day of scenario.days) {
-    summaries.push(
-      await generateDailyCoachSummary({
-        supabase,
-        userId: targetUser.id,
-        profile,
-        date: day.date
-      })
-    );
-  }
-
-  return summaries;
+  return { day, summary };
 }
 
 export async function runEvalScenarioWeeklySummary(scenario: EvalScenario) {
@@ -583,20 +526,4 @@ export async function runEvalScenarioWeeklySummary(scenario: EvalScenario) {
     periodStart,
     periodEnd
   });
-}
-
-export async function runFullEvalScenario(input: {
-  adminUserId: string;
-  scenario: EvalScenario;
-}) {
-  const result = await runEvalScenarioMessages({
-    adminUserId: input.adminUserId,
-    scenario: input.scenario,
-    resetFirst: true
-  });
-
-  await runEvalScenarioDailySummaries(input.scenario);
-  await runEvalScenarioWeeklySummary(input.scenario);
-
-  return result;
 }

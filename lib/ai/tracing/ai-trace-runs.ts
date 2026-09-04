@@ -15,6 +15,7 @@ export type AiTraceRunStatus =
 type PersistedLogIds = {
   activityLogIds: string[];
   dietLogIds: string[];
+  lifestyleLogIds: string[];
   wellnessCheckinIds: string[];
 };
 
@@ -59,6 +60,14 @@ function buildExtractedPayload(reply: FrankieOrchestrationResult): Json {
       timeReferenceText: entry.timeReferenceText,
       loggedForDate: entry.loggedForDate
     })),
+    lifestyleEntries: reply.parsedLifestyleEntries.map((entry) => ({
+      category: entry.category,
+      confidence: entry.confidence,
+      description: entry.description,
+      detectedKeyword: entry.detectedKeyword,
+      timeReferenceText: entry.timeReferenceText,
+      loggedForDate: entry.loggedForDate
+    })),
     intent: reply.metadata.intent ?? null,
     wellnessCheckin: reply.parsedWellnessCheckin
       ? {
@@ -92,6 +101,13 @@ function buildToolCalls(reply: FrankieOrchestrationResult): Json {
     });
   }
 
+  if (reply.persistPlan.lifestyleEntries && reply.parsedLifestyleEntries.length > 0) {
+    calls.push({
+      name: "log_lifestyle",
+      entryCount: reply.parsedLifestyleEntries.length
+    });
+  }
+
   if (reply.persistPlan.wellnessCheckin && reply.parsedWellnessCheckin) {
     calls.push({
       name: "log_wellness",
@@ -110,6 +126,7 @@ function buildToolResults(
     persistedCounts: {
       activity: persistedLogIds.activityLogIds.length,
       diet: persistedLogIds.dietLogIds.length,
+      lifestyle: persistedLogIds.lifestyleLogIds.length,
       wellness: persistedLogIds.wellnessCheckinIds.length
     },
     runStatus
@@ -157,6 +174,7 @@ export async function recordAiTraceRun(input: {
     persisted_log_ids: {
       activityLogIds: input.persistedLogIds.activityLogIds,
       dietLogIds: input.persistedLogIds.dietLogIds,
+      lifestyleLogIds: input.persistedLogIds.lifestyleLogIds,
       wellnessCheckinIds: input.persistedLogIds.wellnessCheckinIds
     },
     needs_clarification: input.reply.metadata.needsClarification ?? false,
