@@ -59,6 +59,17 @@ function activity(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function dietEntry(overrides: Record<string, unknown> = {}) {
+  return {
+    mealType: "dinner",
+    description: "steak and potatoes",
+    loggedForDate: "2026-01-15",
+    timeReferenceText: "",
+    confidence: 0.9,
+    ...overrides
+  };
+}
+
 const recentMessages: ChatMessage[] = [];
 
 beforeEach(() => {
@@ -287,6 +298,33 @@ describe("orchestrateFrankieReply sanitization and dedup", () => {
       mealType: "breakfast",
       detectedKeyword: "skipped_meal"
     });
+  });
+
+  it("does not turn an unrelated exercise sentence into a diet entry", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({ activityType: "Bench Press", description: "Bench Press" }),
+          activity({ activityType: "core exercises", description: "core exercises" })
+        ],
+        dietEntries: [dietEntry({ mealType: "dinner", description: "steak and potatoes" })]
+      })
+    );
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message:
+        "Today I exercised, what I did was Bench Press and core exercises. Later I ate steak and potatoes for dinner. Before bed I had a protein shake",
+      recentMessages,
+      skipCoachResponse: true
+    });
+
+    expect(result.parsedDietEntries).toHaveLength(1);
+    expect(result.parsedDietEntries[0].mealType).toBe("dinner");
+    expect(result.parsedDietEntries[0].description.toLowerCase()).not.toContain("bench press");
+    expect(result.parsedDietEntries[0].description.toLowerCase()).not.toContain("exercise");
   });
 
   it("supplements a second activity clause the model missed", async () => {
