@@ -16,8 +16,22 @@ function formatPeriod(summary: CoachSummaryWithUser) {
     : summary.period_start;
 }
 
+export function stripMarkdown(markdown: string) {
+  return markdown
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/(\*\*|__)(.*?)\1/g, "$2")
+    .replace(/(\*|_)(.*?)\1/g, "$2")
+    .replace(/^\s*>\s?/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "");
+}
+
 export function buildPreview(summaryText: string) {
-  const singleLine = summaryText.replace(/\s+/g, " ").trim();
+  const singleLine = stripMarkdown(summaryText).replace(/\s+/g, " ").trim();
 
   if (singleLine.length <= PREVIEW_LENGTH) {
     return singleLine;
