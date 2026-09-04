@@ -120,6 +120,17 @@ describe("computeDashboardData: wellness", () => {
     const result = computeDashboardData(null, [], [], [wellnessCheckin({ energy_score: 1 })]);
     expect(result.wellness.metrics.find((m) => m.label === "Energy")?.value).toBe("Very low");
   });
+
+  it("includes mood in the 7-day trend", () => {
+    const result = computeDashboardData(
+      null,
+      [],
+      [],
+      [wellnessCheckin({ logged_for_date: "2026-01-08", mood_score: 4 })]
+    );
+    const todayPoint = result.wellness.trend.find((point) => point.label === "Thu");
+    expect(todayPoint?.mood).toBe(4);
+  });
 });
 
 describe("computeDashboardData: nextStep priority", () => {

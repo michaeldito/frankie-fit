@@ -13,6 +13,8 @@ export default defineConfig({
       // actually covered rather than being diluted by the much larger untested app surface
       // (components, routes, Supabase-bound modules). Add a file here when you add its test.
       include: [
+        "components/chat/logged-entry-format.ts",
+        "components/chat/quick-start.ts",
         "lib/admin.ts",
         "lib/rate-limit.ts",
         "lib/workouts/validation.ts",

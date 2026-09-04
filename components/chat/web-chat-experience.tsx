@@ -4,6 +4,12 @@ import type { FormEvent, KeyboardEvent } from "react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChatTranscript, type LoggedEntryKind } from "@/components/chat/chat-transcript";
+import {
+  QUICK_START_OPTIONS,
+  findBracketBlanks,
+  findNextBlank,
+  findPreviousBlank
+} from "@/components/chat/quick-start";
 import { PERSONAS } from "@/lib/ai/prompts/personas";
 import type { Database } from "@/types/database";
 
@@ -27,17 +33,6 @@ type WebChatExperienceProps = {
 };
 
 const DEFAULT_PERSONA_LABEL = "Default Frankie";
-
-const QUICK_START_PLACEHOLDER = "[fill in]";
-
-const QUICK_START_OPTIONS: Array<{ label: string; template: string }> = [
-  { label: "Exercise", template: `Today I exercised, what I did was ${QUICK_START_PLACEHOLDER}` },
-  { label: "Food", template: `Today I ate, what I had was ${QUICK_START_PLACEHOLDER}` },
-  {
-    label: "Wellness",
-    template: `Today I'm checking in, how I'm feeling is ${QUICK_START_PLACEHOLDER}`
-  }
-];
 
 async function chatApiFetch<T>(input: RequestInfo, init?: RequestInit) {
   const response = await fetch(input, {
@@ -77,8 +72,18 @@ export function WebChatExperience({
   const [isRefreshing, startRefreshTransition] = useTransition();
   const [personaId, setPersonaId] = useState<string | null>(initialPersona);
   const [personaMenuOpen, setPersonaMenuOpen] = useState(false);
+  const [quickStartHintVisible, setQuickStartHintVisible] = useState(false);
+  const quickStartHintTimeoutRef = useRef<number | null>(null);
   const isBusy = Boolean(pendingMessage) || isThinking || isRefreshing;
   const activePersona = PERSONAS.find((persona) => persona.id === personaId) ?? null;
+
+  useEffect(() => {
+    return () => {
+      if (quickStartHintTimeoutRef.current) {
+        window.clearTimeout(quickStartHintTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -227,12 +232,31 @@ export function WebChatExperience({
     );
   }
 
+  function dismissQuickStartHint() {
+    if (quickStartHintTimeoutRef.current) {
+      window.clearTimeout(quickStartHintTimeoutRef.current);
+      quickStartHintTimeoutRef.current = null;
+    }
+
+    setQuickStartHintVisible(false);
+  }
+
   function handleQuickStart(template: string) {
     if (!schemaReady || isBusy) {
       return;
     }
 
     setDraft(template);
+    setQuickStartHintVisible(true);
+
+    if (quickStartHintTimeoutRef.current) {
+      window.clearTimeout(quickStartHintTimeoutRef.current);
+    }
+
+    quickStartHintTimeoutRef.current = window.setTimeout(() => {
+      setQuickStartHintVisible(false);
+    }, 5000);
+
     window.requestAnimationFrame(() => {
       const textarea = textareaRef.current;
 
@@ -241,13 +265,10 @@ export function WebChatExperience({
       }
 
       textarea.focus();
-      const placeholderIndex = template.indexOf(QUICK_START_PLACEHOLDER);
+      const firstBlank = findBracketBlanks(template)[0];
 
-      if (placeholderIndex >= 0) {
-        textarea.setSelectionRange(
-          placeholderIndex,
-          placeholderIndex + QUICK_START_PLACEHOLDER.length
-        );
+      if (firstBlank) {
+        textarea.setSelectionRange(firstBlank.start, firstBlank.end);
       } else {
         textarea.setSelectionRange(template.length, template.length);
       }
@@ -255,6 +276,22 @@ export function WebChatExperience({
   }
 
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Tab") {
+      const textarea = event.currentTarget;
+      const blanks = findBracketBlanks(textarea.value);
+      const nextBlank = event.shiftKey
+        ? findPreviousBlank(blanks, textarea.selectionStart)
+        : findNextBlank(blanks, textarea.selectionEnd);
+
+      if (nextBlank) {
+        event.preventDefault();
+        textarea.setSelectionRange(nextBlank.start, nextBlank.end);
+        dismissQuickStartHint();
+      }
+
+      return;
+    }
+
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
       return;
     }
@@ -311,11 +348,30 @@ export function WebChatExperience({
               </button>
             ))}
           </div>
+          {quickStartHintVisible ? (
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-[0.75rem] border border-[var(--border-strong)] bg-[var(--surface-strong)] px-3 py-2 text-xs leading-5 text-[var(--muted-strong)]">
+              <span>Type in the highlighted blank, then press Tab for the next one.</span>
+              <button
+                aria-label="Dismiss hint"
+                className="shrink-0 cursor-pointer text-[var(--muted)] hover:text-[var(--foreground)]"
+                onClick={dismissQuickStartHint}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
           <textarea
             className="ff-textarea min-h-32"
             disabled={!schemaReady || isBusy}
             name="message"
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => {
+              setDraft(event.target.value);
+
+              if (quickStartHintVisible) {
+                dismissQuickStartHint();
+              }
+            }}
             onKeyDown={handleComposerKeyDown}
             placeholder={
               schemaReady
