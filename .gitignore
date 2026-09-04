@@ -31,3 +31,6 @@ next-dev*.err
 .DS_Store
 *.pem
 .vercel
+
+# supabase
+supabase/.temp/
