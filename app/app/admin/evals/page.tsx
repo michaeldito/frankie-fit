@@ -379,6 +379,34 @@ function DietExtractionCard({
   );
 }
 
+function LifestyleExtractionCard({
+  entry,
+  index
+}: {
+  entry: Record<string, Json | undefined>;
+  index: number;
+}) {
+  return (
+    <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="ff-kicker">Lifestyle {index + 1}</p>
+          <h4 className="mt-2 text-base font-semibold tracking-[-0.02em]">
+            {renderScalar(entry.description)}
+          </h4>
+        </div>
+        <AttentionPill tone="slate">{formatConfidence(entry.confidence)} confidence</AttentionPill>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ValueTile label="Category" value={renderScalar(entry.category)} />
+        <ValueTile label="Logged for" value={renderScalar(entry.loggedForDate)} />
+        <ValueTile label="Time reference" value={renderScalar(entry.timeReferenceText)} />
+      </div>
+    </article>
+  );
+}
+
 function WellnessExtractionCard({
   wellness
 }: {
@@ -425,20 +453,27 @@ function ActualExtractionSummary({ actualJson }: { actualJson: Json }) {
   const rawModelExtractionObject = getOptionalJsonObject(rawModelExtraction);
   const rawActivities = getJsonObjectArray(rawModelExtractionObject?.activities);
   const rawDietEntries = getJsonObjectArray(rawModelExtractionObject?.dietEntries);
+  const rawLifestyleEntries = getJsonObjectArray(rawModelExtractionObject?.lifestyleEntries);
   const rawWellness = getOptionalJsonObject(rawModelExtractionObject?.wellness);
   const activities = getJsonObjectArray(actual.activities);
   const dietEntries = getJsonObjectArray(actual.dietEntries);
+  const lifestyleEntries = getJsonObjectArray(actual.lifestyleEntries);
   const wellness = getOptionalJsonObject(actual.wellnessCheckin);
   const activityStatus = getPersistenceStatus(
     activities.length,
     getPersistedCount(actual, "activityLogIds")
   );
   const dietStatus = getPersistenceStatus(dietEntries.length, getPersistedCount(actual, "dietLogIds"));
+  const lifestyleStatus = getPersistenceStatus(
+    lifestyleEntries.length,
+    getPersistedCount(actual, "lifestyleLogIds")
+  );
   const wellnessStatus = getPersistenceStatus(
     wellness ? 1 : 0,
     getPersistedCount(actual, "wellnessCheckinIds")
   );
-  const hasAnyExtraction = activities.length > 0 || dietEntries.length > 0 || Boolean(wellness);
+  const hasAnyExtraction =
+    activities.length > 0 || dietEntries.length > 0 || lifestyleEntries.length > 0 || Boolean(wellness);
 
   return (
     <div className="mt-5 space-y-4">
@@ -450,6 +485,7 @@ function ActualExtractionSummary({ actualJson }: { actualJson: Json }) {
           </AttentionPill>
           <PersistenceChip label="Activity" status={activityStatus} />
           <PersistenceChip label="Diet" status={dietStatus} />
+          <PersistenceChip label="Lifestyle" status={lifestyleStatus} />
           <PersistenceChip label="Wellness" status={wellnessStatus} />
         </div>
       </div>
@@ -457,6 +493,7 @@ function ActualExtractionSummary({ actualJson }: { actualJson: Json }) {
       <div className="grid gap-3 md:grid-cols-3">
         <ValueTile label="Raw model activities" value={rawActivities.length} />
         <ValueTile label="Raw model diet entries" value={rawDietEntries.length} />
+        <ValueTile label="Raw model lifestyle entries" value={rawLifestyleEntries.length} />
         <ValueTile
           label="Raw model wellness"
           value={rawWellness?.present === true ? "Present" : "Not present"}
@@ -500,6 +537,21 @@ function ActualExtractionSummary({ actualJson }: { actualJson: Json }) {
               ))
             ) : (
               <EmptyExtraction label="diet" />
+            )}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+            Lifestyle
+          </p>
+          <div className="space-y-3">
+            {lifestyleEntries.length > 0 ? (
+              lifestyleEntries.map((entry, index) => (
+                <LifestyleExtractionCard entry={entry} index={index} key={`lifestyle-${index}`} />
+              ))
+            ) : (
+              <EmptyExtraction label="lifestyle" />
             )}
           </div>
         </div>

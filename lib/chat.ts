@@ -391,7 +391,7 @@ export function resolveLoggedForDateFromTimeReference(
   }
 
   if (/\btoday\b|\bthis morning\b|\bthis afternoon\b|\btonight\b|\blast night\b/.test(normalizedText)) {
-    return toDateKey(getPacificToday());
+    return normalizedFallbackDate ?? toDateKey(getPacificToday());
   }
 
   const daysAgoMatch = normalizedText.match(/\b(\d+)\s+days?\s+ago\b/);

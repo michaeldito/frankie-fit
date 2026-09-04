@@ -13,7 +13,7 @@ export type EvalScenario = {
   days: EvalScenarioDay[];
 };
 
-export type EvalPillar = "activity" | "diet" | "wellness";
+export type EvalPillar = "activity" | "diet" | "lifestyle" | "wellness";
 
 export type EvalScenarioUpdate = {
   pillar: EvalPillar;
@@ -88,6 +88,16 @@ const cardioHappyDays: EvalScenarioDay[] = [
           coreFacts: ["energy 4", "good mood", "low stress", "steady motivation"],
           shouldNotInfer: ["sleep hours", "soreness"]
         }
+      },
+      {
+        pillar: "lifestyle",
+        message: "Monday 2026-05-04 had dinner with family tonight, felt really connected.",
+        expected: {
+          shouldLog: true,
+          loggedForDate: "2026-05-04",
+          coreFacts: ["dinner with family", "felt connected"],
+          shouldNotInfer: ["what was eaten", "wellness score"]
+        }
       }
     ]
   },
@@ -161,6 +171,16 @@ const cardioHappyDays: EvalScenarioDay[] = [
           loggedForDate: "2026-05-06",
           coreFacts: ["positive mood", "energy 5", "soreness 1"],
           shouldNotInfer: ["stress score"]
+        }
+      },
+      {
+        pillar: "lifestyle",
+        message: "Wednesday 2026-05-06 watched a movie with my partner tonight, a relaxing night in.",
+        expected: {
+          shouldLog: true,
+          loggedForDate: "2026-05-06",
+          coreFacts: ["watched a movie", "partner", "relaxing night"],
+          shouldNotInfer: ["what movie", "activity"]
         }
       }
     ]
@@ -350,6 +370,16 @@ const liftingMixedDays: EvalScenarioDay[] = [
           coreFacts: ["motivation 5", "good mood", "energy 4"],
           shouldNotInfer: ["stress score"]
         }
+      },
+      {
+        pillar: "lifestyle",
+        message: "Monday 2026-05-04 went out with friends after work, good to catch up.",
+        expected: {
+          shouldLog: true,
+          loggedForDate: "2026-05-04",
+          coreFacts: ["went out with friends", "caught up"],
+          shouldNotInfer: ["alcohol", "activity"]
+        }
       }
     ]
   },
@@ -423,6 +453,16 @@ const liftingMixedDays: EvalScenarioDay[] = [
           loggedForDate: "2026-05-06",
           coreFacts: ["energy 3", "okay mood", "low motivation", "tired"],
           shouldNotInfer: ["alcohol cause"]
+        }
+      },
+      {
+        pillar: "lifestyle",
+        message: "Wednesday 2026-05-06 smoked a little before bed to help wind down.",
+        expected: {
+          shouldLog: true,
+          loggedForDate: "2026-05-06",
+          coreFacts: ["smoked before bed", "wind down"],
+          shouldNotInfer: ["quantity", "wellness score"]
         }
       }
     ]
@@ -612,6 +652,16 @@ const difficultMixedDays: EvalScenarioDay[] = [
           coreFacts: ["energy 3", "stress 4", "okay motivation"],
           shouldNotInfer: ["mood score"]
         }
+      },
+      {
+        pillar: "lifestyle",
+        message: "Monday 2026-05-04 work travel starts this week, flying out tonight.",
+        expected: {
+          shouldLog: true,
+          loggedForDate: "2026-05-04",
+          coreFacts: ["work travel", "flying out"],
+          shouldNotInfer: ["destination", "duration"]
+        }
       }
     ]
   },
@@ -648,6 +698,16 @@ const difficultMixedDays: EvalScenarioDay[] = [
           loggedForDate: "2026-05-05",
           coreFacts: ["good mood", "energy 4", "stress 3"],
           shouldNotInfer: ["motivation score"]
+        }
+      },
+      {
+        pillar: "lifestyle",
+        message: "Tuesday 2026-05-05 had a couple drinks at the hotel bar after the flight, needed to unwind.",
+        expected: {
+          shouldLog: true,
+          loggedForDate: "2026-05-05",
+          coreFacts: ["drinks at hotel bar", "unwind"],
+          shouldNotInfer: ["number of drinks", "activity"]
         }
       }
     ]
