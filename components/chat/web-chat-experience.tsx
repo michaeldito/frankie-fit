@@ -128,8 +128,8 @@ export function WebChatExperience({
     }
 
     if (personaMenuOpen) {
-      document.addEventListener("mousedown", handlePointerDown);
-      return () => document.removeEventListener("mousedown", handlePointerDown);
+      document.addEventListener("mousedown", handlePointerDown, true);
+      return () => document.removeEventListener("mousedown", handlePointerDown, true);
     }
   }, [personaMenuOpen]);
 
@@ -443,7 +443,7 @@ export function WebChatExperience({
               <SendIcon busy={isBusy} />
             </button>
           </div>
-          <div className="relative mt-2 flex items-center justify-end gap-2" ref={personaMenuRef}>
+          <div className="relative mt-2 flex items-center justify-between gap-2" ref={personaMenuRef}>
             <button
               aria-expanded={personaMenuOpen}
               className="cursor-pointer text-sm font-medium text-[var(--muted)] transition hover:text-[var(--foreground)]"
@@ -456,7 +456,7 @@ export function WebChatExperience({
 
             <div
               aria-hidden={!personaMenuOpen}
-              className={`ff-card absolute right-0 z-30 max-h-60 w-max min-w-52 max-w-64 origin-bottom-right overflow-y-auto p-1.5 transition-all duration-200 ease-out ${
+              className={`ff-card absolute left-0 z-30 max-h-60 w-max min-w-52 max-w-64 origin-bottom-left overflow-y-auto p-1.5 transition-all duration-200 ease-out ${
                 personaMenuOpen
                   ? "translate-y-0 scale-100 opacity-100"
                   : "pointer-events-none translate-y-1 scale-95 opacity-0"
