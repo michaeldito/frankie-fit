@@ -26,6 +26,7 @@ export type AdminOverviewMetrics = {
   pillarUsage30d: {
     activity: number;
     diet: number;
+    lifestyle: number;
     wellness: number;
   };
 };
@@ -72,6 +73,7 @@ function parseAdminOverviewMetrics(value: Json | null): AdminOverviewMetrics | n
     pillarUsage30d: {
       activity: Number(pillarUsageRaw.activity ?? 0),
       diet: Number(pillarUsageRaw.diet ?? 0),
+      lifestyle: Number(pillarUsageRaw.lifestyle ?? 0),
       wellness: Number(pillarUsageRaw.wellness ?? 0)
     }
   };
@@ -128,6 +130,7 @@ function buildEmptyOverviewData(error: string | null): AdminOverviewData {
     pillarUsageCards: [
       { label: "Exercise", value: "0" },
       { label: "Diet", value: "0" },
+      { label: "Lifestyle", value: "0" },
       { label: "Wellness", value: "0" }
     ],
     promptThemes: [],
@@ -221,6 +224,7 @@ export async function getAdminOverviewData(
     pillarUsageCards: [
       { label: "Exercise", value: `${metrics.pillarUsage30d.activity}` },
       { label: "Diet", value: `${metrics.pillarUsage30d.diet}` },
+      { label: "Lifestyle", value: `${metrics.pillarUsage30d.lifestyle}` },
       { label: "Wellness", value: `${metrics.pillarUsage30d.wellness}` }
     ],
     promptThemes: promptThemesResult.data ?? [],
