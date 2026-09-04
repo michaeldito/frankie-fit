@@ -63,6 +63,7 @@ export type WellnessTrendPoint = {
 export type WellnessDashboardData = {
   metrics: DashboardMetric[];
   trend: WellnessTrendPoint[];
+  breakdown: Array<{ label: string; value: number }>;
   recent: DashboardRecentItem[];
   insight: string;
   empty: boolean;
@@ -133,6 +134,7 @@ export function createEmptyWellnessDashboard(): WellnessDashboardData {
       { label: "Recovery", value: "No data" }
     ],
     trend: [],
+    breakdown: [],
     recent: [],
     insight:
       "No wellness check-ins are saved yet. A quick energy, stress, or soreness update will make Frankie much more useful.",
@@ -502,6 +504,25 @@ function buildDietDashboardData(dietLogs: DietLogRow[]): DietDashboardData {
   };
 }
 
+// Wellness has no natural category to tally the way activity type or meal type does, so this
+// counts how often each signal gets mentioned at all (a non-null score) rather than tallying a
+// value. Easy to extend later — e.g. once a cross-pillar insight surfaces which signals actually
+// correlate with training or eating patterns, this is the place to fold that in.
+function buildWellnessBreakdown(wellnessCheckins: WellnessCheckinRow[]) {
+  const signalCounts: Array<[string, number]> = [
+    ["Energy", wellnessCheckins.filter((entry) => entry.energy_score !== null).length],
+    ["Stress", wellnessCheckins.filter((entry) => entry.stress_score !== null).length],
+    ["Soreness", wellnessCheckins.filter((entry) => entry.soreness_score !== null).length],
+    ["Mood", wellnessCheckins.filter((entry) => entry.mood_score !== null).length],
+    ["Motivation", wellnessCheckins.filter((entry) => entry.motivation_score !== null).length]
+  ];
+
+  return signalCounts
+    .filter(([, value]) => value > 0)
+    .sort((left, right) => right[1] - left[1])
+    .map(([label, value]) => ({ label, value }));
+}
+
 function buildWellnessDashboardData(wellnessCheckins: WellnessCheckinRow[]): WellnessDashboardData {
   if (wellnessCheckins.length === 0) {
     return createEmptyWellnessDashboard();
@@ -519,6 +540,7 @@ function buildWellnessDashboardData(wellnessCheckins: WellnessCheckinRow[]): Wel
       { label: "Recovery", value: getRecoveryLabel(averageSoreness) }
     ],
     trend: buildWellnessTrend(wellnessCheckins),
+    breakdown: buildWellnessBreakdown(wellnessCheckins),
     recent: wellnessCheckins.slice(0, 5).map((entry) => ({
       id: entry.id,
       title: `Check-in • ${formatShortDate(entry.logged_for_date)}`,

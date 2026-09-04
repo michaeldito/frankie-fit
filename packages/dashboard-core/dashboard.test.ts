@@ -131,6 +131,42 @@ describe("computeDashboardData: wellness", () => {
     const todayPoint = result.wellness.trend.find((point) => point.label === "Thu");
     expect(todayPoint?.mood).toBe(4);
   });
+
+  it("breaks down how often each signal is mentioned, sorted by frequency", () => {
+    const allSignalsNull = {
+      energy_score: null,
+      soreness_score: null,
+      mood_score: null,
+      stress_score: null,
+      motivation_score: null
+    };
+    const result = computeDashboardData(
+      null,
+      [],
+      [],
+      [
+        wellnessCheckin({ id: "w1", ...allSignalsNull, energy_score: 4, stress_score: 2 }),
+        wellnessCheckin({ id: "w2", ...allSignalsNull, energy_score: 3 }),
+        wellnessCheckin({ id: "w3", ...allSignalsNull })
+      ]
+    );
+
+    expect(result.wellness.breakdown).toEqual([
+      { label: "Energy", value: 2 },
+      { label: "Stress", value: 1 }
+    ]);
+  });
+
+  it("omits signals that were never mentioned from the breakdown", () => {
+    const result = computeDashboardData(
+      null,
+      [],
+      [],
+      [wellnessCheckin({ energy_score: 4, stress_score: null, soreness_score: null, mood_score: null, motivation_score: null })]
+    );
+
+    expect(result.wellness.breakdown).toEqual([{ label: "Energy", value: 1 }]);
+  });
 });
 
 describe("computeDashboardData: nextStep priority", () => {
