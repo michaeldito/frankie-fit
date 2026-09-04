@@ -141,6 +141,12 @@ export function getTraceAnalysis(trace: AiTraceRunRow | null) {
       : "The rule-based fallback handled this turn instead of the model path.";
   }
 
+  if (trace.orchestration_mode === "unavailable") {
+    return trace.fallback_reason
+      ? `Frankie showed the "not reachable" message for this turn because the model path could not be used: ${trace.fallback_reason}`
+      : 'Frankie showed the "not reachable" message for this turn instead of using the model path.';
+  }
+
   if (trace.used_model) {
     return "The model path completed normally. If the result still felt wrong, the likely issue is extraction quality or coaching wording rather than a route-level failure.";
   }

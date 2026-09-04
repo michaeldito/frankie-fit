@@ -10,7 +10,7 @@ export async function logWellnessCheckin(input: {
   userId: string;
   sourceMessageId: string;
   entry: ParsedWellnessCheckin | null;
-  extractionSource: "model" | "rule_based";
+  extractionSource: "model" | "unavailable";
 }) {
   if (!input.entry) {
     return [] as string[];
