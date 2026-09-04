@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerEnv } from "@/lib/env";
-import { evaluateCheckinNudges } from "@/lib/notifications";
+import {
+  evaluateCheckinNudges,
+  evaluateDailySummaryNotifications,
+  evaluateWeeklySummaryNotifications
+} from "@/lib/notifications";
 
 export async function GET(request: NextRequest) {
   const { CRON_SECRET } = getServerEnv();
@@ -16,12 +20,21 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await evaluateCheckinNudges();
+    const [checkinResult, dailySummaryResult, weeklySummaryResult] = await Promise.all([
+      evaluateCheckinNudges(),
+      evaluateDailySummaryNotifications(),
+      evaluateWeeklySummaryNotifications()
+    ]);
 
-    return NextResponse.json({ ok: true, ...result });
+    return NextResponse.json({
+      ok: true,
+      checkinReminders: checkinResult,
+      dailySummaries: dailySummaryResult,
+      weeklySummaries: weeklySummaryResult
+    });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Could not evaluate check-in nudges.", ok: false },
+      { error: error instanceof Error ? error.message : "Could not evaluate notifications.", ok: false },
       { status: 500 }
     );
   }
