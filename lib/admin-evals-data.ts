@@ -1,6 +1,7 @@
 import type { CurrentAppContext } from "@/lib/profile";
 import { isAdminProfile } from "@/lib/admin";
-import { TUNING_REVIEW_CHECK_ID } from "@/lib/admin-evals";
+import { EVAL_SCENARIOS, TUNING_REVIEW_CHECK_ID } from "@/lib/admin-evals";
+import { resolveEvalScenarioUserIds } from "@/lib/admin-eval-runner";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -117,7 +118,7 @@ export async function getAdminEvalsData(input: {
   const selectedRun = input.selectedRunId
     ? (runs.find((run) => run.id === input.selectedRunId) ?? null)
     : null;
-  const [itemsResult, statusCountsResult, summariesResult] = await Promise.all([
+  const [itemsResult, statusCountsResult, scenarioUserIds] = await Promise.all([
     selectedRun
       ? supabase
           .from("eval_run_items")
@@ -131,12 +132,22 @@ export async function getAdminEvalsData(input: {
           .select("id, eval_run_id, run_status")
           .in("eval_run_id", runIds)
       : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from("coach_summaries")
-      .select("*, profiles ( full_name )")
-      .order("created_at", { ascending: false })
-      .limit(10)
+    resolveEvalScenarioUserIds(EVAL_SCENARIOS).catch(() => [] as string[])
   ]);
+
+  // Scoped to the known benchmark personas rather than a flat global "most recent" query, so
+  // one persona's summaries can never crowd another's out of the window (see the "Coaching
+  // memory" bug where Maya Patel's freshly-generated summaries were hidden by more recent
+  // activity on other personas).
+  const summariesResult =
+    scenarioUserIds.length > 0
+      ? await supabase
+          .from("coach_summaries")
+          .select("*, profiles ( full_name )")
+          .in("user_id", scenarioUserIds)
+          .order("created_at", { ascending: false })
+          .limit(60)
+      : { data: [], error: null };
 
   const firstError =
     itemsResult.error?.message ??

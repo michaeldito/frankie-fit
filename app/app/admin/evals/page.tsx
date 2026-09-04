@@ -11,7 +11,7 @@ import {
   getScenarioUpdateCount,
   TUNING_REVIEW_CHECK_ID
 } from "@/lib/admin-evals";
-import { resetScenarioUserAction, runFullScenarioAction } from "@/app/app/admin/evals/actions";
+import { resetScenarioUserAction } from "@/app/app/admin/evals/actions";
 import { getAdminEvalsData, type RunItemStatusCounts } from "@/lib/admin-evals-data";
 import { requireAdminContext } from "@/lib/admin";
 import { getCurrentAppContext } from "@/lib/profile";
@@ -24,15 +24,19 @@ function SectionCard({
   title,
   children
 }: {
-  eyebrow: string;
-  title: string;
+  eyebrow?: string;
+  title?: string;
   children: ReactNode;
 }) {
   return (
     <section className="ff-panel p-4">
-      <p className="ff-kicker">{eyebrow}</p>
-      <h2 className="mt-2 text-base font-semibold tracking-[-0.02em]">{title}</h2>
-      <div className="mt-3">{children}</div>
+      {eyebrow ? <p className="ff-kicker">{eyebrow}</p> : null}
+      {title ? (
+        <h2 className={`${eyebrow ? "mt-2" : ""} text-base font-semibold tracking-[-0.02em]`}>
+          {title}
+        </h2>
+      ) : null}
+      <div className={title || eyebrow ? "mt-3" : ""}>{children}</div>
     </section>
   );
 }
@@ -573,12 +577,6 @@ export default async function AdminEvalsPage({
 
   return (
     <div className="space-y-4">
-      {message ? (
-        <section className="ff-panel border-[rgba(96,165,250,0.28)] bg-[rgba(59,130,246,0.08)] p-3.5 text-sm leading-6">
-          {message}
-        </section>
-      ) : null}
-
       {!evalData.ready ? (
         <section className="ff-panel p-4">
           <p className="ff-kicker">Eval setup note</p>
@@ -676,9 +674,9 @@ export default async function AdminEvalsPage({
               <EvalScenarioActions
                 dailySummarySteps={getScenarioDailySummarySteps(selectedScenario)}
                 evalReady={evalData.ready}
+                message={selectedScenarioId === selectedScenario.id ? message : ""}
                 replaySteps={getScenarioReplaySteps(selectedScenario)}
                 resetAction={resetScenarioUserAction}
-                runFullAction={runFullScenarioAction}
                 scenarioId={selectedScenario.id}
                 scenarioLabel={selectedScenario.label}
               />
@@ -922,7 +920,7 @@ export default async function AdminEvalsPage({
           </SectionCard>
         </>
       ) : (
-        <SectionCard eyebrow="Independent of any single replay" title="Coaching memory">
+        <SectionCard>
           <CoachingMemoryGrid summaries={evalData.summaries} />
         </SectionCard>
       )}

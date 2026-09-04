@@ -1,13 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import type { EvalPillar, EvalReplayStep, EvalSummaryStep } from "@/lib/admin-evals";
 
 type ServerFormAction = (formData: FormData) => void | Promise<void>;
 type ProgressStatus = "idle" | "starting" | "running" | "completed" | "failed";
-type ProgressKind = "replay" | "dailySummaries" | "weeklySummary";
+type ProgressKind = "fullScenario" | "replay" | "dailySummaries" | "weeklySummary";
 
 type ProgressStep = {
   dayIndex: number;
@@ -19,9 +19,9 @@ type ProgressStep = {
 type EvalScenarioActionsProps = {
   dailySummarySteps: EvalSummaryStep[];
   evalReady: boolean;
+  message?: string;
   replaySteps: EvalReplayStep[];
   resetAction: ServerFormAction;
-  runFullAction: ServerFormAction;
   scenarioId: string;
   scenarioLabel: string;
 };
@@ -54,6 +54,13 @@ const PROGRESS_COPY: Record<
     unit: string;
   }
 > = {
+  fullScenario: {
+    completedLabel: "Reset, replay, and summarize complete",
+    failedLabel: "Reset, replay, and summarize stopped",
+    runningLabel: (scenarioLabel) =>
+      `Resetting, replaying, and summarizing ${scenarioLabel.toLowerCase()}`,
+    unit: "Step"
+  },
   replay: {
     completedLabel: "Replay complete",
     failedLabel: "Replay stopped",
@@ -80,6 +87,34 @@ function formatStepLabel(step: ProgressStep | undefined) {
   }
 
   return step.pillar ? `${step.dayLabel} ${step.pillar}` : step.dayLabel;
+}
+
+function buildFullScenarioSteps(
+  replaySteps: EvalReplayStep[],
+  dailySummarySteps: EvalSummaryStep[]
+): ProgressStep[] {
+  const steps: ProgressStep[] = [{ dayIndex: -1, dayLabel: "Reset test data", stepIndex: 0 }];
+
+  replaySteps.forEach((step) => {
+    steps.push({
+      dayIndex: step.dayIndex,
+      dayLabel: step.dayLabel,
+      pillar: step.pillar,
+      stepIndex: steps.length
+    });
+  });
+
+  dailySummarySteps.forEach((step) => {
+    steps.push({
+      dayIndex: step.dayIndex,
+      dayLabel: `${step.dayLabel} summary`,
+      stepIndex: steps.length
+    });
+  });
+
+  steps.push({ dayIndex: -1, dayLabel: "Weekly summary", stepIndex: steps.length });
+
+  return steps;
 }
 
 function formatEta(ms: number | null) {
@@ -126,18 +161,14 @@ function ActionButton({
 
 function SubmitButton({
   children,
-  disabled = false,
-  pendingLabel
+  disabled = false
 }: {
   children: ReactNode;
   disabled?: boolean;
-  pendingLabel: string;
 }) {
   const { pending } = useFormStatus();
 
-  return (
-    <ActionButton disabled={disabled || pending}>{pending ? pendingLabel : children}</ActionButton>
-  );
+  return <ActionButton disabled={disabled || pending}>{children}</ActionButton>;
 }
 
 function StepBullet({
@@ -174,9 +205,9 @@ function StepBullet({
 export function EvalScenarioActions({
   dailySummarySteps,
   evalReady,
+  message,
   replaySteps,
   resetAction,
-  runFullAction,
   scenarioId,
   scenarioLabel
 }: EvalScenarioActionsProps) {
@@ -191,7 +222,14 @@ export function EvalScenarioActions({
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState<ProgressStatus>("idle");
   const [steps, setSteps] = useState<ProgressStep[]>(replaySteps);
+  const [lastSeenMessage, setLastSeenMessage] = useState(message);
+  const [visibleMessage, setVisibleMessage] = useState(message);
   const isRunning = status === "starting" || status === "running";
+
+  if (message !== lastSeenMessage) {
+    setLastSeenMessage(message);
+    setVisibleMessage(message);
+  }
   const shouldShowProgress = status !== "idle";
   const averageDuration = useMemo(() => {
     if (durations.length === 0) {
@@ -206,6 +244,18 @@ export function EvalScenarioActions({
   const completionPercent =
     steps.length > 0 ? Math.round((completedSteps / steps.length) * 100) : 0;
   const progressCopy = PROGRESS_COPY[activeKind];
+
+  useEffect(() => {
+    if (!visibleMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setVisibleMessage(undefined);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [visibleMessage]);
 
   function resetProgressState(kind: ProgressKind, nextSteps: ProgressStep[]) {
     setActiveKind(kind);
@@ -313,7 +363,7 @@ export function EvalScenarioActions({
         replayRunId: startData.runId,
         nextStatus: "completed"
       });
-      router.push(`/app/admin/evals?run=${startData.runId}`);
+      router.push(`/app/admin/evals?run=${startData.runId}&scenario=${scenarioId}`);
       router.refresh();
     } catch (caughtError) {
       const message =
@@ -414,32 +464,183 @@ export function EvalScenarioActions({
     }
   }
 
+  async function handleFullScenario() {
+    if (!evalReady || isRunning) {
+      return;
+    }
+
+    const combinedSteps = buildFullScenarioSteps(replaySteps, dailySummarySteps);
+    resetProgressState("fullScenario", combinedSteps);
+
+    let activeRunId: string | null = null;
+    let stepCursor = 0;
+
+    try {
+      const resetStartedAt = Date.now();
+      setActiveStep(stepCursor);
+
+      const resetResponse = await fetch("/api/admin/evals/reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ scenarioId })
+      });
+      const resetData = (await resetResponse.json()) as StepResponse;
+
+      if (!resetResponse.ok || !resetData.ok) {
+        setError(resetData.error ?? "Could not reset test data.");
+        setFailedStep(stepCursor);
+        setStatus("failed");
+        return;
+      }
+
+      setCompletedSteps(stepCursor + 1);
+      setDurations((current) => [...current, resetData.elapsedMs ?? Date.now() - resetStartedAt]);
+      stepCursor += 1;
+
+      const startResponse = await fetch("/api/admin/evals/replay/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ scenarioId })
+      });
+      const startData = (await startResponse.json()) as StartReplayResponse;
+
+      if (!startResponse.ok) {
+        throw new Error(startData.error ?? "Could not start replay.");
+      }
+
+      activeRunId = startData.runId;
+      setRunId(startData.runId);
+
+      for (const step of startData.steps) {
+        setActiveStep(stepCursor + step.stepIndex);
+
+        const stepResponse = await fetch("/api/admin/evals/replay/step", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            runId: startData.runId,
+            scenarioId,
+            stepIndex: step.stepIndex,
+            threadId: startData.threadId
+          })
+        });
+        const stepData = (await stepResponse.json()) as StepReplayResponse;
+
+        if (!stepResponse.ok || !stepData.ok) {
+          const message = stepData.error ?? "Replay step failed.";
+          setError(message);
+          setFailedStep(stepCursor + step.stepIndex);
+          setStatus("failed");
+          await finishReplay({
+            replayRunId: startData.runId,
+            nextStatus: "failed",
+            errorMessage: message
+          });
+          return;
+        }
+
+        setCompletedSteps(stepCursor + step.stepIndex + 1);
+        setDurations((current) => [...current, stepData.elapsedMs ?? 0]);
+      }
+
+      await finishReplay({
+        replayRunId: startData.runId,
+        nextStatus: "completed"
+      });
+      stepCursor += startData.steps.length;
+
+      for (const step of dailySummarySteps) {
+        setActiveStep(stepCursor + step.stepIndex);
+
+        const dailyResponse = await fetch("/api/admin/evals/summaries/daily-step", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ dayIndex: step.dayIndex, scenarioId })
+        });
+        const dailyData = (await dailyResponse.json()) as StepResponse;
+
+        if (!dailyResponse.ok || !dailyData.ok) {
+          setError(dailyData.error ?? "Could not generate that day's summary.");
+          setFailedStep(stepCursor + step.stepIndex);
+          setStatus("failed");
+          return;
+        }
+
+        setCompletedSteps(stepCursor + step.stepIndex + 1);
+        setDurations((current) => [...current, dailyData.elapsedMs ?? 0]);
+      }
+
+      stepCursor += dailySummarySteps.length;
+      setActiveStep(stepCursor);
+
+      const weeklyStartedAt = Date.now();
+      const weeklyResponse = await fetch("/api/admin/evals/summaries/weekly", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ scenarioId })
+      });
+      const weeklyData = (await weeklyResponse.json()) as StepResponse;
+
+      if (!weeklyResponse.ok || !weeklyData.ok) {
+        setError(weeklyData.error ?? "Could not generate the weekly summary.");
+        setFailedStep(stepCursor);
+        setStatus("failed");
+        return;
+      }
+
+      setCompletedSteps(stepCursor + 1);
+      setDurations((current) => [...current, weeklyData.elapsedMs ?? Date.now() - weeklyStartedAt]);
+      setActiveStep(null);
+      setStatus("completed");
+      router.push(`/app/admin/evals?run=${startData.runId}&scenario=${scenarioId}`);
+      router.refresh();
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Reset, replay, and summarize failed unexpectedly.";
+      setError(message);
+      setFailedStep(activeStep);
+      setStatus("failed");
+
+      if (activeRunId) {
+        await finishReplay({
+          replayRunId: activeRunId,
+          nextStatus: "failed",
+          errorMessage: message
+        }).catch(() => null);
+      }
+    }
+  }
+
   return (
     <div className="mt-3 flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <form action={runFullAction}>
-          <input name="scenarioId" type="hidden" value={scenarioId} />
-          <SubmitButton
-            disabled={!evalReady || isRunning}
-            pendingLabel="Working — resetting, replaying, and summarizing (can take a minute or two)..."
-          >
-            Reset, replay, summarize
-          </SubmitButton>
-        </form>
+        <ActionButton disabled={!evalReady || isRunning} onClick={handleFullScenario} type="button">
+          Reset, replay, summarize
+        </ActionButton>
         <form action={resetAction}>
           <input name="scenarioId" type="hidden" value={scenarioId} />
-          <SubmitButton disabled={!evalReady || isRunning} pendingLabel="Working — clearing test data...">
-            Reset test data
-          </SubmitButton>
+          <SubmitButton disabled={!evalReady || isRunning}>Reset test data</SubmitButton>
         </form>
         <ActionButton disabled={!evalReady || isRunning} onClick={handleReplay} type="button">
-          {isRunning && activeKind === "replay" ? "Running..." : "Replay messages"}
+          Replay messages
         </ActionButton>
         <ActionButton disabled={!evalReady || isRunning} onClick={handleDailySummaries} type="button">
-          {isRunning && activeKind === "dailySummaries" ? "Working..." : "Daily summaries"}
+          Daily summaries
         </ActionButton>
         <ActionButton disabled={!evalReady || isRunning} onClick={handleWeeklySummary} type="button">
-          {isRunning && activeKind === "weeklySummary" ? "Working..." : "Weekly summary"}
+          Weekly summary
         </ActionButton>
         <button
           aria-label="What do these actions do?"
@@ -450,6 +651,27 @@ export function EvalScenarioActions({
           i
         </button>
       </div>
+
+      {visibleMessage ? (
+        <div
+          className="inline-flex items-center gap-2 self-start rounded-full border border-[rgba(74,222,128,0.28)] bg-[rgba(34,197,94,0.1)] px-3.5 py-2 text-sm leading-5 text-[var(--foreground)]"
+          role="status"
+        >
+          <svg
+            aria-hidden="true"
+            className="h-4 w-4 flex-none text-[rgba(74,222,128,0.9)]"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+          <span>{visibleMessage}</span>
+        </div>
+      ) : null}
 
       {showInfo ? (
         <div

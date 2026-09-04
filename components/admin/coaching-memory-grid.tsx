@@ -1,16 +1,77 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import type { CoachSummaryWithUser } from "@/lib/admin-evals-data";
 
 type CoachingMemoryGridProps = {
   summaries: CoachSummaryWithUser[];
 };
 
+const PREVIEW_LENGTH = 140;
+
 function formatPeriod(summary: CoachSummaryWithUser) {
   return summary.period_end !== summary.period_start
     ? `${summary.period_start} to ${summary.period_end}`
     : summary.period_start;
+}
+
+export function buildPreview(summaryText: string) {
+  const singleLine = summaryText.replace(/\s+/g, " ").trim();
+
+  if (singleLine.length <= PREVIEW_LENGTH) {
+    return singleLine;
+  }
+
+  return `${singleLine.slice(0, PREVIEW_LENGTH).trimEnd()}…`;
+}
+
+function MemoryCard({ summary }: { summary: CoachSummaryWithUser }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <article className="ff-card-soft overflow-hidden p-0">
+      <button
+        aria-expanded={isExpanded}
+        className="flex w-full flex-col items-start gap-1 p-4 text-left"
+        onClick={() => setIsExpanded((expanded) => !expanded)}
+        type="button"
+      >
+        <div className="flex w-full items-center justify-between gap-2">
+          <p className="font-medium">
+            {summary.userName ?? "Unknown user"} &middot; {summary.summary_type}
+          </p>
+          <svg
+            className={`shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+            fill="none"
+            height="14"
+            viewBox="0 0 16 16"
+            width="14"
+          >
+            <path
+              d="M6 3l5 5-5 5"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.6"
+            />
+          </svg>
+        </div>
+        <p className="text-xs italic text-[var(--muted)]">{formatPeriod(summary)}</p>
+        {!isExpanded ? (
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+            {buildPreview(summary.summary_text)}
+          </p>
+        ) : null}
+      </button>
+
+      {isExpanded ? (
+        <div className="ff-markdown border-t border-[var(--border)] px-4 py-3 text-sm leading-6 text-[var(--muted)]">
+          <ReactMarkdown>{summary.summary_text}</ReactMarkdown>
+        </div>
+      ) : null}
+    </article>
+  );
 }
 
 export function CoachingMemoryGrid({ summaries }: CoachingMemoryGridProps) {
@@ -35,11 +96,7 @@ export function CoachingMemoryGrid({ summaries }: CoachingMemoryGridProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-xl text-sm leading-6 text-[var(--muted)]">
-          Independent of any single replay &mdash; daily and weekly summaries accumulate over time
-          for each scenario user.
-        </p>
+      <div className="flex flex-wrap items-center gap-3">
         <div className="flex flex-wrap gap-2">
           <button
             className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
@@ -71,18 +128,7 @@ export function CoachingMemoryGrid({ summaries }: CoachingMemoryGridProps) {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {visibleSummaries.map((summary) => (
-          <article className="ff-card-soft p-4" key={summary.id}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-medium">
-                {summary.userName ?? "Unknown user"} &middot; {summary.summary_type}
-              </p>
-              <span className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
-                {summary.prompt_version ?? "no prompt"}
-              </span>
-            </div>
-            <p className="mt-1 text-xs italic text-[var(--muted)]">{formatPeriod(summary)}</p>
-            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{summary.summary_text}</p>
-          </article>
+          <MemoryCard key={summary.id} summary={summary} />
         ))}
       </div>
     </div>
