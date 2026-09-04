@@ -297,6 +297,7 @@ function buildExtractionView(trace: AiTraceRunRow | null) {
     return {
       activityRows: [] as Array<Record<string, string>>,
       dietRows: [] as Array<Record<string, string>>,
+      lifestyleRows: [] as Array<Record<string, string>>,
       wellnessEntries: [] as Array<{ label: string; value: string }>,
       rawModelExtraction: null as Json | null
     };
@@ -334,6 +335,19 @@ function buildExtractionView(trace: AiTraceRunRow | null) {
     };
   });
 
+  const lifestyleRows = asArray(payload.lifestyleEntries).map((item) => {
+    const source = asObject(item);
+    const confidence = readNumberValue(source?.confidence);
+
+    return {
+      Category: renderScalar(source?.category),
+      Description: renderScalar(source?.description),
+      Confidence: confidence !== null ? `${Math.round(confidence * 100)}%` : "Not recorded",
+      "Time Reference": renderScalar(source?.timeReferenceText),
+      "Logged For": renderScalar(source?.loggedForDate)
+    };
+  });
+
   const wellness = asObject(payload.wellnessCheckin ?? null);
   const wellnessEntries = wellness
     ? Object.entries(wellness).map(([key, value]) => ({
@@ -345,6 +359,7 @@ function buildExtractionView(trace: AiTraceRunRow | null) {
   return {
     activityRows,
     dietRows,
+    lifestyleRows,
     wellnessEntries,
     rawModelExtraction: payload.rawModelExtraction ?? null
   };
@@ -364,6 +379,10 @@ function buildWritesEntries(trace: AiTraceRunRow | null) {
       {
         label: "Diet Log IDs",
         value: renderScalar(persisted?.dietLogIds)
+      },
+      {
+        label: "Lifestyle Log IDs",
+        value: renderScalar(persisted?.lifestyleLogIds)
       },
       {
         label: "Wellness Check-In IDs",
@@ -604,6 +623,14 @@ export function DebugTraceInspector({
                   <TableLikeRows rows={extractionView.dietRows} />
                 ) : (
                   <p className="leading-7 text-[var(--muted)]">No diet entries were extracted.</p>
+                )}
+              </SurfaceSection>
+
+              <SurfaceSection eyebrow="Lifestyle" title="Parsed lifestyle entries">
+                {extractionView.lifestyleRows.length > 0 ? (
+                  <TableLikeRows rows={extractionView.lifestyleRows} />
+                ) : (
+                  <p className="leading-7 text-[var(--muted)]">No lifestyle entries were extracted.</p>
                 )}
               </SurfaceSection>
 

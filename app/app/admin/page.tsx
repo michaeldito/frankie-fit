@@ -77,7 +77,7 @@ export default async function AdminOverviewPage() {
       <section className="grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="space-y-3">
           <SectionCard eyebrow="Pillar usage" title="Where users are creating signal">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
               {overview.pillarUsageCards.map((card) => (
                 <MetricCard key={card.label} label={card.label} value={card.value} />
               ))}

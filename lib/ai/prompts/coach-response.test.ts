@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { AppProfile } from "@/lib/profile";
-import type { ParsedActivity, ParsedDietEntry, ParsedWellnessCheckin } from "@/lib/chat";
+import type {
+  ParsedActivity,
+  ParsedDietEntry,
+  ParsedLifestyleEntry,
+  ParsedWellnessCheckin
+} from "@/lib/chat";
 import type { PersonaProfile } from "@/lib/ai/prompts/personas";
 import { buildCoachResponseSystemPrompt, buildCoachResponseUserPrompt } from "./coach-response";
 
@@ -52,6 +57,18 @@ function dietEntry(overrides: Partial<ParsedDietEntry> = {}): ParsedDietEntry {
   };
 }
 
+function lifestyleEntry(overrides: Partial<ParsedLifestyleEntry> = {}): ParsedLifestyleEntry {
+  return {
+    description: "went to an arcade on a date",
+    category: "social",
+    confidence: 0.9,
+    detectedKeyword: "model_extraction",
+    timeReferenceText: null,
+    loggedForDate: "2026-01-15",
+    ...overrides
+  };
+}
+
 function wellnessCheckin(overrides: Partial<ParsedWellnessCheckin> = {}): ParsedWellnessCheckin {
   return {
     energyScore: null,
@@ -73,6 +90,7 @@ function baseInput(overrides: Partial<Parameters<typeof buildCoachResponseUserPr
     recentConversation: "",
     activities: [] as ParsedActivity[],
     dietEntries: [] as ParsedDietEntry[],
+    lifestyleEntries: [] as ParsedLifestyleEntry[],
     wellnessCheckin: null as ParsedWellnessCheckin | null,
     ...overrides
   };
@@ -101,6 +119,7 @@ describe("buildCoachResponseSystemPrompt", () => {
     expect(prompt).toContain(
       "Only mention concrete durations, intensities, counts, foods, or wellness scores if they appear in the structured updates for this turn."
     );
+    expect(prompt).toContain("Never moralize, warn, or lecture about substance use.");
   });
 });
 
@@ -128,6 +147,7 @@ describe("buildCoachResponseUserPrompt", () => {
     const prompt = buildCoachResponseUserPrompt(baseInput());
     expect(prompt).toContain("Structured activity updates:\n\nNone.");
     expect(prompt).toContain("Structured diet updates:\n\nNone.");
+    expect(prompt).toContain("Structured lifestyle updates:\n\nNone.");
     expect(prompt).toContain("Structured wellness update:\n\nNone.");
   });
 
@@ -153,6 +173,20 @@ describe("buildCoachResponseUserPrompt", () => {
       baseInput({ dietEntries: [dietEntry({ mealType: "breakfast" })] })
     );
     expect(prompt).toContain("- breakfast: eggs and toast");
+  });
+
+  it("labels a lifestyle entry with its category", () => {
+    const prompt = buildCoachResponseUserPrompt(
+      baseInput({ lifestyleEntries: [lifestyleEntry()] })
+    );
+    expect(prompt).toContain("- social: went to an arcade on a date");
+  });
+
+  it("falls back to 'lifestyle' when a lifestyle entry has no category", () => {
+    const prompt = buildCoachResponseUserPrompt(
+      baseInput({ lifestyleEntries: [lifestyleEntry({ category: null })] })
+    );
+    expect(prompt).toContain("- lifestyle: went to an arcade on a date");
   });
 
   it("renders 'unknown' for unset wellness scores and 'none' for unset notes", () => {

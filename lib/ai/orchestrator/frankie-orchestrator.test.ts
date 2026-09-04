@@ -25,6 +25,7 @@ function baseExtraction(overrides: Record<string, unknown> = {}) {
     notes: "",
     activities: [],
     dietEntries: [],
+    lifestyleEntries: [],
     wellness: {
       present: false,
       energyScore: 0,
@@ -63,6 +64,17 @@ function dietEntry(overrides: Record<string, unknown> = {}) {
   return {
     mealType: "dinner",
     description: "steak and potatoes",
+    loggedForDate: "2026-01-15",
+    timeReferenceText: "",
+    confidence: 0.9,
+    ...overrides
+  };
+}
+
+function lifestyleEntry(overrides: Record<string, unknown> = {}) {
+  return {
+    description: "went to an arcade on a date",
+    category: "social",
     loggedForDate: "2026-01-15",
     timeReferenceText: "",
     confidence: 0.9,
@@ -194,6 +206,54 @@ describe("orchestrateFrankieReply", () => {
     expect(result.shouldPersistStructuredData).toBe(false);
   });
 
+  it("returns a log_confirmation reply for a clean lifestyle-only extraction", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({ lifestyleEntries: [lifestyleEntry()] })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Sounds like a fun night!");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "went on a date to the arcade tonight",
+      recentMessages
+    });
+
+    expect(result.assistantMessageType).toBe("log_confirmation");
+    expect(result.shouldPersistStructuredData).toBe(true);
+    expect(result.persistPlan.lifestyleEntries).toBe(true);
+    expect(result.parsedLifestyleEntries).toHaveLength(1);
+    expect(result.parsedLifestyleEntries[0].category).toBe("social");
+    expect(result.reply).toBe("Sounds like a fun night!");
+  });
+
+  it("keeps an activity persisting alongside a same-message substance lifestyle entry", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [activity({ description: "squats and deadlifts" })],
+        lifestyleEntries: [
+          lifestyleEntry({ description: "smoked a bowl beforehand", category: "substance_cannabis" })
+        ]
+      })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Nice PR!");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "squats and deadlifts for 50 minutes, hit a new PR. smoked a bowl beforehand",
+      recentMessages
+    });
+
+    expect(result.persistPlan.activities).toBe(true);
+    expect(result.persistPlan.lifestyleEntries).toBe(true);
+    expect(result.parsedActivities).toHaveLength(1);
+    expect(result.parsedLifestyleEntries).toHaveLength(1);
+    expect(result.parsedLifestyleEntries[0].category).toBe("substance_cannabis");
+  });
+
   it("skips the coach response call when skipCoachResponse is set", async () => {
     hasOpenAiApiKey.mockReturnValue(true);
     createStructuredOpenAiResponse.mockResolvedValue(
@@ -215,6 +275,25 @@ describe("orchestrateFrankieReply", () => {
 });
 
 describe("orchestrateFrankieReply sanitization and dedup", () => {
+  it("collapses two identically-described lifestyle entries the model returned twice into one", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        lifestyleEntries: [lifestyleEntry(), lifestyleEntry()]
+      })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Nice!");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "went on a date to the arcade",
+      recentMessages
+    });
+
+    expect(result.parsedLifestyleEntries).toHaveLength(1);
+  });
+
   it("collapses two identically-described activities the model returned twice into one", async () => {
     hasOpenAiApiKey.mockReturnValue(true);
     createStructuredOpenAiResponse.mockResolvedValue(

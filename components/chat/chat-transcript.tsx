@@ -7,14 +7,17 @@ import {
   formatActivityTitle,
   formatDietDetail,
   formatDietTitle,
+  formatLifestyleDetail,
+  formatLifestyleTitle,
   formatWellnessDetail,
   formatWellnessTitle,
   type LoggedActivity,
   type LoggedDietEntry,
+  type LoggedLifestyleEntry,
   type LoggedWellnessCheckin
 } from "@/components/chat/logged-entry-format";
 
-export type LoggedEntryKind = "activity" | "diet" | "wellness";
+export type LoggedEntryKind = "activity" | "diet" | "lifestyle" | "wellness";
 
 type ChatTranscriptMessage = {
   id: string;
@@ -47,6 +50,7 @@ function getStructuredPayload(message: ChatTranscriptMessage) {
   return message.structured_payload as {
     activitiesLogged?: LoggedActivity[];
     dietLogged?: LoggedDietEntry[];
+    lifestyleLogged?: LoggedLifestyleEntry[];
     wellnessLogged?: LoggedWellnessCheckin | null;
   } | null;
 }
@@ -116,6 +120,7 @@ export function ChatTranscript({
               const payload = getStructuredPayload(message);
               const loggedActivities = payload?.activitiesLogged ?? [];
               const loggedDietEntries = payload?.dietLogged ?? [];
+              const loggedLifestyleEntries = payload?.lifestyleLogged ?? [];
               const loggedWellnessCheckin = payload?.wellnessLogged
                 ? [payload.wellnessLogged]
                 : [];
@@ -147,6 +152,13 @@ export function ChatTranscript({
                         formatTitle={formatDietTitle}
                         kicker="Meal"
                         onRemove={(entryId) => onRemoveLoggedEntry(message.id, "diet", entryId)}
+                      />
+                      <LoggedEntryCard
+                        entries={loggedLifestyleEntries}
+                        formatDetail={formatLifestyleDetail}
+                        formatTitle={formatLifestyleTitle}
+                        kicker="Lifestyle"
+                        onRemove={(entryId) => onRemoveLoggedEntry(message.id, "lifestyle", entryId)}
                       />
                       <LoggedEntryCard
                         entries={loggedWellnessCheckin}

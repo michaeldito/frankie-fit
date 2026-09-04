@@ -221,11 +221,13 @@ export function WebChatExperience({
   const loggedEntryRoutes: Record<LoggedEntryKind, string> = {
     activity: "/api/logs/activity",
     diet: "/api/logs/diet",
+    lifestyle: "/api/logs/lifestyle",
     wellness: "/api/logs/wellness"
   };
   const loggedEntryPayloadKeys: Record<LoggedEntryKind, string> = {
     activity: "activitiesLogged",
     diet: "dietLogged",
+    lifestyle: "lifestyleLogged",
     wellness: "wellnessLogged"
   };
 

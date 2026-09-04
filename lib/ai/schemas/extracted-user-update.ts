@@ -3,6 +3,7 @@ import type {
   ActivityTimePrecision,
   ParsedActivity,
   ParsedDietEntry,
+  ParsedLifestyleEntry,
   LoggedForDateValue,
   ParsedWellnessCheckin
 } from "@/lib/chat";
@@ -33,6 +34,16 @@ const intentOptions = [
   "mixed_update",
   "unclear"
 ] as const;
+const lifestyleCategoryOptions = [
+  "unknown",
+  "social",
+  "family",
+  "entertainment",
+  "travel",
+  "substance_alcohol",
+  "substance_cannabis",
+  "other"
+] as const;
 
 const extractedActivitySchema = z.object({
   activityType: z.string().min(1),
@@ -57,6 +68,14 @@ const extractedDietEntrySchema = z.object({
   loggedForDate: z.string()
 });
 
+const extractedLifestyleSchema = z.object({
+  description: z.string().min(1),
+  category: z.enum(lifestyleCategoryOptions),
+  confidence: z.number().min(0).max(1),
+  timeReferenceText: z.string(),
+  loggedForDate: z.string()
+});
+
 const extractedWellnessSchema = z.object({
   present: z.boolean(),
   energyScore: z.number().int().min(0).max(5),
@@ -73,6 +92,7 @@ export const extractedUserUpdateSchema = z.object({
   notes: z.string(),
   activities: z.array(extractedActivitySchema),
   dietEntries: z.array(extractedDietEntrySchema),
+  lifestyleEntries: z.array(extractedLifestyleSchema),
   wellness: extractedWellnessSchema,
   needsClarification: z.boolean(),
   clarificationQuestion: z.string()
@@ -147,6 +167,21 @@ export const extractedUserUpdateJsonSchema = {
         required: ["description", "mealType", "confidence", "timeReferenceText", "loggedForDate"]
       }
     },
+    lifestyleEntries: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          description: { type: "string", minLength: 1 },
+          category: { type: "string", enum: lifestyleCategoryOptions },
+          confidence: { type: "number", minimum: 0, maximum: 1 },
+          timeReferenceText: { type: "string" },
+          loggedForDate: { type: "string" }
+        },
+        required: ["description", "category", "confidence", "timeReferenceText", "loggedForDate"]
+      }
+    },
     wellness: {
       type: "object",
       additionalProperties: false,
@@ -183,6 +218,7 @@ export const extractedUserUpdateJsonSchema = {
     "notes",
     "activities",
     "dietEntries",
+    "lifestyleEntries",
     "wellness",
     "needsClarification",
     "clarificationQuestion"
@@ -219,6 +255,10 @@ function mapIntensity(value: (typeof intensityOptions)[number]) {
 }
 
 function mapMealType(value: (typeof mealTypeOptions)[number]) {
+  return value === "unknown" ? null : value;
+}
+
+function mapLifestyleCategory(value: (typeof lifestyleCategoryOptions)[number]) {
   return value === "unknown" ? null : value;
 }
 
@@ -298,6 +338,7 @@ function removeInvalidArrayItems(value: unknown): unknown {
   const candidate = value as {
     activities?: unknown;
     dietEntries?: unknown;
+    lifestyleEntries?: unknown;
   };
 
   return {
@@ -321,7 +362,15 @@ function removeInvalidArrayItems(value: unknown): unknown {
             typeof entry === "object" &&
             isNonEmptyString((entry as { description?: unknown }).description)
         )
-      : candidate.dietEntries
+      : candidate.dietEntries,
+    lifestyleEntries: Array.isArray(candidate.lifestyleEntries)
+      ? candidate.lifestyleEntries.filter(
+          (entry) =>
+            entry &&
+            typeof entry === "object" &&
+            isNonEmptyString((entry as { description?: unknown }).description)
+        )
+      : candidate.lifestyleEntries
   };
 }
 
@@ -538,6 +587,28 @@ export function mapExtractedDietEntries(
     return {
       description,
       mealType: mapMealType(entry.mealType),
+      confidence: entry.confidence > 0 ? entry.confidence : 0.7,
+      detectedKeyword: "model_extraction",
+      timeReferenceText,
+      loggedForDate: resolveLoggedForDateFromTimeReference(
+        timeReferenceText,
+        mapLoggedForDate(entry.loggedForDate)
+      )
+    };
+  });
+}
+
+export function mapExtractedLifestyleEntries(
+  extracted: ExtractedUserUpdate["lifestyleEntries"]
+): ParsedLifestyleEntry[] {
+  return extracted.map((entry, index) => {
+    const description = entry.description.trim() || `lifestyle update ${index + 1}`;
+    const timeReferenceText =
+      entry.timeReferenceText.trim() || extractTimeReferenceText(description) || null;
+
+    return {
+      description,
+      category: mapLifestyleCategory(entry.category),
       confidence: entry.confidence > 0 ? entry.confidence : 0.7,
       detectedKeyword: "model_extraction",
       timeReferenceText,

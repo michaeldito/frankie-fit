@@ -21,6 +21,10 @@ export const QUICK_START_OPTIONS: QuickStartOption[] = [
     label: "Wellness",
     template:
       "Checking in — energy: [1-5], stress: [1-5], soreness: [1-5], mood: [1-5], motivation: [1-5]"
+  },
+  {
+    label: "Lifestyle",
+    template: "Today I [fill in], and it made me feel [fill in]"
   }
 ];
 
