@@ -84,6 +84,24 @@ export function CoachingMemoryGrid({ summaries }: CoachingMemoryGridProps) {
     selectedUser === "all"
       ? summaries
       : summaries.filter((summary) => (summary.userName ?? "Unknown user") === selectedUser);
+  const columns = useMemo(() => {
+    const byUser = new Map<string, CoachSummaryWithUser[]>();
+
+    visibleSummaries.forEach((summary) => {
+      const userName = summary.userName ?? "Unknown user";
+      const existing = byUser.get(userName);
+
+      if (existing) {
+        existing.push(summary);
+      } else {
+        byUser.set(userName, [summary]);
+      }
+    });
+
+    return users
+      .filter((userName) => byUser.has(userName))
+      .map((userName) => ({ userName, summaries: byUser.get(userName)! }));
+  }, [users, visibleSummaries]);
 
   if (summaries.length === 0) {
     return (
@@ -126,9 +144,14 @@ export function CoachingMemoryGrid({ summaries }: CoachingMemoryGridProps) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {visibleSummaries.map((summary) => (
-          <MemoryCard key={summary.id} summary={summary} />
+      <div className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
+        {columns.map((column) => (
+          <div className="space-y-4" key={column.userName}>
+            <p className="ff-kicker">{column.userName}</p>
+            {column.summaries.map((summary) => (
+              <MemoryCard key={summary.id} summary={summary} />
+            ))}
+          </div>
         ))}
       </div>
     </div>
