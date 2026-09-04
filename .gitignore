@@ -8,6 +8,9 @@ out
 # typescript
 *.tsbuildinfo
 
+# test coverage
+coverage
+
 # env
 .env
 .env.local

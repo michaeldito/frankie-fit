@@ -1,9 +1,10 @@
 "use client";
 
 import type { FormEvent, KeyboardEvent } from "react";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChatTranscript, type LoggedEntryKind } from "@/components/chat/chat-transcript";
+import { PERSONAS } from "@/lib/ai/prompts/personas";
 import type { Database } from "@/types/database";
 
 type ChatMessage = Database["public"]["Tables"]["conversation_messages"]["Row"];
@@ -20,9 +21,12 @@ type WebChatExperienceProps = {
   followupMessage: string;
   introMessage: string;
   initialMessages: ChatMessage[];
+  initialPersona: string | null;
   schemaReady: boolean;
   userCardClass: string;
 };
+
+const DEFAULT_PERSONA_LABEL = "Default Frankie";
 
 const QUICK_START_PLACEHOLDER = "[fill in]";
 
@@ -57,19 +61,57 @@ export function WebChatExperience({
   followupMessage,
   introMessage,
   initialMessages,
+  initialPersona,
   schemaReady,
   userCardClass
 }: WebChatExperienceProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const personaMenuRef = useRef<HTMLDivElement | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState(initialMessages);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [isRefreshing, startRefreshTransition] = useTransition();
+  const [personaId, setPersonaId] = useState<string | null>(initialPersona);
+  const [personaMenuOpen, setPersonaMenuOpen] = useState(false);
   const isBusy = Boolean(pendingMessage) || isThinking || isRefreshing;
+  const activePersona = PERSONAS.find((persona) => persona.id === personaId) ?? null;
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (personaMenuRef.current && !personaMenuRef.current.contains(event.target as Node)) {
+        setPersonaMenuOpen(false);
+      }
+    }
+
+    if (personaMenuOpen) {
+      document.addEventListener("mousedown", handlePointerDown);
+      return () => document.removeEventListener("mousedown", handlePointerDown);
+    }
+  }, [personaMenuOpen]);
+
+  async function handleSelectPersona(nextPersonaId: string | null) {
+    setPersonaMenuOpen(false);
+
+    if (nextPersonaId === personaId) {
+      return;
+    }
+
+    setPersonaId(nextPersonaId);
+
+    try {
+      await chatApiFetch("/api/chat", {
+        method: "POST",
+        body: JSON.stringify({ action: "set_persona", personaId: nextPersonaId ?? "" })
+      });
+    } catch {
+      setPersonaId(personaId);
+      setError("Frankie could not switch coaching voices just now.");
+    }
+  }
 
   async function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -285,7 +327,50 @@ export function WebChatExperience({
             value={draft}
           />
         </label>
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <div className="relative" ref={personaMenuRef}>
+            <button
+              aria-expanded={personaMenuOpen}
+              className="cursor-pointer rounded-full border border-[var(--border-strong)] bg-[var(--surface-strong)] px-3 py-1.5 text-sm font-medium text-[var(--muted-strong)] transition hover:border-[rgba(147,197,253,0.5)] hover:text-[var(--foreground)]"
+              onClick={() => setPersonaMenuOpen((current) => !current)}
+              type="button"
+            >
+              Coach: {activePersona?.displayName ?? DEFAULT_PERSONA_LABEL}
+            </button>
+
+            <div
+              aria-hidden={!personaMenuOpen}
+              className={`ff-card absolute left-0 z-30 max-h-60 w-52 origin-bottom-left overflow-y-auto p-1.5 transition-all duration-200 ease-out ${
+                personaMenuOpen
+                  ? "translate-y-0 scale-100 opacity-100"
+                  : "pointer-events-none translate-y-1 scale-95 opacity-0"
+              }`}
+              style={{ bottom: "calc(100% + 0.5rem)" }}
+            >
+              <button
+                className={`block w-full cursor-pointer rounded-[0.5rem] px-2.5 py-2 text-left text-sm font-medium transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)] ${
+                  personaId === null ? "text-[var(--foreground)]" : "text-[var(--muted-strong)]"
+                }`}
+                onClick={() => handleSelectPersona(null)}
+                type="button"
+              >
+                {DEFAULT_PERSONA_LABEL}
+              </button>
+              {PERSONAS.map((persona) => (
+                <button
+                  className={`block w-full cursor-pointer rounded-[0.5rem] px-2.5 py-2 text-left text-sm font-medium transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)] ${
+                    personaId === persona.id ? "text-[var(--foreground)]" : "text-[var(--muted-strong)]"
+                  }`}
+                  key={persona.id}
+                  onClick={() => handleSelectPersona(persona.id)}
+                  type="button"
+                >
+                  {persona.displayName}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             className="ff-button-primary min-w-28 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             disabled={!schemaReady || isBusy || !draft.trim()}

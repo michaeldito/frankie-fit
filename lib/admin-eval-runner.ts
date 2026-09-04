@@ -50,6 +50,7 @@ function toAppProfile(row: ProfileRow | null): AppProfile | null {
     health_considerations: row.health_considerations,
     avoidances: row.avoidances,
     coaching_style: row.coaching_style,
+    coach_persona: row.coach_persona,
     preferred_checkin_style: row.preferred_checkin_style,
     safety_acknowledged: row.safety_acknowledged,
     onboarding_completed: row.onboarding_completed,

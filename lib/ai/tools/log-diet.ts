@@ -10,7 +10,7 @@ export async function logDietEntries(input: {
   userId: string;
   sourceMessageId: string;
   entries: ParsedDietEntry[];
-  extractionSource: "model" | "rule_based";
+  extractionSource: "model" | "unavailable";
 }) {
   if (input.entries.length === 0) {
     return [] as string[];

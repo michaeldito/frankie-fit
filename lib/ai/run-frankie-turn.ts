@@ -241,6 +241,13 @@ export async function runFrankieTurn(input: {
     };
   }
 
+  const runStatus =
+    reply.orchestrationMode === "unavailable"
+      ? "unavailable"
+      : reply.metadata.needsClarification
+        ? "clarification"
+        : "completed";
+
   const traceId = await recordAiTraceRun({
     supabase: input.supabase,
     userId: input.userId,
@@ -254,7 +261,7 @@ export async function runFrankieTurn(input: {
     userMessage: input.message,
     reply,
     persistedLogIds,
-    runStatus: reply.metadata.needsClarification ? "clarification" : "completed",
+    runStatus,
     latencyMs: Date.now() - startedAt
   });
 
@@ -265,7 +272,7 @@ export async function runFrankieTurn(input: {
     errorMessage: null,
     persistedLogIds,
     reply,
-    runStatus: reply.metadata.needsClarification ? "clarification" : "completed",
+    runStatus,
     traceId,
     userMessage
   };
