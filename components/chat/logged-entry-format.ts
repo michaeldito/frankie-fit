@@ -27,6 +27,11 @@ export function capitalize(value: string) {
   return value.slice(0, 1).toUpperCase() + value.slice(1);
 }
 
+export function formatLoggedDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return match ? `${match[2]}-${match[3]}-${match[1]}` : value;
+}
+
 export function formatActivityTitle(activity: LoggedActivity) {
   return capitalize(activity.activityType);
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatLoggedDate } from "@/components/chat/logged-entry-format";
 
 export type LoggedEntry = {
   id: string | null;
@@ -52,14 +53,31 @@ export function LoggedEntryCard<T extends LoggedEntry>({
             <div className="flex items-center justify-between gap-3">
               <p className="ff-kicker">{kicker}</p>
               <div className="flex items-center gap-2 text-[0.72rem] text-[var(--muted)]">
-                {entry.loggedForDate ? <span>{entry.loggedForDate}</span> : null}
+                {entry.loggedForDate ? <span>{formatLoggedDate(entry.loggedForDate)}</span> : null}
                 <button
-                  className="cursor-pointer underline decoration-dotted underline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                  aria-label={removingId === entry.id ? "Removing" : "Remove"}
+                  className={`cursor-pointer text-[var(--muted)] transition hover:text-[var(--foreground)] disabled:cursor-not-allowed ${
+                    removingId === entry.id ? "animate-pulse opacity-60" : ""
+                  }`}
                   disabled={removingId === entry.id}
                   onClick={() => handleRemove(entry.id as string)}
+                  title="Remove"
                   type="button"
                 >
-                  {removingId === entry.id ? "Removing..." : "Remove"}
+                  <svg
+                    aria-hidden="true"
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M3 6h18" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                  </svg>
                 </button>
               </div>
             </div>

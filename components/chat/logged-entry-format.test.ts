@@ -5,6 +5,7 @@ import {
   formatActivityTitle,
   formatDietDetail,
   formatDietTitle,
+  formatLoggedDate,
   formatWellnessDetail,
   formatWellnessTitle,
   type LoggedActivity,
@@ -53,6 +54,16 @@ describe("capitalize", () => {
 
   it("handles an empty string without throwing", () => {
     expect(capitalize("")).toBe("");
+  });
+});
+
+describe("formatLoggedDate", () => {
+  it("converts YYYY-MM-DD to MM-DD-YYYY", () => {
+    expect(formatLoggedDate("2026-09-03")).toBe("09-03-2026");
+  });
+
+  it("returns the input unchanged when it doesn't match the expected shape", () => {
+    expect(formatLoggedDate("not-a-date")).toBe("not-a-date");
   });
 });
 
