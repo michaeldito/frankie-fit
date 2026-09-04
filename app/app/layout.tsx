@@ -5,12 +5,14 @@ import {
   type UserAppShellUser
 } from "@/components/app-shell/user-app-shell";
 import { getSuggestedNextStep } from "@/lib/dashboard";
+import { getUnreadNotificationCount } from "@/lib/notifications";
 import {
   getAccountLabel,
   getCurrentAppContext,
   getDisplayName,
   getInitials
 } from "@/lib/profile";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const previewUser: UserAppShellUser = {
   displayName: "Preview Member",
@@ -21,6 +23,7 @@ const previewUser: UserAppShellUser = {
     "Keep movement, meals, and recovery close enough together that Frankie can guide the next step well.",
   authConfigured: false,
   isAdmin: false,
+  unreadNotificationCount: 0,
   nextStepTitle: "Quick recovery check-in",
   nextStepDescription:
     "A short update will help Frankie keep today's guidance grounded in how the week is actually feeling.",
@@ -41,6 +44,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const displayName = getDisplayName(context.user, context.profile);
   const nextStep = await getSuggestedNextStep(context);
+  const unreadNotificationCount = context.schemaReady
+    ? await getUnreadNotificationCount(await createSupabaseServerClient(), context.user.id)
+    : 0;
   const primaryGoal = context.profile?.primary_goal?.trim()
     ? context.profile.primary_goal
     : context.schemaReady
@@ -62,6 +68,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         : "Run the Supabase migration to unlock onboarding, saved profiles, and personalized coaching.",
     authConfigured: true,
     isAdmin: context.profile?.role === "admin",
+    unreadNotificationCount,
     nextStepTitle: nextStep.title,
     nextStepDescription: nextStep.description,
     nextStepHref: nextStep.href,
