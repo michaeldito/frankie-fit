@@ -144,7 +144,7 @@ export function CoachingMemoryGrid({ summaries }: CoachingMemoryGridProps) {
         </div>
       </div>
 
-      <div className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
+      <div className="grid grid-cols-3 items-start gap-4">
         {columns.map((column) => (
           <div className="space-y-4" key={column.userName}>
             <p className="ff-kicker">{column.userName}</p>
