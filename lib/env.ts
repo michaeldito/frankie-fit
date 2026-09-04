@@ -24,7 +24,8 @@ const supabaseKeySchema = z.object({
 
 const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
-  OPENAI_API_KEY: z.string().min(1).optional()
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  CRON_SECRET: z.string().min(1).optional()
 });
 
 export function hasSupabaseEnv() {
@@ -61,6 +62,7 @@ export function getPublicEnv() {
 export function getServerEnv() {
   return serverEnvSchema.parse({
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    CRON_SECRET: process.env.CRON_SECRET
   });
 }

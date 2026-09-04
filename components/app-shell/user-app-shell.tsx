@@ -11,6 +11,7 @@ import {
 } from "react";
 import { signOut } from "@/app/app/actions";
 import { NavLink } from "@/components/app-shell/nav-link";
+import { NotificationBell } from "@/components/app-shell/notification-bell";
 
 export type UserAppShellUser = {
   displayName: string;
@@ -24,6 +25,7 @@ export type UserAppShellUser = {
   nextStepDescription: string;
   nextStepHref: string;
   nextStepCtaLabel: string;
+  unreadNotificationCount: number;
 };
 
 type UserAppShellProps = {
@@ -311,6 +313,9 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+                  {user.authConfigured ? (
+                    <NotificationBell initialUnreadCount={user.unreadNotificationCount} />
+                  ) : null}
                   {user.authConfigured ? (
                     <div className="relative" ref={profileMenuRef}>
                       <button
