@@ -546,6 +546,10 @@ export function isLikelyDietClause(clause: string) {
   return looksLikeDietClause(clause, mealMatch);
 }
 
+export function isLikelyActivityClause(clause: string) {
+  return findActivityMatch(clause) !== null;
+}
+
 function hasAnyCue(clause: string, cues: string[]) {
   return cues.some((cue) => {
     const regex = new RegExp(`\\b${escapeRegex(cue)}\\b`, "i");

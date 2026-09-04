@@ -3,6 +3,7 @@ import type { AppProfile } from "@/lib/profile";
 import {
   buildStructuredLogConfirmation,
   extractTimeReferenceText,
+  isLikelyActivityClause,
   isLikelyDietClause,
   parseActivityMessage,
   resolveLoggedForDateFromTimeReference,
@@ -418,7 +419,7 @@ function cleanDietGroupDescription(value: string) {
       /\b(?:sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday|s)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?)\b/gi,
       " "
     )
-    .replace(/\bi\s+(?:had|ate|drank|snacked(?:\s+on)?)\s+/i, " ")
+    .replace(/\bi\s+(?:had|ate|drank|snacked(?:\s+on)?)\s+/gi, " ")
     .replace(
       /^(?:\s*(?:for\s+)?(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b\s*(?:was|were|is|=|:)?\s*)/i,
       " "
@@ -497,7 +498,11 @@ function splitDietEntryOnTimingTransition(input: {
     return null;
   }
 
-  const splitEntries = parts
+  const dietRelevantParts = parts.filter(
+    (part) => !isLikelyActivityClause(part) || isLikelyDietClause(part)
+  );
+
+  const splitEntries = dietRelevantParts
     .map((part) => {
       const description = cleanDietGroupDescription(part);
 
@@ -526,7 +531,7 @@ function splitDietEntryOnTimingTransition(input: {
         Boolean(entryWithEvidence)
     );
 
-  return splitEntries.length > 1 ? splitEntries : null;
+  return splitEntries.length > 0 ? splitEntries : null;
 }
 
 function normalizeActivityType(value: string) {

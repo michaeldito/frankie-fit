@@ -195,6 +195,7 @@ function WellnessTrend({ trend }: { trend: WellnessTrendPoint[] }) {
                 <span>Energy {point.energy ? point.energy.toFixed(1) : "-"}</span>
                 <span>Stress {point.stress ? point.stress.toFixed(1) : "-"}</span>
                 <span>Soreness {point.soreness ? point.soreness.toFixed(1) : "-"}</span>
+                <span>Mood {point.mood ? point.mood.toFixed(1) : "-"}</span>
                 <span>Motivation {point.motivation ? point.motivation.toFixed(1) : "-"}</span>
               </div>
             </div>

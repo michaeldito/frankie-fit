@@ -55,6 +55,7 @@ export type WellnessTrendPoint = {
   label: string;
   energy: number | null;
   soreness: number | null;
+  mood: number | null;
   stress: number | null;
   motivation: number | null;
 };
@@ -245,6 +246,7 @@ function buildWellnessTrend(wellnessCheckins: WellnessCheckinRow[]): WellnessTre
       label: formatShortDay(dateKey),
       energy: average(dayEntries.map((entry) => entry.energy_score)),
       soreness: average(dayEntries.map((entry) => entry.soreness_score)),
+      mood: average(dayEntries.map((entry) => entry.mood_score)),
       stress: average(dayEntries.map((entry) => entry.stress_score)),
       motivation: average(dayEntries.map((entry) => entry.motivation_score))
     };
@@ -320,9 +322,14 @@ function buildWellnessInsight(wellnessCheckins: WellnessCheckinRow[]) {
   const averageStress = average(recentCheckins.map((entry) => entry.stress_score));
   const averageMotivation = average(recentCheckins.map((entry) => entry.motivation_score));
   const averageSoreness = average(recentCheckins.map((entry) => entry.soreness_score));
+  const averageMood = average(recentCheckins.map((entry) => entry.mood_score));
 
   if ((averageEnergy ?? 5) <= 2.5 && (averageMotivation ?? 5) <= 2.5) {
     return "Energy and motivation both look a little low lately. That usually points to backing off the pressure and keeping the next move simple.";
+  }
+
+  if ((averageMood ?? 5) <= 2.5) {
+    return "Mood has been running low across your recent check-ins. Frankie should keep the next few days lighter and more supportive rather than pushing harder.";
   }
 
   if ((averageStress ?? 1) >= 4) {
