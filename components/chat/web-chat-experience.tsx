@@ -128,8 +128,8 @@ export function WebChatExperience({
     }
 
     if (personaMenuOpen) {
-      document.addEventListener("mousedown", handlePointerDown);
-      return () => document.removeEventListener("mousedown", handlePointerDown);
+      document.addEventListener("mousedown", handlePointerDown, true);
+      return () => document.removeEventListener("mousedown", handlePointerDown, true);
     }
   }, [personaMenuOpen]);
 
