@@ -38,6 +38,7 @@ export type Database = {
           health_considerations: string[];
           avoidances: string[];
           coaching_style: string | null;
+          coach_persona: string | null;
           preferred_checkin_style: string | null;
           safety_acknowledged: boolean;
           onboarding_completed: boolean;
@@ -73,6 +74,7 @@ export type Database = {
           health_considerations?: string[];
           avoidances?: string[];
           coaching_style?: string | null;
+          coach_persona?: string | null;
           preferred_checkin_style?: string | null;
           safety_acknowledged?: boolean;
           onboarding_completed?: boolean;
@@ -108,6 +110,7 @@ export type Database = {
           health_considerations?: string[];
           avoidances?: string[];
           coaching_style?: string | null;
+          coach_persona?: string | null;
           preferred_checkin_style?: string | null;
           safety_acknowledged?: boolean;
           onboarding_completed?: boolean;

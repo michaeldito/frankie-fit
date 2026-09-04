@@ -19,10 +19,11 @@ Run locally (CI enforces the same):
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test:coverage
 pnpm build
 ```
 
-Fix failures rather than disabling rules or using `--no-verify` / `any` casts to route around them.
+Fix failures rather than disabling rules or using `--no-verify` / `any` casts to route around them. If you touch a file listed in `vitest.config.mts`'s coverage `include`, add or extend its test rather than letting coverage silently drop — add newly-tested files to that list too.
 
 ## Commit messages
 
@@ -35,6 +36,13 @@ Short, imperative subject line ("Add streak tracking to dashboard", not "Added" 
 - No speculative abstractions — build what the current task needs.
 - Keep the app stateless and portable per [docs/deployment-strategy.md](docs/deployment-strategy.md) — no Vercel-only product dependencies (Vercel KV/Blob, edge-only assumptions), no secrets/config baked into code, standard Postgres-compatible schema/queries.
 - Never expose OpenAI keys or Supabase service-role/secret keys to the client — server-side only.
+
+## Database migrations
+
+- Add new migrations as a new file in `supabase/migrations/`, timestamped after the latest existing one.
+- Normal path: `supabase db push` (requires an authenticated Supabase CLI).
+- **In an agent/tool session, `supabase login`'s interactive browser + Keychain flow does not work** — it needs a real TTY and will fail fast with a non-TTY error, or hang on a native macOS Keychain password prompt the agent cannot see or complete. Don't retry it in a loop. Either ask the person running the session to authenticate the CLI themselves, or use a personal access token (`supabase.com/dashboard/account/tokens`) via the `SUPABASE_ACCESS_TOKEN` env var, which skips the interactive flow entirely.
+- If neither is available: apply the migration's SQL directly in the Supabase dashboard's SQL editor, then have someone with a working CLI session run `supabase migration repair --status applied <version>` for that migration's timestamp so the CLI's remote migration history stays in sync. Skipping the repair step means a later `supabase db push` won't know the migration was already applied and may error trying to re-run it.
 
 ## CI
 

@@ -16,6 +16,7 @@ import {
   buildCoachResponseUserPrompt
 } from "@/lib/ai/prompts/coach-response";
 import { buildExtractUserUpdatePrompt } from "@/lib/ai/prompts/extract-user-update";
+import { getPersona } from "@/lib/ai/prompts/personas";
 import {
   createStructuredOpenAiResponse,
   createTextOpenAiResponse,
@@ -1131,7 +1132,7 @@ export async function orchestrateFrankieReply(input: {
     const reply = input.skipCoachResponse
       ? null
       : await createTextOpenAiResponse({
-          systemPrompt: buildCoachResponseSystemPrompt(),
+          systemPrompt: buildCoachResponseSystemPrompt(getPersona(input.profile?.coach_persona)),
           userPrompt: buildCoachResponseUserPrompt({
             profile: input.profile,
             userMessage: input.message,
