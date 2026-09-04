@@ -41,13 +41,13 @@ export function LoggedEntryCard<T extends LoggedEntry>({
   }
 
   return (
-    <div className="mt-3 space-y-2">
+    <div className="mt-2 space-y-1.5">
       {removable.map((entry) => {
         const detail = formatDetail(entry);
 
         return (
           <div
-            className="ff-card-soft border-l-2 border-l-[var(--border-strong)] p-3"
+            className="ff-card-soft border-l-2 border-l-[var(--border-strong)] p-3.5"
             key={entry.id}
           >
             <div className="flex items-center justify-between gap-3">

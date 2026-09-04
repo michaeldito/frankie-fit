@@ -1,6 +1,24 @@
 import { WebChatExperience } from "@/components/chat/web-chat-experience";
 import { getChatExperience } from "@/lib/chat";
+import { FRANKIE_PROMPT_VERSION } from "@/lib/ai/orchestrator/frankie-orchestrator";
 import { getCurrentAppContext, getDisplayName } from "@/lib/profile";
+
+function getFrankieVersionLabel(promptVersion: string) {
+  const versionNumber = promptVersion.match(/v(\d+)$/)?.[1];
+
+  if (!versionNumber) {
+    return "Frankie";
+  }
+
+  // Raw prompt versions climb by 1 per change (v10, v11, v12, ...). Once past single digits,
+  // display each run of ten as one major version with the ones digit as the minor version, e.g.
+  // v10 -> 1.0, v11 -> 1.1, v20 -> 2.0, so the label stays a familiar major.minor shape.
+  const parsedVersion = Number(versionNumber);
+  const major = Math.floor(parsedVersion / 10);
+  const minor = parsedVersion % 10;
+
+  return `Frankie ${major}.${minor}`;
+}
 
 type ChatPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -30,12 +48,13 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   const followupMessage = context.profile?.onboarding_completed
     ? `Since you enjoy ${preferredActivityText}, you do not need to overthink this. Log what you did, what you ate, or how recovery feels and I will shape the next step from there.`
     : "A short update is enough. Frankie can work from movement, meals, wellness, or a blend of all three.";
-  const assistantCardClass = "ff-card max-w-3xl px-5 py-4 sm:px-6 sm:py-5";
+  const assistantCardClass = "ff-card max-w-3xl px-4 py-3 sm:px-5 sm:py-3.5";
   const userCardClass =
-    "ml-auto max-w-2xl rounded-[1.45rem] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] px-5 py-4 text-white shadow-[0_18px_34px_rgba(29,78,216,0.32)] sm:px-6 sm:py-5";
+    "ml-auto max-w-2xl rounded-[1.2rem] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] px-4 py-3 text-white shadow-[0_18px_34px_rgba(29,78,216,0.32)] sm:px-5 sm:py-3.5";
+  const frankieVersionLabel = getFrankieVersionLabel(FRANKIE_PROMPT_VERSION);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
+    <div className="-mb-1.5 flex h-full min-h-0 flex-col gap-4 sm:-mb-2">
       {!chatExperience.schemaReady ? (
         <section className="ff-panel p-5 sm:p-6">
           <p className="ff-kicker">Setup note</p>
@@ -64,10 +83,11 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
         </section>
       ) : null}
 
-      <section className="ff-panel min-h-0 flex flex-1 flex-col overflow-hidden">
+      <section className="min-h-0 flex flex-1 flex-col overflow-hidden">
         <WebChatExperience
           assistantCardClass={assistantCardClass}
           followupMessage={followupMessage}
+          frankieVersionLabel={frankieVersionLabel}
           initialMessages={chatExperience.messages}
           initialPersona={context.profile?.coach_persona ?? null}
           introMessage={introMessage}

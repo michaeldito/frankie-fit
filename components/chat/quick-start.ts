@@ -14,7 +14,7 @@ export const QUICK_START_OPTIONS: QuickStartOption[] = [
     template: "Today I did [fill in] for [fill in] minutes at [light/moderate/hard] intensity"
   },
   {
-    label: "Food",
+    label: "Diet",
     template: "For [breakfast/lunch/dinner/snack], I ate [fill in]"
   },
   {

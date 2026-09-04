@@ -25,6 +25,7 @@ type ChatApiResponse = {
 type WebChatExperienceProps = {
   assistantCardClass: string;
   followupMessage: string;
+  frankieVersionLabel: string;
   introMessage: string;
   initialMessages: ChatMessage[];
   initialPersona: string | null;
@@ -51,9 +52,43 @@ async function chatApiFetch<T>(input: RequestInfo, init?: RequestInit) {
   return payload;
 }
 
+function SendIcon({ busy }: { busy: boolean }) {
+  if (busy) {
+    return (
+      <svg aria-hidden="true" className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" />
+        <path
+          className="opacity-90"
+          d="M21 12a9 9 0 0 0-9-9"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="3"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.4"
+      viewBox="0 0 24 24"
+    >
+      <path d="M19 5v6a4 4 0 0 1-4 4H5" />
+      <path d="M9 11 5 15l4 4" />
+    </svg>
+  );
+}
+
 export function WebChatExperience({
   assistantCardClass,
   followupMessage,
+  frankieVersionLabel,
   introMessage,
   initialMessages,
   initialPersona,
@@ -97,6 +132,17 @@ export function WebChatExperience({
       return () => document.removeEventListener("mousedown", handlePointerDown);
     }
   }, [personaMenuOpen]);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [draft]);
 
   async function handleSelectPersona(nextPersonaId: string | null) {
     setPersonaMenuOpen(false);
@@ -326,16 +372,18 @@ export function WebChatExperience({
         userCardClass={userCardClass}
       />
 
+      <div className="-mx-4 border-t border-[var(--border)] sm:-mx-5" />
+
       <form
-        className="border-t border-[var(--border)] px-5 py-4 sm:px-6"
+        className="px-5 pt-4 pb-0 sm:px-6"
         onSubmit={handleSend}
         ref={formRef}
       >
-        <label className="block">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold tracking-[-0.01em]">
+        <div>
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <label className="text-sm font-semibold tracking-[-0.01em]" htmlFor="chat-message-input">
               Tell Frankie anything about your
-            </span>
+            </label>
             {QUICK_START_OPTIONS.map((option) => (
               <button
                 className="cursor-pointer rounded-full border border-[var(--border-strong)] bg-[var(--surface-strong)] px-3 py-1.5 text-sm font-medium text-[var(--muted-strong)] transition hover:border-[rgba(147,197,253,0.5)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
@@ -361,42 +409,52 @@ export function WebChatExperience({
               </button>
             </div>
           ) : null}
-          <textarea
-            className="ff-textarea min-h-32"
-            disabled={!schemaReady || isBusy}
-            name="message"
-            onChange={(event) => {
-              setDraft(event.target.value);
+          <div className="ff-textarea flex min-h-0 resize-none items-stretch gap-2">
+            <textarea
+              className="min-h-[2.5rem] max-h-[16rem] min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent p-0 text-[0.85rem] text-[var(--foreground)] outline-none"
+              disabled={!schemaReady || isBusy}
+              id="chat-message-input"
+              name="message"
+              onChange={(event) => {
+                setDraft(event.target.value);
 
-              if (quickStartHintVisible) {
-                dismissQuickStartHint();
+                if (quickStartHintVisible) {
+                  dismissQuickStartHint();
+                }
+              }}
+              onKeyDown={handleComposerKeyDown}
+              placeholder={
+                schemaReady
+                  ? "I ran 30 minutes this morning, had eggs and toast after, and my energy's been solid today."
+                  : "Run the Supabase schema first, then Frankie can start saving chat and logs."
               }
-            }}
-            onKeyDown={handleComposerKeyDown}
-            placeholder={
-              schemaReady
-                ? "I ran 30 minutes this morning, had eggs and toast after, and my energy's been solid today."
-                : "Run the Supabase schema first, then Frankie can start saving chat and logs."
-            }
-            ref={textareaRef}
-            required
-            value={draft}
-          />
-        </label>
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <div className="relative" ref={personaMenuRef}>
+              ref={textareaRef}
+              required
+              value={draft}
+            />
+            <button
+              aria-label={pendingMessage ? "Sending" : isThinking ? "Thinking" : "Send"}
+              className="ff-button-primary mb-0.5 h-9 w-9 shrink-0 self-end rounded-full p-0 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={!schemaReady || isBusy || !draft.trim()}
+              type="submit"
+            >
+              <SendIcon busy={isBusy} />
+            </button>
+          </div>
+          <div className="relative mt-2 flex items-center justify-end gap-2" ref={personaMenuRef}>
             <button
               aria-expanded={personaMenuOpen}
-              className="cursor-pointer rounded-full border border-[var(--border-strong)] bg-[var(--surface-strong)] px-3 py-1.5 text-sm font-medium text-[var(--muted-strong)] transition hover:border-[rgba(147,197,253,0.5)] hover:text-[var(--foreground)]"
+              className="cursor-pointer text-sm font-medium text-[var(--muted)] transition hover:text-[var(--foreground)]"
               onClick={() => setPersonaMenuOpen((current) => !current)}
               type="button"
             >
               Coach: {activePersona?.displayName ?? DEFAULT_PERSONA_LABEL}
             </button>
+            <span className="text-sm text-[var(--muted)]">{frankieVersionLabel}</span>
 
             <div
               aria-hidden={!personaMenuOpen}
-              className={`ff-card absolute left-0 z-30 max-h-60 w-max min-w-52 max-w-64 origin-bottom-left overflow-y-auto p-1.5 transition-all duration-200 ease-out ${
+              className={`ff-card absolute right-0 z-30 max-h-60 w-max min-w-52 max-w-64 origin-bottom-right overflow-y-auto p-1.5 transition-all duration-200 ease-out ${
                 personaMenuOpen
                   ? "translate-y-0 scale-100 opacity-100"
                   : "pointer-events-none translate-y-1 scale-95 opacity-0"
@@ -430,14 +488,6 @@ export function WebChatExperience({
               ))}
             </div>
           </div>
-
-          <button
-            className="ff-button-primary min-w-28 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={!schemaReady || isBusy || !draft.trim()}
-            type="submit"
-          >
-            {pendingMessage ? "Sending..." : isThinking ? "Thinking..." : "Send"}
-          </button>
         </div>
       </form>
     </>
