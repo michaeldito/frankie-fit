@@ -5,11 +5,14 @@ import {
   formatActivityTitle,
   formatDietDetail,
   formatDietTitle,
+  formatLifestyleDetail,
+  formatLifestyleTitle,
   formatLoggedDate,
   formatWellnessDetail,
   formatWellnessTitle,
   type LoggedActivity,
   type LoggedDietEntry,
+  type LoggedLifestyleEntry,
   type LoggedWellnessCheckin
 } from "./logged-entry-format";
 
@@ -29,6 +32,16 @@ function dietEntry(overrides: Partial<LoggedDietEntry> = {}): LoggedDietEntry {
     id: "diet-1",
     description: "Eggs and toast",
     mealType: "breakfast",
+    loggedForDate: "2026-09-03",
+    ...overrides
+  };
+}
+
+function lifestyleEntry(overrides: Partial<LoggedLifestyleEntry> = {}): LoggedLifestyleEntry {
+  return {
+    id: "lifestyle-1",
+    description: "Went to an arcade on a date",
+    category: "social",
     loggedForDate: "2026-09-03",
     ...overrides
   };
@@ -112,6 +125,30 @@ describe("formatDietDetail", () => {
 
   it("returns null for an empty description", () => {
     expect(formatDietDetail(dietEntry({ description: "" }))).toBeNull();
+  });
+});
+
+describe("formatLifestyleTitle", () => {
+  it("capitalizes the category and replaces underscores with spaces", () => {
+    expect(formatLifestyleTitle(lifestyleEntry({ category: "substance_alcohol" }))).toBe(
+      "Substance alcohol"
+    );
+  });
+
+  it("falls back to Lifestyle when category is unknown", () => {
+    expect(formatLifestyleTitle(lifestyleEntry({ category: null }))).toBe("Lifestyle");
+  });
+});
+
+describe("formatLifestyleDetail", () => {
+  it("returns the description", () => {
+    expect(formatLifestyleDetail(lifestyleEntry({ description: "Visited family" }))).toBe(
+      "Visited family"
+    );
+  });
+
+  it("returns null for an empty description", () => {
+    expect(formatLifestyleDetail(lifestyleEntry({ description: "" }))).toBeNull();
   });
 });
 

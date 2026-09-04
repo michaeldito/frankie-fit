@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   mapExtractedActivities,
   mapExtractedDietEntries,
+  mapExtractedLifestyleEntries,
   mapExtractedWellnessCheckin,
   parseExtractedUserUpdate,
   type ExtractedUserUpdate
@@ -13,6 +14,7 @@ function baseUpdate(): ExtractedUserUpdate {
     notes: "",
     activities: [],
     dietEntries: [],
+    lifestyleEntries: [],
     wellness: {
       present: false,
       energyScore: 0,
@@ -170,6 +172,36 @@ describe("mapExtractedDietEntries", () => {
       { description: "   ", mealType: "unknown", confidence: 0.5, timeReferenceText: "", loggedForDate: "2026-01-15" }
     ]);
     expect(mapped.description).toBe("food update 1");
+  });
+});
+
+describe("mapExtractedLifestyleEntries", () => {
+  it("maps 'unknown' category to null", () => {
+    const [mapped] = mapExtractedLifestyleEntries([
+      { description: "went to an arcade on a date", category: "unknown", confidence: 0.5, timeReferenceText: "", loggedForDate: "2026-01-15" }
+    ]);
+    expect(mapped.category).toBeNull();
+  });
+
+  it("preserves a substance_alcohol category", () => {
+    const [mapped] = mapExtractedLifestyleEntries([
+      { description: "three beers at the game", category: "substance_alcohol", confidence: 0.8, timeReferenceText: "", loggedForDate: "2026-01-15" }
+    ]);
+    expect(mapped.category).toBe("substance_alcohol");
+  });
+
+  it("preserves a substance_cannabis category", () => {
+    const [mapped] = mapExtractedLifestyleEntries([
+      { description: "smoked a bowl before lifting", category: "substance_cannabis", confidence: 0.8, timeReferenceText: "", loggedForDate: "2026-01-15" }
+    ]);
+    expect(mapped.category).toBe("substance_cannabis");
+  });
+
+  it("falls back to a default description when blank", () => {
+    const [mapped] = mapExtractedLifestyleEntries([
+      { description: "   ", category: "unknown", confidence: 0.5, timeReferenceText: "", loggedForDate: "2026-01-15" }
+    ]);
+    expect(mapped.description).toBe("lifestyle update 1");
   });
 });
 

@@ -15,7 +15,7 @@ export function buildExtractUserUpdatePrompt(input?: { isAnsweringClarification?
     "You are a structured extraction engine for Frankie Fit.",
     "Extract only facts that are present in the current user message.",
     "Do not use profile preferences, prior conversation, or likely defaults to fill missing facts.",
-    "A message may contain activity, diet, and wellness updates at the same time.",
+    "A message may contain activity, diet, lifestyle, and wellness updates at the same time.",
     `Assume today's local date is ${todayDate} in America/Los_Angeles.`,
     ...(input?.isAnsweringClarification
       ? [
@@ -47,6 +47,14 @@ export function buildExtractUserUpdatePrompt(input?: { isAnsweringClarification?
     "- If one meal phrase lists multiple foods or drinks together, return one diet entry with the combined description. Example: turkey wrap and an apple for lunch is one lunch entry.",
     "- Return timeReferenceText as the exact timing phrase for that entry when present.",
     "- Only set mealType when the user explicitly says breakfast, brunch, lunch, dinner, supper, snack, or dessert. Otherwise use unknown.",
+    "- Do not include alcoholic drinks (beer, wine, a cocktail, a shot, liquor) in dietEntries. Alcohol belongs only in lifestyleEntries, even when mentioned alongside a meal.",
+    "",
+    "Lifestyle:",
+    "- Lifestyle covers notable life context that is not itself food/drink or structured exercise: social plans, family time, entertainment, travel, and substance use.",
+    "- Extract every distinct lifestyle event the user explicitly mentions, as its own lifestyleEntries item.",
+    "- Use category substance_alcohol for any alcohol mention (beer, wine, a cocktail, drinks, a shot, liquor) and substance_cannabis for any cannabis mention (smoked, vaped, an edible, a bowl, a joint, weed, THC). Use category social for dates, hangouts, or outings with friends; family for time with family; entertainment for movies, shows, games, or similar; travel for trips; and other only when none of those fit.",
+    "- Do not create a lifestyle entry for an ordinary meal or workout description with no social, family, entertainment, travel, or substance content.",
+    "- Return timeReferenceText as the exact timing phrase for that entry when present.",
     "",
     "Wellness:",
     "- Energy, soreness, mood, stress, motivation, sleep, fatigue, and recovery notes are all meaningful wellness signals.",

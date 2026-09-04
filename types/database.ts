@@ -679,6 +679,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      lifestyle_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          source_message_id: string | null;
+          category: string;
+          description: string;
+          logged_for_date: string;
+          metadata_json: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          source_message_id?: string | null;
+          category: string;
+          description: string;
+          logged_for_date?: string;
+          metadata_json?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          source_message_id?: string | null;
+          category?: string;
+          description?: string;
+          logged_for_date?: string;
+          metadata_json?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       product_suggestions: {
         Row: {
           id: string;

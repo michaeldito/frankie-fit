@@ -7,6 +7,7 @@ import {
 import { recordAiTraceRun } from "@/lib/ai/tracing/ai-trace-runs";
 import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
+import { logLifestyleEntries } from "@/lib/ai/tools/log-lifestyle";
 import { logWellnessCheckin } from "@/lib/ai/tools/log-wellness";
 import { MAX_CHAT_MESSAGE_LENGTH } from "@/lib/chat";
 import type { AppProfile } from "@/lib/profile";
@@ -382,6 +383,7 @@ export async function POST(request: NextRequest) {
   const persistedLogIds = {
     activityLogIds: [] as string[],
     dietLogIds: [] as string[],
+    lifestyleLogIds: [] as string[],
     wellnessCheckinIds: [] as string[]
   };
 
@@ -402,6 +404,15 @@ export async function POST(request: NextRequest) {
           userId: context.user.id,
           sourceMessageId: sourceMessage.id,
           entries: reply.parsedDietEntries,
+          extractionSource: reply.metadata.extractionSource
+        });
+      }
+      if (reply.persistPlan.lifestyleEntries) {
+        persistedLogIds.lifestyleLogIds = await logLifestyleEntries({
+          supabase: context.supabase,
+          userId: context.user.id,
+          sourceMessageId: sourceMessage.id,
+          entries: reply.parsedLifestyleEntries,
           extractionSource: reply.metadata.extractionSource
         });
       }
@@ -453,6 +464,7 @@ export async function POST(request: NextRequest) {
     : reply.shouldPersistStructuredData &&
       (reply.parsedActivities.length > 0 ||
         reply.parsedDietEntries.length > 0 ||
+        reply.parsedLifestyleEntries.length > 0 ||
         reply.parsedWellnessCheckin)
       ? {
           activitiesLogged: reply.persistPlan.activities
@@ -475,6 +487,15 @@ export async function POST(request: NextRequest) {
             confidence: entry.confidence,
             description: entry.description,
             mealType: entry.mealType,
+            timeReferenceText: entry.timeReferenceText,
+            loggedForDate: entry.loggedForDate
+          }))
+            : [],
+          lifestyleLogged: reply.persistPlan.lifestyleEntries
+            ? reply.parsedLifestyleEntries.map((entry) => ({
+            category: entry.category,
+            confidence: entry.confidence,
+            description: entry.description,
             timeReferenceText: entry.timeReferenceText,
             loggedForDate: entry.loggedForDate
           }))

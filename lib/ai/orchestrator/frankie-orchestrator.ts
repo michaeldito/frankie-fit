@@ -9,6 +9,7 @@ import {
   resolveLoggedForDateFromTimeReference,
   type ParsedActivity,
   type ParsedDietEntry,
+  type ParsedLifestyleEntry,
   type ParsedWellnessCheckin
 } from "@/lib/chat";
 import { buildChatContext } from "@/lib/ai/context/load-chat-context";
@@ -28,6 +29,7 @@ import {
   type ExtractedUserUpdate,
   mapExtractedActivities,
   mapExtractedDietEntries,
+  mapExtractedLifestyleEntries,
   mapExtractedWellnessCheckin,
   parseExtractedUserUpdate
 } from "@/lib/ai/schemas/extracted-user-update";
@@ -64,6 +66,7 @@ export type FrankieOrchestrationResult = {
   assistantMessageType: "chat" | "log_confirmation" | "clarification_request";
   parsedActivities: ParsedActivity[];
   parsedDietEntries: ParsedDietEntry[];
+  parsedLifestyleEntries: ParsedLifestyleEntry[];
   parsedWellnessCheckin: ParsedWellnessCheckin | null;
   reply: string;
   orchestrationMode: "model" | "unavailable";
@@ -71,6 +74,7 @@ export type FrankieOrchestrationResult = {
   persistPlan: {
     activities: boolean;
     dietEntries: boolean;
+    lifestyleEntries: boolean;
     wellnessCheckin: boolean;
   };
   metadata: {
@@ -92,6 +96,7 @@ function buildUnavailableReply(fallbackReason: string): FrankieOrchestrationResu
     assistantMessageType: "chat",
     parsedActivities: [],
     parsedDietEntries: [],
+    parsedLifestyleEntries: [],
     parsedWellnessCheckin: null,
     reply: FRANKIE_UNAVAILABLE_REPLY,
     orchestrationMode: "unavailable",
@@ -99,6 +104,7 @@ function buildUnavailableReply(fallbackReason: string): FrankieOrchestrationResu
     persistPlan: {
       activities: false,
       dietEntries: false,
+      lifestyleEntries: false,
       wellnessCheckin: false
     },
     metadata: {
@@ -955,6 +961,27 @@ function sanitizeDietEntries(entries: ParsedDietEntry[], message: string) {
   }).filter((entry): entry is ParsedDietEntry => Boolean(entry));
 }
 
+function sanitizeLifestyleEntries(entries: ParsedLifestyleEntry[]) {
+  const seenKeys = new Set<string>();
+
+  return entries.filter((entry) => {
+    if (!entry.description.trim()) {
+      return false;
+    }
+
+    const key = [entry.loggedForDate, entry.category ?? "", entry.description.toLowerCase().trim()].join(
+      "::"
+    );
+
+    if (seenKeys.has(key)) {
+      return false;
+    }
+
+    seenKeys.add(key);
+    return true;
+  });
+}
+
 function sanitizeWellnessCheckin(
   checkin: ParsedWellnessCheckin | null,
   message: string
@@ -1067,12 +1094,17 @@ function buildDietLabel(entry: ParsedDietEntry) {
 
 function buildPartialPersistencePrefix(input: {
   parsedDietEntries: ParsedDietEntry[];
+  parsedLifestyleEntries: ParsedLifestyleEntry[];
   parsedWellnessCheckin: ParsedWellnessCheckin | null;
 }) {
   const parts: string[] = [];
 
   if (input.parsedDietEntries.length > 0) {
     parts.push(`I logged ${input.parsedDietEntries.map(buildDietLabel).join(", ")}.`);
+  }
+
+  if (input.parsedLifestyleEntries.length > 0) {
+    parts.push(`I logged ${input.parsedLifestyleEntries.map((entry) => entry.description).join(", ")}.`);
   }
 
   if (input.parsedWellnessCheckin) {
@@ -1085,11 +1117,13 @@ function buildPartialPersistencePrefix(input: {
 function hasPersistableData(input: {
   activities: ParsedActivity[];
   dietEntries: ParsedDietEntry[];
+  lifestyleEntries: ParsedLifestyleEntry[];
   wellnessCheckin: ParsedWellnessCheckin | null;
 }) {
   return (
     input.activities.length > 0 ||
     input.dietEntries.length > 0 ||
+    input.lifestyleEntries.length > 0 ||
     Boolean(input.wellnessCheckin)
   );
 }
@@ -1148,6 +1182,9 @@ export async function orchestrateFrankieReply(input: {
       mapExtractedDietEntries(extracted.dietEntries),
       input.message
     );
+    const parsedLifestyleEntries = sanitizeLifestyleEntries(
+      mapExtractedLifestyleEntries(extracted.lifestyleEntries)
+    );
     const parsedWellnessCheckin = sanitizeWellnessCheckin(
       mapExtractedWellnessCheckin(extracted.wellness),
       input.message
@@ -1156,12 +1193,14 @@ export async function orchestrateFrankieReply(input: {
       input.profile,
       parsedActivities,
       parsedDietEntries,
-      parsedWellnessCheckin
+      parsedWellnessCheckin,
+      parsedLifestyleEntries
     );
     const blockingActivityIssue = hasBlockingActivityIssue(parsedActivities);
     const usableData = hasPersistableData({
       activities: parsedActivities,
       dietEntries: parsedDietEntries,
+      lifestyleEntries: parsedLifestyleEntries,
       wellnessCheckin: parsedWellnessCheckin
     });
 
@@ -1169,10 +1208,12 @@ export async function orchestrateFrankieReply(input: {
       const persistPlan = {
         activities: false,
         dietEntries: parsedDietEntries.length > 0,
+        lifestyleEntries: parsedLifestyleEntries.length > 0,
         wellnessCheckin: Boolean(parsedWellnessCheckin)
       };
       const reply = `${buildPartialPersistencePrefix({
         parsedDietEntries,
+        parsedLifestyleEntries,
         parsedWellnessCheckin
       })}${buildBlockingClarificationReply(parsedActivities)}`;
 
@@ -1180,10 +1221,12 @@ export async function orchestrateFrankieReply(input: {
         assistantMessageType: "clarification_request",
         parsedActivities,
         parsedDietEntries,
+        parsedLifestyleEntries,
         parsedWellnessCheckin,
         reply,
         orchestrationMode: "model",
-        shouldPersistStructuredData: persistPlan.dietEntries || persistPlan.wellnessCheckin,
+        shouldPersistStructuredData:
+          persistPlan.dietEntries || persistPlan.lifestyleEntries || persistPlan.wellnessCheckin,
         persistPlan,
         metadata: {
           extractionSource: "model",
@@ -1206,6 +1249,7 @@ export async function orchestrateFrankieReply(input: {
         assistantMessageType: "clarification_request",
         parsedActivities,
         parsedDietEntries,
+        parsedLifestyleEntries,
         parsedWellnessCheckin,
         reply,
         orchestrationMode: "model",
@@ -1213,6 +1257,7 @@ export async function orchestrateFrankieReply(input: {
         persistPlan: {
           activities: false,
           dietEntries: false,
+          lifestyleEntries: false,
           wellnessCheckin: false
         },
         metadata: {
@@ -1239,6 +1284,7 @@ export async function orchestrateFrankieReply(input: {
             recentConversation: context.recentConversation,
             activities: parsedActivities,
             dietEntries: parsedDietEntries,
+            lifestyleEntries: parsedLifestyleEntries,
             wellnessCheckin: parsedWellnessCheckin
           })
         });
@@ -1247,6 +1293,7 @@ export async function orchestrateFrankieReply(input: {
       assistantMessageType: structuredFallback ? "log_confirmation" : "chat",
       parsedActivities,
       parsedDietEntries,
+      parsedLifestyleEntries,
       parsedWellnessCheckin,
       reply: reply || structuredFallback?.reply || FRANKIE_UNAVAILABLE_REPLY,
       orchestrationMode: "model",
@@ -1254,6 +1301,7 @@ export async function orchestrateFrankieReply(input: {
       persistPlan: {
         activities: parsedActivities.length > 0,
         dietEntries: parsedDietEntries.length > 0,
+        lifestyleEntries: parsedLifestyleEntries.length > 0,
         wellnessCheckin: Boolean(parsedWellnessCheckin)
       },
       metadata: {

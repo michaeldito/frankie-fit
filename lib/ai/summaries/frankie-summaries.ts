@@ -6,6 +6,7 @@ import { createTextOpenAiResponse, hasOpenAiApiKey } from "@/lib/ai/openai-respo
 type SupabaseServerClient = SupabaseClient<Database>;
 type ActivityLog = Database["public"]["Tables"]["activity_logs"]["Row"];
 type DietLog = Database["public"]["Tables"]["diet_logs"]["Row"];
+type LifestyleLog = Database["public"]["Tables"]["lifestyle_logs"]["Row"];
 type WellnessCheckin = Database["public"]["Tables"]["wellness_checkins"]["Row"];
 type CoachSummary = Database["public"]["Tables"]["coach_summaries"]["Row"];
 
@@ -15,6 +16,7 @@ export const FRANKIE_SUMMARY_PROMPT_VERSION = "frankie-summary-v1";
 type LogBundle = {
   activities: ActivityLog[];
   dietEntries: DietLog[];
+  lifestyleEntries: LifestyleLog[];
   wellnessCheckins: WellnessCheckin[];
 };
 
@@ -48,6 +50,16 @@ function formatDiet(entries: DietLog[]) {
     .join("\n");
 }
 
+function formatLifestyle(entries: LifestyleLog[]) {
+  if (entries.length === 0) {
+    return "None.";
+  }
+
+  return entries
+    .map((entry) => `- ${entry.logged_for_date}: ${entry.category}: ${entry.description}`)
+    .join("\n");
+}
+
 function formatWellness(checkins: WellnessCheckin[]) {
   if (checkins.length === 0) {
     return "None.";
@@ -75,7 +87,8 @@ function buildSummarySystemPrompt() {
     "Summaries must be grounded only in the structured logs provided.",
     "Do not invent missing duration, intensity, meal timing, causes, diagnoses, or exact metrics.",
     "Write in a way that helps Frankie coach the user tomorrow or next week.",
-    "Keep the summary practical, specific, and compact."
+    "Keep the summary practical, specific, and compact.",
+    "Treat lifestyle logs (social plans, family time, entertainment, travel, substance use) as neutral context, the same as any other log. Never moralize, warn, or lecture about substance use."
   ].join("\n");
 }
 
@@ -95,6 +108,9 @@ function buildDailySummaryPrompt(input: {
     "",
     "Diet logs:",
     formatDiet(input.logs.dietEntries),
+    "",
+    "Lifestyle logs:",
+    formatLifestyle(input.logs.lifestyleEntries),
     "",
     "Wellness check-ins:",
     formatWellness(input.logs.wellnessCheckins),
@@ -136,6 +152,9 @@ function buildWeeklySummaryPrompt(input: {
     "Diet logs:",
     formatDiet(input.logs.dietEntries),
     "",
+    "Lifestyle logs:",
+    formatLifestyle(input.logs.lifestyleEntries),
+    "",
     "Wellness check-ins:",
     formatWellness(input.logs.wellnessCheckins),
     "",
@@ -151,10 +170,11 @@ function buildWeeklySummaryPrompt(input: {
 function fallbackDailySummary(date: string, logs: LogBundle) {
   const activityCount = logs.activities.length;
   const dietCount = logs.dietEntries.length;
+  const lifestyleCount = logs.lifestyleEntries.length;
   const wellnessCount = logs.wellnessCheckins.length;
 
   return [
-    `${date}: logged ${activityCount} activity update(s), ${dietCount} diet update(s), and ${wellnessCount} wellness check-in(s).`,
+    `${date}: logged ${activityCount} activity update(s), ${dietCount} diet update(s), ${lifestyleCount} lifestyle update(s), and ${wellnessCount} wellness check-in(s).`,
     "Tomorrow's coaching signal should come from the clearest logged pattern, without filling in missing details.",
     "A practical next focus is to keep the update simple and add one useful detail if it is easy."
   ].join(" ");
@@ -162,7 +182,7 @@ function fallbackDailySummary(date: string, logs: LogBundle) {
 
 function fallbackWeeklySummary(periodStart: string, periodEnd: string, logs: LogBundle) {
   return [
-    `${periodStart} through ${periodEnd}: logged ${logs.activities.length} activity update(s), ${logs.dietEntries.length} diet update(s), and ${logs.wellnessCheckins.length} wellness check-in(s).`,
+    `${periodStart} through ${periodEnd}: logged ${logs.activities.length} activity update(s), ${logs.dietEntries.length} diet update(s), ${logs.lifestyleEntries.length} lifestyle update(s), and ${logs.wellnessCheckins.length} wellness check-in(s).`,
     "The next-week focus should stay grounded in consistency, recovery, and the user's clearest logged friction points."
   ].join(" ");
 }
@@ -171,9 +191,11 @@ function buildMetrics(logs: LogBundle): Record<string, Json> {
   return {
     activityCount: logs.activities.length,
     dietCount: logs.dietEntries.length,
+    lifestyleCount: logs.lifestyleEntries.length,
     wellnessCount: logs.wellnessCheckins.length,
     activityTypes: Array.from(new Set(logs.activities.map((activity) => activity.activity_type))),
     dietDescriptions: logs.dietEntries.map((entry) => entry.description),
+    lifestyleCategories: Array.from(new Set(logs.lifestyleEntries.map((entry) => entry.category))),
     wellnessDates: logs.wellnessCheckins.map((checkin) => checkin.logged_for_date)
   };
 }
@@ -184,7 +206,7 @@ async function loadLogs(input: {
   periodStart: string;
   periodEnd: string;
 }): Promise<LogBundle> {
-  const [activitiesResult, dietResult, wellnessResult] = await Promise.all([
+  const [activitiesResult, dietResult, lifestyleResult, wellnessResult] = await Promise.all([
     input.supabase
       .from("activity_logs")
       .select("*")
@@ -194,6 +216,13 @@ async function loadLogs(input: {
       .order("logged_for_date", { ascending: true }),
     input.supabase
       .from("diet_logs")
+      .select("*")
+      .eq("user_id", input.userId)
+      .gte("logged_for_date", input.periodStart)
+      .lte("logged_for_date", input.periodEnd)
+      .order("logged_for_date", { ascending: true }),
+    input.supabase
+      .from("lifestyle_logs")
       .select("*")
       .eq("user_id", input.userId)
       .gte("logged_for_date", input.periodStart)
@@ -211,6 +240,7 @@ async function loadLogs(input: {
   const firstError =
     activitiesResult.error?.message ??
     dietResult.error?.message ??
+    lifestyleResult.error?.message ??
     wellnessResult.error?.message ??
     null;
 
@@ -221,6 +251,7 @@ async function loadLogs(input: {
   return {
     activities: activitiesResult.data ?? [],
     dietEntries: dietResult.data ?? [],
+    lifestyleEntries: lifestyleResult.data ?? [],
     wellnessCheckins: wellnessResult.data ?? []
   };
 }

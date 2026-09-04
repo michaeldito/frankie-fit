@@ -5,6 +5,7 @@ import { orchestrateFrankieReply } from "@/lib/ai/orchestrator/frankie-orchestra
 import { recordAiTraceRun } from "@/lib/ai/tracing/ai-trace-runs";
 import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
+import { logLifestyleEntries } from "@/lib/ai/tools/log-lifestyle";
 import { logWellnessCheckin } from "@/lib/ai/tools/log-wellness";
 
 type SupabaseServerClient = SupabaseClient<Database>;
@@ -13,6 +14,7 @@ type ChatMessage = Database["public"]["Tables"]["conversation_messages"]["Row"];
 type PersistedLogIds = {
   activityLogIds: string[];
   dietLogIds: string[];
+  lifestyleLogIds: string[];
   wellnessCheckinIds: string[];
 };
 
@@ -23,6 +25,7 @@ function buildAssistantStructuredPayload(
     !reply.shouldPersistStructuredData ||
     (reply.parsedActivities.length === 0 &&
       reply.parsedDietEntries.length === 0 &&
+      reply.parsedLifestyleEntries.length === 0 &&
       !reply.parsedWellnessCheckin)
   ) {
     return {};
@@ -49,6 +52,15 @@ function buildAssistantStructuredPayload(
           confidence: entry.confidence,
           description: entry.description,
           mealType: entry.mealType,
+          timeReferenceText: entry.timeReferenceText,
+          loggedForDate: entry.loggedForDate
+        }))
+      : [],
+    lifestyleLogged: reply.persistPlan.lifestyleEntries
+      ? reply.parsedLifestyleEntries.map((entry) => ({
+          category: entry.category,
+          confidence: entry.confidence,
+          description: entry.description,
           timeReferenceText: entry.timeReferenceText,
           loggedForDate: entry.loggedForDate
         }))
@@ -82,6 +94,7 @@ function buildActualJson(input: {
     persistedLogIds: input.persistedLogIds,
     activities: input.reply.parsedActivities,
     dietEntries: input.reply.parsedDietEntries,
+    lifestyleEntries: input.reply.parsedLifestyleEntries,
     wellnessCheckin: input.reply.parsedWellnessCheckin
   } as Json;
 }
@@ -123,6 +136,7 @@ export async function runFrankieTurn(input: {
   const persistedLogIds: PersistedLogIds = {
     activityLogIds: [],
     dietLogIds: [],
+    lifestyleLogIds: [],
     wellnessCheckinIds: []
   };
 
@@ -144,6 +158,16 @@ export async function runFrankieTurn(input: {
           userId: input.userId,
           sourceMessageId: userMessage.id,
           entries: reply.parsedDietEntries,
+          extractionSource: reply.metadata.extractionSource
+        });
+      }
+
+      if (reply.persistPlan.lifestyleEntries) {
+        persistedLogIds.lifestyleLogIds = await logLifestyleEntries({
+          supabase: input.supabase,
+          userId: input.userId,
+          sourceMessageId: userMessage.id,
+          entries: reply.parsedLifestyleEntries,
           extractionSource: reply.metadata.extractionSource
         });
       }
