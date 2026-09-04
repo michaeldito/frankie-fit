@@ -46,6 +46,13 @@ export type EvalReplayStep = {
   stepIndex: number;
 };
 
+export type EvalSummaryStep = {
+  dayIndex: number;
+  dayLabel: string;
+  scenarioDate: string;
+  stepIndex: number;
+};
+
 const cardioHappyDays: EvalScenarioDay[] = [
   {
     dayIndex: 0,
@@ -923,6 +930,15 @@ export function getScenarioReplaySteps(scenario: EvalScenario): EvalReplayStep[]
     }))
   ).map((step, stepIndex) => ({
     ...step,
+    stepIndex
+  }));
+}
+
+export function getScenarioDailySummarySteps(scenario: EvalScenario): EvalSummaryStep[] {
+  return scenario.days.map((day, stepIndex) => ({
+    dayIndex: day.dayIndex,
+    dayLabel: day.label,
+    scenarioDate: day.date,
     stepIndex
   }));
 }

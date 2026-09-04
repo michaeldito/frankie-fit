@@ -6,16 +6,12 @@ import { TuningNoteForm } from "@/components/admin/tuning-note-form";
 import { TuningNotesExportModal } from "@/components/admin/tuning-notes-export-modal";
 import {
   EVAL_SCENARIOS,
+  getScenarioDailySummarySteps,
   getScenarioReplaySteps,
   getScenarioUpdateCount,
   TUNING_REVIEW_CHECK_ID
 } from "@/lib/admin-evals";
-import {
-  resetScenarioUserAction,
-  runDailySummariesAction,
-  runFullScenarioAction,
-  runWeeklySummaryAction
-} from "@/app/app/admin/evals/actions";
+import { resetScenarioUserAction, runFullScenarioAction } from "@/app/app/admin/evals/actions";
 import { getAdminEvalsData, type RunItemStatusCounts } from "@/lib/admin-evals-data";
 import { requireAdminContext } from "@/lib/admin";
 import { getCurrentAppContext } from "@/lib/profile";
@@ -678,14 +674,13 @@ export default async function AdminEvalsPage({
 
             <div className="mt-4 border-t border-[var(--border)] pt-3.5">
               <EvalScenarioActions
-                dailySummariesAction={runDailySummariesAction}
+                dailySummarySteps={getScenarioDailySummarySteps(selectedScenario)}
                 evalReady={evalData.ready}
                 replaySteps={getScenarioReplaySteps(selectedScenario)}
                 resetAction={resetScenarioUserAction}
                 runFullAction={runFullScenarioAction}
                 scenarioId={selectedScenario.id}
                 scenarioLabel={selectedScenario.label}
-                weeklySummaryAction={runWeeklySummaryAction}
               />
             </div>
           </div>

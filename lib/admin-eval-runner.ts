@@ -550,21 +550,35 @@ export async function runEvalScenarioMessages(input: {
   };
 }
 
-export async function runEvalScenarioDailySummaries(scenario: EvalScenario) {
-  const targetUser = await resolveTargetUser(scenario.userEmail);
+export async function runEvalScenarioDailySummaryStep(input: {
+  dayIndex: number;
+  scenario: EvalScenario;
+}) {
+  const day = input.scenario.days.find((candidate) => candidate.dayIndex === input.dayIndex);
+
+  if (!day) {
+    throw new Error("Daily summary step index is out of range.");
+  }
+
+  const targetUser = await resolveTargetUser(input.scenario.userEmail);
   const profile = await loadProfile(targetUser.id);
   const supabase = createSupabaseServiceRoleClient();
+  const summary = await generateDailyCoachSummary({
+    supabase,
+    userId: targetUser.id,
+    profile,
+    date: day.date
+  });
+
+  return { day, summary };
+}
+
+export async function runEvalScenarioDailySummaries(scenario: EvalScenario) {
   const summaries = [];
 
   for (const day of scenario.days) {
-    summaries.push(
-      await generateDailyCoachSummary({
-        supabase,
-        userId: targetUser.id,
-        profile,
-        date: day.date
-      })
-    );
+    const result = await runEvalScenarioDailySummaryStep({ dayIndex: day.dayIndex, scenario });
+    summaries.push(result.summary);
   }
 
   return summaries;

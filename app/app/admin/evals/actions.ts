@@ -4,12 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getEvalScenarioById } from "@/lib/admin-evals";
 import { requireAdminContext } from "@/lib/admin";
-import {
-  resetEvalScenarioUser,
-  runEvalScenarioDailySummaries,
-  runEvalScenarioWeeklySummary,
-  runFullEvalScenario
-} from "@/lib/admin-eval-runner";
+import { resetEvalScenarioUser, runFullEvalScenario } from "@/lib/admin-eval-runner";
 import { getCurrentAppContext } from "@/lib/profile";
 
 function getStringValue(formData: FormData, key: string) {
@@ -58,24 +53,6 @@ export async function resetScenarioUserAction(formData: FormData) {
   redirectToEvals(
     `Reset ${scenario.userName}; removed ${result.deletedThreadCount} thread(s) and ${result.deletedEvalRunCount} eval run(s).`
   );
-}
-
-export async function runDailySummariesAction(formData: FormData) {
-  const scenario = getScenarioFromForm(formData);
-  await requireAdminUserId();
-  const summaries = await runEvalScenarioDailySummaries(scenario);
-
-  revalidatePath("/app/admin/evals");
-  redirectToEvals(`Generated ${summaries.length} daily summaries for ${scenario.label}.`);
-}
-
-export async function runWeeklySummaryAction(formData: FormData) {
-  const scenario = getScenarioFromForm(formData);
-  await requireAdminUserId();
-  await runEvalScenarioWeeklySummary(scenario);
-
-  revalidatePath("/app/admin/evals");
-  redirectToEvals(`Generated weekly summary for ${scenario.label}.`);
 }
 
 export async function runFullScenarioAction(formData: FormData) {
