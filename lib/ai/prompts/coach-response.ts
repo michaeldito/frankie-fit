@@ -1,5 +1,10 @@
 import type { AppProfile } from "@/lib/profile";
-import type { ParsedActivity, ParsedDietEntry, ParsedWellnessCheckin } from "@/lib/chat";
+import type {
+  ParsedActivity,
+  ParsedDietEntry,
+  ParsedLifestyleEntry,
+  ParsedWellnessCheckin
+} from "@/lib/chat";
 import type { PersonaProfile } from "@/lib/ai/prompts/personas";
 
 function formatActivities(activities: ParsedActivity[]) {
@@ -28,6 +33,16 @@ function formatDietEntries(entries: ParsedDietEntry[]) {
 
   return entries
     .map((entry) => `- ${entry.mealType ?? "meal"}: ${entry.description}`)
+    .join("\n");
+}
+
+function formatLifestyleEntries(entries: ParsedLifestyleEntry[]) {
+  if (entries.length === 0) {
+    return "None.";
+  }
+
+  return entries
+    .map((entry) => `- ${entry.category ?? "lifestyle"}: ${entry.description}`)
     .join("\n");
 }
 
@@ -60,7 +75,8 @@ export function buildCoachResponseSystemPrompt(persona: PersonaProfile | null = 
     "Never make optional missing detail feel like a blocker. Users can give simple updates, and Frankie should still be useful.",
     "When helpful, include one gentle nudge for richer future context, but keep it optional and low-pressure.",
     "Do not mention internal schemas, JSON, or tool execution.",
-    "Do not overclaim causality or medical certainty."
+    "Do not overclaim causality or medical certainty.",
+    "Treat lifestyle updates (social plans, family time, entertainment, travel, substance use) as neutral context, the same as any other log. Never moralize, warn, or lecture about substance use."
   ].filter((line): line is string => line !== null);
 
   if (persona) {
@@ -84,6 +100,7 @@ export function buildCoachResponseUserPrompt(input: {
   recentConversation: string;
   activities: ParsedActivity[];
   dietEntries: ParsedDietEntry[];
+  lifestyleEntries: ParsedLifestyleEntry[];
   wellnessCheckin: ParsedWellnessCheckin | null;
 }) {
   const goalText = input.profile?.primary_goal ?? "Not set";
@@ -98,10 +115,12 @@ export function buildCoachResponseUserPrompt(input: {
     formatActivities(input.activities),
     "Structured diet updates:",
     formatDietEntries(input.dietEntries),
+    "Structured lifestyle updates:",
+    formatLifestyleEntries(input.lifestyleEntries),
     "Structured wellness update:",
     formatWellness(input.wellnessCheckin),
     "Important response rules:",
-    "- Treat the structured activity, diet, and wellness sections as the source of truth for this turn.",
+    "- Treat the structured activity, diet, lifestyle, and wellness sections as the source of truth for this turn.",
     "- If a structured activity has no duration or no intensity, do not mention a duration or intensity for it.",
     "- If a structured diet entry is vague, acknowledge it generally without adding foods or quantities that are not listed.",
     "- Do not pull a duration, intensity, or other concrete detail forward from the recent conversation unless it is also present in the structured updates for this turn.",

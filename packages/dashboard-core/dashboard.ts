@@ -3,6 +3,7 @@ import { addDays, formatShortDate, formatShortDay, getPacificToday, getWeekStart
 
 export type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"];
 export type DietLogRow = Database["public"]["Tables"]["diet_logs"]["Row"];
+export type LifestyleLogRow = Database["public"]["Tables"]["lifestyle_logs"]["Row"];
 export type WellnessCheckinRow = Database["public"]["Tables"]["wellness_checkins"]["Row"];
 
 export type DashboardProfileInput = Pick<
@@ -69,9 +70,18 @@ export type WellnessDashboardData = {
   empty: boolean;
 };
 
+export type LifestyleDashboardData = {
+  metrics: DashboardMetric[];
+  patterns: Array<{ label: string; value: number }>;
+  recent: DashboardRecentItem[];
+  insight: string;
+  empty: boolean;
+};
+
 export type DashboardComputation = {
   exercise: ExerciseDashboardData;
   diet: DietDashboardData;
+  lifestyle: LifestyleDashboardData;
   wellness: WellnessDashboardData;
   nextStep: DashboardNextStep;
 };
@@ -122,6 +132,21 @@ export function createEmptyDietDashboard(): DietDashboardData {
     recent: [],
     insight:
       "No food has been logged yet. Even one simple meal update gives Frankie a much better read on your routine.",
+    empty: true
+  };
+}
+
+export function createEmptyLifestyleDashboard(): LifestyleDashboardData {
+  return {
+    metrics: [
+      { label: "Logged", value: "0" },
+      { label: "Days with logs", value: "0" },
+      { label: "Most common", value: "None yet" }
+    ],
+    patterns: [],
+    recent: [],
+    insight:
+      "No lifestyle updates are logged yet. Social plans, family time, entertainment, travel, or anything else outside a workout or meal all count.",
     empty: true
   };
 }
@@ -186,6 +211,14 @@ function formatActivityDetail(activity: ActivityLogRow) {
 function formatDietDetail(entry: DietLogRow) {
   const mealType = entry.meal_type ? `${capitalizeLabel(entry.meal_type, "Meal")} • ` : "";
   return `${mealType}${entry.description}`;
+}
+
+function formatLifestyleCategoryLabel(category: string) {
+  return capitalizeLabel(category.replace(/_/g, " "), "Lifestyle");
+}
+
+function formatLifestyleDetail(entry: LifestyleLogRow) {
+  return `${formatLifestyleCategoryLabel(entry.category)} • ${entry.description}`;
 }
 
 function formatWellnessDetail(entry: WellnessCheckinRow) {
@@ -312,6 +345,28 @@ function buildDietInsight(dietLogs: DietLogRow[], daysWithFoodLogs: number) {
   }
 
   return "You have enough meal data for Frankie to start spotting patterns. Keep the updates simple and consistent.";
+}
+
+function buildLifestyleInsight(lifestyleLogs: LifestyleLogRow[], daysWithLifestyleLogs: number) {
+  if (lifestyleLogs.length === 0) {
+    return createEmptyLifestyleDashboard().insight;
+  }
+
+  const categoryBreakdown = lifestyleLogs.reduce<Map<string, number>>((map, log) => {
+    map.set(log.category, (map.get(log.category) ?? 0) + 1);
+    return map;
+  }, new Map());
+  const topCategory = Array.from(categoryBreakdown.entries()).sort((left, right) => right[1] - left[1])[0];
+
+  if (daysWithLifestyleLogs <= 2) {
+    return "A few lifestyle updates are showing up. Logging more of what's going on outside training and meals will help Frankie see the fuller picture.";
+  }
+
+  if (topCategory) {
+    return `${formatLifestyleCategoryLabel(topCategory[0])} shows up most often in your recent lifestyle logs. Frankie can start weighing that alongside training and diet when it shapes coaching.`;
+  }
+
+  return "You have enough lifestyle context for Frankie to start noticing patterns alongside training and diet.";
 }
 
 function buildWellnessInsight(wellnessCheckins: WellnessCheckinRow[]) {
@@ -504,6 +559,43 @@ function buildDietDashboardData(dietLogs: DietLogRow[]): DietDashboardData {
   };
 }
 
+function buildLifestyleDashboardData(lifestyleLogs: LifestyleLogRow[]): LifestyleDashboardData {
+  if (lifestyleLogs.length === 0) {
+    return createEmptyLifestyleDashboard();
+  }
+
+  const weekStartKey = toDateKey(getWeekStart());
+  const lifestyleLogsThisWeek = lifestyleLogs.filter((log) => log.logged_for_date >= weekStartKey);
+  const daysWithLifestyleLogs = new Set(lifestyleLogsThisWeek.map((log) => log.logged_for_date)).size;
+  const categoryBreakdown = Array.from(
+    lifestyleLogs.reduce<Map<string, number>>((map, log) => {
+      map.set(log.category, (map.get(log.category) ?? 0) + 1);
+      return map;
+    }, new Map())
+  )
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 4)
+    .map(([label, value]) => ({ label: formatLifestyleCategoryLabel(label), value }));
+  const topCategory = categoryBreakdown[0]?.label ?? "None yet";
+
+  return {
+    metrics: [
+      { label: "Logged", value: `${lifestyleLogsThisWeek.length}` },
+      { label: "Days with logs", value: `${daysWithLifestyleLogs}` },
+      { label: "Most common", value: topCategory }
+    ],
+    patterns: categoryBreakdown,
+    recent: lifestyleLogs.slice(0, 6).map((entry) => ({
+      id: entry.id,
+      title: formatLifestyleCategoryLabel(entry.category),
+      detail: formatLifestyleDetail(entry),
+      dateLabel: formatShortDate(entry.logged_for_date)
+    })),
+    insight: buildLifestyleInsight(lifestyleLogsThisWeek, daysWithLifestyleLogs),
+    empty: false
+  };
+}
+
 // Wellness has no natural category to tally the way activity type or meal type does, so this
 // counts how often each signal gets mentioned at all (a non-null score) rather than tallying a
 // value. Easy to extend later — e.g. once a cross-pillar insight surfaces which signals actually
@@ -557,11 +649,13 @@ export function computeDashboardData(
   profile: DashboardProfileInput | null,
   activityLogs: ActivityLogRow[],
   dietLogs: DietLogRow[],
-  wellnessCheckins: WellnessCheckinRow[]
+  wellnessCheckins: WellnessCheckinRow[],
+  lifestyleLogs: LifestyleLogRow[] = []
 ): DashboardComputation {
   return {
     exercise: buildExerciseDashboardData(profile, activityLogs),
     diet: buildDietDashboardData(dietLogs),
+    lifestyle: buildLifestyleDashboardData(lifestyleLogs),
     wellness: buildWellnessDashboardData(wellnessCheckins),
     nextStep: buildNextStep(profile, activityLogs, dietLogs, wellnessCheckins)
   };

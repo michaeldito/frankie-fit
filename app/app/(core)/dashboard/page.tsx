@@ -5,6 +5,7 @@ import {
   type DashboardTrendPoint,
   type DietDashboardData,
   type ExerciseDashboardData,
+  type LifestyleDashboardData,
   type WellnessDashboardData,
   type WellnessTrendPoint
 } from "@/lib/dashboard";
@@ -14,11 +15,12 @@ type DashboardPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-type DashboardTabId = "exercise" | "diet" | "wellness";
+type DashboardTabId = "exercise" | "diet" | "lifestyle" | "wellness";
 
 const dashboardTabs: Array<{ id: DashboardTabId; label: string }> = [
   { id: "exercise", label: "Exercise" },
   { id: "diet", label: "Diet" },
+  { id: "lifestyle", label: "Lifestyle" },
   { id: "wellness", label: "Wellness" }
 ];
 
@@ -27,7 +29,7 @@ function getSearchParam(value: string | string[] | undefined) {
 }
 
 function getActiveTab(value: string | undefined): DashboardTabId {
-  if (value === "diet" || value === "wellness") {
+  if (value === "diet" || value === "lifestyle" || value === "wellness") {
     return value;
   }
 
@@ -294,6 +296,49 @@ function DietTab({ data }: { data: DietDashboardData }) {
   );
 }
 
+function LifestyleTab({ data }: { data: LifestyleDashboardData }) {
+  if (data.empty) {
+    return (
+      <EmptyState
+        title="No lifestyle data yet"
+        body={data.insight}
+        href="/app/chat"
+        cta="Log something"
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <section className="grid gap-3 md:grid-cols-2">
+        <FrankieInsight body={data.insight} />
+        <SectionCard eyebrow="Keep it simple" title="What good logging looks like">
+          <p className="leading-7 text-[var(--muted)]">
+            Anything outside a workout or a meal counts — social plans, family time,
+            entertainment, travel, or substance use. A quick note is enough.
+          </p>
+        </SectionCard>
+      </section>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        {data.metrics.map((metric) => (
+          <SummaryCard key={metric.label} label={metric.label} value={metric.value} />
+        ))}
+      </div>
+      <BreakdownList
+        emptyCopy="As lifestyle updates get logged, Frankie will summarize your patterns here."
+        items={data.patterns}
+        title="What shows up most"
+      />
+      <RecentList
+        emptyCopy="Your latest lifestyle logs will show up here."
+        items={data.recent}
+        title="Latest lifestyle logs"
+      />
+    </div>
+  );
+}
+
 function WellnessTab({ data }: { data: WellnessDashboardData }) {
   if (data.empty) {
     return (
@@ -383,6 +428,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       {activeTab === "exercise" ? <ExerciseTab data={dashboardData.exercise} /> : null}
       {activeTab === "diet" ? <DietTab data={dashboardData.diet} /> : null}
+      {activeTab === "lifestyle" ? <LifestyleTab data={dashboardData.lifestyle} /> : null}
       {activeTab === "wellness" ? <WellnessTab data={dashboardData.wellness} /> : null}
     </div>
   );

@@ -60,6 +60,15 @@ export type ParsedWellnessCheckin = {
   loggedForDate: LoggedForDateValue;
 };
 
+export type ParsedLifestyleEntry = {
+  description: string;
+  category: string | null;
+  confidence: number;
+  detectedKeyword: string;
+  timeReferenceText: string | null;
+  loggedForDate: LoggedForDateValue;
+};
+
 type ActivityMatch = {
   label: string;
   keyword: string;
@@ -1277,6 +1286,29 @@ function joinDietConfirmations(entries: ParsedDietEntry[]) {
   return `${leading}, and ${formatDietConfirmation(entries[entries.length - 1])}`;
 }
 
+function formatLifestyleConfirmation(entry: ParsedLifestyleEntry) {
+  return entry.description;
+}
+
+function joinLifestyleConfirmations(entries: ParsedLifestyleEntry[]) {
+  if (entries.length === 1) {
+    return formatLifestyleConfirmation(entries[0]);
+  }
+
+  if (entries.length === 2) {
+    return `${formatLifestyleConfirmation(entries[0])} and ${formatLifestyleConfirmation(
+      entries[1]
+    )}`;
+  }
+
+  const leading = entries
+    .slice(0, -1)
+    .map((entry) => formatLifestyleConfirmation(entry))
+    .join(", ");
+
+  return `${leading}, and ${formatLifestyleConfirmation(entries[entries.length - 1])}`;
+}
+
 function getWellnessDescriptor(
   score: number | null,
   descriptors: [string, string, string, string, string]
@@ -1360,12 +1392,14 @@ export function buildStructuredLogConfirmation(
   profile: AppProfile | null,
   parsedActivities: ParsedActivity[],
   parsedDietEntries: ParsedDietEntry[],
-  parsedWellnessCheckin: ParsedWellnessCheckin | null
+  parsedWellnessCheckin: ParsedWellnessCheckin | null,
+  parsedLifestyleEntries: ParsedLifestyleEntry[] = []
 ) {
   if (
     parsedActivities.length === 0 &&
     parsedDietEntries.length === 0 &&
-    !parsedWellnessCheckin
+    !parsedWellnessCheckin &&
+    parsedLifestyleEntries.length === 0
   ) {
     return null;
   }
@@ -1384,6 +1418,10 @@ export function buildStructuredLogConfirmation(
     confirmationSegments.push(formatWellnessConfirmation(parsedWellnessCheckin));
   }
 
+  if (parsedLifestyleEntries.length > 0) {
+    confirmationSegments.push(joinLifestyleConfirmations(parsedLifestyleEntries));
+  }
+
   const confirmationText = joinConfirmationSegments(confirmationSegments);
   const goalText = profile?.primary_goal
     ? ` That keeps us moving toward ${profile.primary_goal.toLowerCase()}.`
@@ -1394,6 +1432,7 @@ export function buildStructuredLogConfirmation(
     parsedActivities,
     parsedDietEntries,
     parsedWellnessCheckin,
+    parsedLifestyleEntries,
     reply: `Nice. I logged ${confirmationText}.${goalText} If you want, tell me how it felt, how the meals lined up with your day, or how recovery is trending and I can help shape the next step.`
   };
 }

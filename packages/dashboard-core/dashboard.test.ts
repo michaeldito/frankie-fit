@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { computeDashboardData, type ActivityLogRow, type DietLogRow, type WellnessCheckinRow } from "./dashboard";
+import {
+  computeDashboardData,
+  type ActivityLogRow,
+  type DietLogRow,
+  type LifestyleLogRow,
+  type WellnessCheckinRow
+} from "./dashboard";
 
 // Pinned "today" so week-relative fixtures (logged_for_date) are deterministic.
 // 2026-01-08 is a Thursday in the week starting Monday 2026-01-05.
@@ -31,6 +37,21 @@ function dietLog(overrides: Partial<DietLogRow> = {}): DietLogRow {
     meal_type: "lunch",
     logged_for_date: "2026-01-08",
     confidence: null,
+    metadata_json: null,
+    created_at: TODAY,
+    updated_at: TODAY,
+    ...overrides
+  };
+}
+
+function lifestyleLog(overrides: Partial<LifestyleLogRow> = {}): LifestyleLogRow {
+  return {
+    id: "lifestyle-1",
+    user_id: "user-1",
+    source_message_id: null,
+    category: "social",
+    description: "Went to an arcade on a date",
+    logged_for_date: "2026-01-08",
     metadata_json: null,
     created_at: TODAY,
     updated_at: TODAY,
@@ -107,6 +128,45 @@ describe("computeDashboardData: diet", () => {
     );
 
     expect(result.diet.metrics.find((m) => m.label === "Most logged")?.value).toBe("Snack");
+  });
+});
+
+describe("computeDashboardData: lifestyle", () => {
+  it("returns the empty dashboard when there are no logs", () => {
+    const result = computeDashboardData(null, [], [], []);
+    expect(result.lifestyle.empty).toBe(true);
+  });
+
+  it("surfaces the most-logged category in the metrics", () => {
+    const result = computeDashboardData(
+      null,
+      [],
+      [],
+      [],
+      [
+        lifestyleLog({ id: "l1", category: "substance_alcohol" }),
+        lifestyleLog({ id: "l2", category: "substance_alcohol" }),
+        lifestyleLog({ id: "l3", category: "social" })
+      ]
+    );
+
+    expect(result.lifestyle.metrics.find((m) => m.label === "Most common")?.value).toBe(
+      "Substance alcohol"
+    );
+  });
+
+  it("humanizes the category label in patterns and recent items", () => {
+    const result = computeDashboardData(
+      null,
+      [],
+      [],
+      [],
+      [lifestyleLog({ category: "substance_cannabis", description: "Had an edible" })]
+    );
+
+    expect(result.lifestyle.patterns[0].label).toBe("Substance cannabis");
+    expect(result.lifestyle.recent[0].title).toBe("Substance cannabis");
+    expect(result.lifestyle.recent[0].detail).toBe("Substance cannabis • Had an edible");
   });
 });
 

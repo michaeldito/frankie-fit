@@ -155,6 +155,7 @@ export async function resetEvalScenarioUser(scenario: EvalScenario) {
 
   await supabase.from("activity_logs").delete().eq("user_id", targetUser.id);
   await supabase.from("diet_logs").delete().eq("user_id", targetUser.id);
+  await supabase.from("lifestyle_logs").delete().eq("user_id", targetUser.id);
   await supabase.from("wellness_checkins").delete().eq("user_id", targetUser.id);
   await supabase.from("recommendations").delete().eq("user_id", targetUser.id);
   await supabase.from("weekly_summaries").delete().eq("user_id", targetUser.id);
