@@ -8,6 +8,7 @@ type SupabaseServerClient = SupabaseClient<Database>;
 export type AiTraceRunStatus =
   | "completed"
   | "clarification"
+  | "unavailable"
   | "log_write_failed"
   | "assistant_message_failed";
 

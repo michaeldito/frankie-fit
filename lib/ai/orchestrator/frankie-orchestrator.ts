@@ -1,7 +1,6 @@
 import type { Database } from "@/types/database";
 import type { AppProfile } from "@/lib/profile";
 import {
-  buildAssistantReply,
   buildStructuredLogConfirmation,
   extractTimeReferenceText,
   isLikelyDietClause,
@@ -39,6 +38,7 @@ type ChatContextSnapshot = {
 
 const DEFAULT_OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 export const FRANKIE_PROMPT_VERSION = "frankie-orchestrator-v10";
+const FRANKIE_UNAVAILABLE_REPLY = "Frankie is not reachable right now.";
 const BLOCKING_ACTIVITY_MISSING_FIELDS = new Set([
   "activityType",
   "loggedForDate",
@@ -64,7 +64,7 @@ export type FrankieOrchestrationResult = {
   parsedDietEntries: ParsedDietEntry[];
   parsedWellnessCheckin: ParsedWellnessCheckin | null;
   reply: string;
-  orchestrationMode: "model" | "rule_based_fallback";
+  orchestrationMode: "model" | "unavailable";
   shouldPersistStructuredData: boolean;
   persistPlan: {
     activities: boolean;
@@ -72,7 +72,7 @@ export type FrankieOrchestrationResult = {
     wellnessCheckin: boolean;
   };
   metadata: {
-    extractionSource: "model" | "rule_based";
+    extractionSource: "model" | "unavailable";
     usedOpenAi: boolean;
     fallbackReason?: string;
     intent?: string;
@@ -85,32 +85,22 @@ export type FrankieOrchestrationResult = {
   };
 };
 
-function buildRuleBasedFallback(
-  profile: AppProfile | null,
-  message: string,
-  fallbackReason: string
-): FrankieOrchestrationResult {
-  const fallbackReply = buildAssistantReply(profile, message);
-  const persistPlan = {
-    activities: fallbackReply.parsedActivities.length > 0,
-    dietEntries: fallbackReply.parsedDietEntries.length > 0,
-    wellnessCheckin: Boolean(fallbackReply.parsedWellnessCheckin)
-  };
-  const shouldPersist =
-    fallbackReply.assistantMessageType === "log_confirmation" &&
-    (persistPlan.activities || persistPlan.dietEntries || persistPlan.wellnessCheckin);
-
+function buildUnavailableReply(fallbackReason: string): FrankieOrchestrationResult {
   return {
-    assistantMessageType: fallbackReply.assistantMessageType,
-    parsedActivities: fallbackReply.parsedActivities,
-    parsedDietEntries: fallbackReply.parsedDietEntries,
-    parsedWellnessCheckin: fallbackReply.parsedWellnessCheckin,
-    reply: fallbackReply.reply,
-    orchestrationMode: "rule_based_fallback",
-    shouldPersistStructuredData: shouldPersist,
-    persistPlan,
+    assistantMessageType: "chat",
+    parsedActivities: [],
+    parsedDietEntries: [],
+    parsedWellnessCheckin: null,
+    reply: FRANKIE_UNAVAILABLE_REPLY,
+    orchestrationMode: "unavailable",
+    shouldPersistStructuredData: false,
+    persistPlan: {
+      activities: false,
+      dietEntries: false,
+      wellnessCheckin: false
+    },
     metadata: {
-      extractionSource: "rule_based",
+      extractionSource: "unavailable",
       usedOpenAi: false,
       fallbackReason,
       promptVersion: FRANKIE_PROMPT_VERSION
@@ -1029,11 +1019,7 @@ export async function orchestrateFrankieReply(input: {
   pendingClarification?: PendingClarification;
 }): Promise<FrankieOrchestrationResult> {
   if (!hasOpenAiApiKey()) {
-    return buildRuleBasedFallback(
-      input.profile,
-      input.message,
-      "OPENAI_API_KEY is not configured."
-    );
+    return buildUnavailableReply("OPENAI_API_KEY is not configured.");
   }
 
   try {
@@ -1161,14 +1147,7 @@ export async function orchestrateFrankieReply(input: {
       parsedActivities,
       parsedDietEntries,
       parsedWellnessCheckin,
-      reply:
-        reply ||
-        structuredFallback?.reply ||
-        buildRuleBasedFallback(
-          input.profile,
-          input.message,
-          "Model returned an empty reply."
-        ).reply,
+      reply: reply || structuredFallback?.reply || FRANKIE_UNAVAILABLE_REPLY,
       orchestrationMode: "model",
       shouldPersistStructuredData: usableData,
       persistPlan: {
@@ -1188,9 +1167,7 @@ export async function orchestrateFrankieReply(input: {
       }
     };
   } catch (error) {
-    return buildRuleBasedFallback(
-      input.profile,
-      input.message,
+    return buildUnavailableReply(
       error instanceof Error ? error.message : "Unknown AI orchestration error."
     );
   }

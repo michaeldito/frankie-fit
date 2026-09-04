@@ -10,7 +10,7 @@ export async function logActivityEntries(input: {
   userId: string;
   sourceMessageId: string;
   entries: ParsedActivity[];
-  extractionSource: "model" | "rule_based";
+  extractionSource: "model" | "unavailable";
 }) {
   if (input.entries.length === 0) {
     return [] as string[];

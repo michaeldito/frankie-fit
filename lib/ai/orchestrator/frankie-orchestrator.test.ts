@@ -66,7 +66,7 @@ beforeEach(() => {
 });
 
 describe("orchestrateFrankieReply", () => {
-  it("falls back to rule-based parsing when no API key is configured", async () => {
+  it("shows an unavailable message when no API key is configured", async () => {
     hasOpenAiApiKey.mockReturnValue(false);
     const { orchestrateFrankieReply } = await importOrchestrator();
 
@@ -76,13 +76,16 @@ describe("orchestrateFrankieReply", () => {
       recentMessages
     });
 
-    expect(result.orchestrationMode).toBe("rule_based_fallback");
-    expect(result.metadata.extractionSource).toBe("rule_based");
+    expect(result.orchestrationMode).toBe("unavailable");
+    expect(result.metadata.extractionSource).toBe("unavailable");
     expect(result.metadata.usedOpenAi).toBe(false);
+    expect(result.metadata.fallbackReason).toBe("OPENAI_API_KEY is not configured.");
+    expect(result.reply).toBe("Frankie is not reachable right now.");
+    expect(result.shouldPersistStructuredData).toBe(false);
     expect(createStructuredOpenAiResponse).not.toHaveBeenCalled();
   });
 
-  it("falls back to rule-based parsing when the model call throws", async () => {
+  it("shows an unavailable message when the model call throws", async () => {
     hasOpenAiApiKey.mockReturnValue(true);
     createStructuredOpenAiResponse.mockRejectedValue(new Error("network down"));
     const { orchestrateFrankieReply } = await importOrchestrator();
@@ -93,8 +96,26 @@ describe("orchestrateFrankieReply", () => {
       recentMessages
     });
 
-    expect(result.orchestrationMode).toBe("rule_based_fallback");
+    expect(result.orchestrationMode).toBe("unavailable");
     expect(result.metadata.fallbackReason).toBe("network down");
+    expect(result.reply).toBe("Frankie is not reachable right now.");
+    expect(result.shouldPersistStructuredData).toBe(false);
+  });
+
+  it("shows the unavailable message as filler text when the coach reply is empty and nothing was extracted", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(baseExtraction());
+    createTextOpenAiResponse.mockResolvedValue("");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "hello there",
+      recentMessages
+    });
+
+    expect(result.orchestrationMode).toBe("model");
+    expect(result.reply).toBe("Frankie is not reachable right now.");
   });
 
   it("returns a log_confirmation reply for a clean single-activity extraction", async () => {
@@ -180,21 +201,6 @@ describe("orchestrateFrankieReply", () => {
     expect(result.reply).toContain("logged");
   });
 
-  it("falls back to the rule-based reply text when the model returns an empty reply", async () => {
-    hasOpenAiApiKey.mockReturnValue(true);
-    createStructuredOpenAiResponse.mockResolvedValue(baseExtraction());
-    createTextOpenAiResponse.mockResolvedValue("");
-    const { orchestrateFrankieReply } = await importOrchestrator();
-
-    const result = await orchestrateFrankieReply({
-      profile: null,
-      message: "hello there",
-      recentMessages
-    });
-
-    expect(result.assistantMessageType).toBe("chat");
-    expect(result.reply).toContain("ready to help");
-  });
 });
 
 describe("orchestrateFrankieReply sanitization and dedup", () => {
