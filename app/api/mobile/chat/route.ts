@@ -470,6 +470,7 @@ export async function POST(request: NextRequest) {
           activitiesLogged: reply.persistPlan.activities
             ? reply.parsedActivities.map((activity) => ({
             activityType: activity.activityType,
+            description: activity.description,
             activityCategory: activity.activityCategory,
             sessionCount: activity.sessionCount,
             durationMinutes: activity.durationMinutes,

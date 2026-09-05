@@ -20,8 +20,12 @@ function formatActivities(activities: ParsedActivity[]) {
       const intensity = activity.intensity
         ? ` at ${activity.intensity.toLowerCase()} intensity`
         : "";
+      const description =
+        activity.description && activity.description.toLowerCase() !== activity.activityType.toLowerCase()
+          ? ` (${activity.description})`
+          : "";
 
-      return `- ${activity.activityType}${duration}${intensity}`;
+      return `- ${activity.activityType}${duration}${intensity}${description}`;
     })
     .join("\n");
 }

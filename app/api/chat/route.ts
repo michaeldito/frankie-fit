@@ -292,6 +292,7 @@ export async function POST(request: NextRequest) {
             ? reply.parsedActivities.map((activity, index) => ({
             id: persistedLogIds.activityLogIds[index] ?? null,
             activityType: activity.activityType,
+            description: activity.description,
             activityCategory: activity.activityCategory,
             sessionCount: activity.sessionCount,
             durationMinutes: activity.durationMinutes,

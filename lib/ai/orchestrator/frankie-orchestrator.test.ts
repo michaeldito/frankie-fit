@@ -686,4 +686,93 @@ describe("orchestrateFrankieReply sanitization and dedup", () => {
     expect(result.parsedActivities[0].durationMinutes).toBe(45);
     expect(result.parsedActivities[0].intensity).toBeNull();
   });
+
+  it("consolidates a shared session duration across different categories into a generic mixed-workout entry", async () => {
+    // activityCategory equality is too strict a merge key for a cross-category shared session
+    // (see the "does not merge activities from different categories" test above, which relies on
+    // category staying part of the distinction) — so instead of trusting the model to flag this
+    // itself, the orchestrator checks the raw message directly: a shared session states its
+    // duration once ("running and stretching for 45 minutes"), so it's safe to merge into one
+    // generic "mixed workout" entry without knowing which named activity should "win" the title.
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({
+            activityType: "running",
+            description: "running",
+            activityCategory: "cardio",
+            durationMinutes: 45,
+            intensity: "Light",
+            timeReferenceText: "today"
+          }),
+          activity({
+            activityType: "stretching",
+            description: "stretching",
+            activityCategory: "mobility",
+            durationMinutes: 45,
+            intensity: "Light",
+            timeReferenceText: "today"
+          })
+        ]
+      })
+    );
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "Today I did running and stretching for 45 minutes at light intensity",
+      recentMessages,
+      skipCoachResponse: true
+    });
+
+    expect(result.parsedActivities).toHaveLength(1);
+    expect(result.parsedActivities[0].activityType).toBe("mixed workout");
+    expect(result.parsedActivities[0].activityCategory).toBe("other");
+    expect(result.parsedActivities[0].description).toBe("running and stretching");
+    expect(result.parsedActivities[0].durationMinutes).toBe(45);
+  });
+
+  it("does not merge a cross-category coincidental duration match when the duration is restated per activity", async () => {
+    // Same category mismatch and duration/intensity/date match as the test above, but the raw
+    // message states "30 minutes" twice — once per activity — so this must stay two entries
+    // totaling 60 minutes, not collapse into one 30-minute "mixed workout" entry. This is the
+    // same scenario already covered by "does not merge activities from different categories"
+    // above; this test additionally pins down that the new duration-count check is what's
+    // actually keeping them apart, not just the pre-existing category check.
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({
+            activityType: "squats",
+            description: "squats",
+            activityCategory: "strength",
+            durationMinutes: 30,
+            intensity: "Moderate",
+            timeReferenceText: "today"
+          }),
+          activity({
+            activityType: "walking",
+            description: "walked",
+            activityCategory: "cardio",
+            durationMinutes: 30,
+            intensity: "Moderate",
+            timeReferenceText: "today"
+          })
+        ]
+      })
+    );
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "did squats for 30 minutes moderate, also walked for 30 minutes moderate today",
+      recentMessages,
+      skipCoachResponse: true
+    });
+
+    expect(result.parsedActivities).toHaveLength(2);
+    expect(result.parsedActivities.map((a) => a.durationMinutes)).toEqual([30, 30]);
+  });
 });
