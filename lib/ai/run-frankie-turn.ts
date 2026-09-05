@@ -7,6 +7,7 @@ import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
 import { logLifestyleEntries } from "@/lib/ai/tools/log-lifestyle";
 import { logWellnessCheckin } from "@/lib/ai/tools/log-wellness";
+import { getLatestCoachSummary } from "@/lib/ai/summaries/frankie-summaries";
 
 type SupabaseServerClient = SupabaseClient<Database>;
 type ChatMessage = Database["public"]["Tables"]["conversation_messages"]["Row"];
@@ -129,10 +130,15 @@ export async function runFrankieTurn(input: {
   }
 
   const startedAt = Date.now();
+  const latestCoachSummary = await getLatestCoachSummary({
+    supabase: input.supabase,
+    userId: input.userId
+  });
   const reply = await orchestrateFrankieReply({
     profile: input.profile,
     message: input.message,
-    recentMessages: input.recentMessages
+    recentMessages: input.recentMessages,
+    latestCoachSummary
   });
   const persistedLogIds: PersistedLogIds = {
     activityLogIds: [],

@@ -164,6 +164,49 @@ describe("orchestrateFrankieReply", () => {
     expect(result.reply).toBe("Nice work on the run!");
   });
 
+  it("passes the latest coach summary into the coach-reply prompt as background context only", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({ activities: [activity()] })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Nice work on the run!");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    await orchestrateFrankieReply({
+      profile: null,
+      message: "ran 3 miles this morning, felt moderate",
+      recentMessages,
+      latestCoachSummary: {
+        summaryText: "Consistent morning runs this week, energy trending up.",
+        summaryType: "weekly",
+        periodEnd: "2026-05-10"
+      }
+    });
+
+    const userPrompt = createTextOpenAiResponse.mock.calls[0][0].userPrompt as string;
+    expect(userPrompt).toContain("Consistent morning runs this week, energy trending up.");
+  });
+
+  it("falls back to 'None yet' in the coach-reply prompt when there's no coach summary", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({ activities: [activity()] })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Nice work on the run!");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    await orchestrateFrankieReply({
+      profile: null,
+      message: "ran 3 miles this morning, felt moderate",
+      recentMessages
+    });
+
+    const userPrompt = createTextOpenAiResponse.mock.calls[0][0].userPrompt as string;
+    expect(userPrompt).toContain(
+      "Coaching memory (background context only, not this turn's facts): None yet."
+    );
+  });
+
   it("asks a blocking clarification question when the activity type has no evidence", async () => {
     hasOpenAiApiKey.mockReturnValue(true);
     createStructuredOpenAiResponse.mockResolvedValue(

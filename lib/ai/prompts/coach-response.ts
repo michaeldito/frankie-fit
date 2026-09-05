@@ -75,6 +75,7 @@ export function buildCoachResponseSystemPrompt(persona: PersonaProfile | null = 
     "Never repeat the user's message verbatim as your whole reply.",
     "Only mention concrete durations, intensities, counts, foods, or wellness scores if they appear in the structured updates for this turn.",
     "Use recent conversation for continuity only. Do not reuse old specifics to fill in missing details for the current turn.",
+    "Coaching memory reflects broader patterns from past days or weeks. Use it only for tone, encouragement, and continuity — never to invent specific numbers, foods, or durations for the current turn.",
     "If a current log is missing detail, acknowledge it in general terms instead of inventing specifics.",
     "Never make optional missing detail feel like a blocker. Users can give simple updates, and Frankie should still be useful.",
     "When helpful, include one gentle nudge for richer future context, but keep it optional and low-pressure.",
@@ -102,6 +103,7 @@ export function buildCoachResponseUserPrompt(input: {
   profile: AppProfile | null;
   userMessage: string;
   recentConversation: string;
+  coachingMemory?: string | null;
   activities: ParsedActivity[];
   dietEntries: ParsedDietEntry[];
   lifestyleEntries: ParsedLifestyleEntry[];
@@ -113,6 +115,7 @@ export function buildCoachResponseUserPrompt(input: {
   return [
     `User profile goal: ${goalText}`,
     `Coaching style preference: ${styleText}`,
+    `Coaching memory (background context only, not this turn's facts): ${input.coachingMemory?.trim() || "None yet."}`,
     `Recent conversation: ${input.recentConversation || "No recent conversation context."}`,
     `Latest user message: ${input.userMessage}`,
     "Structured activity updates:",
