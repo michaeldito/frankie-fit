@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getPacificDateKey } from "../../../packages/dashboard-core";
+import { getPacificDateKey } from "@frankie-fit/dashboard-core";
 import { resolveLoggedForDate } from "./shared";
 
 describe("resolveLoggedForDate", () => {

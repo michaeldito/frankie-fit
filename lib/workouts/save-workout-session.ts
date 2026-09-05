@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import { findProgramWorkout, wodTemplates, type WorkoutSessionInput } from "../../packages/workout-core";
+import { findProgramWorkout, wodTemplates, type WorkoutSessionInput } from "@frankie-fit/workout-core";
 
 type SupabaseServerClient = SupabaseClient<Database>;
 

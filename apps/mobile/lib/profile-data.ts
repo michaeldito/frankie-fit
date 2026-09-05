@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Database } from '../../../types/database';
-import { formatList, formatScheduleNotes, getAccountLabel, getDisplayName } from '../../../packages/profile-core';
+import { formatList, formatScheduleNotes, getAccountLabel, getDisplayName } from '@frankie-fit/profile-core';
 
 export { formatList, formatScheduleNotes, getAccountLabel, getDisplayName };
 

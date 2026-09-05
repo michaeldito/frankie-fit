@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { getPacificDateKey } from "../../packages/dashboard-core";
+import { getPacificDateKey } from "@frankie-fit/dashboard-core";
 import {
   exerciseCatalog,
   findProgramWorkout,
@@ -17,7 +17,7 @@ import {
   type WorkoutSessionInput,
   type WorkoutSessionType,
   type WorkoutSetInput
-} from "../../packages/workout-core";
+} from "@frankie-fit/workout-core";
 import { ExercisePicker, type SelectedExercise } from "./exercise-picker";
 import { ProgramWorkoutPicker } from "./program-workout-picker";
 import { SetRows, type EditableSet } from "./set-rows";

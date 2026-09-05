@@ -1,6 +1,6 @@
 "use client";
 
-import type { WodTemplate } from "../../packages/workout-core";
+import type { WodTemplate } from "@frankie-fit/workout-core";
 
 type WodPickerProps = {
   onSelect: (template: WodTemplate) => void;

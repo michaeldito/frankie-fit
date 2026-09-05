@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { fromDateKey, getPacificDateKey } from "../../packages/dashboard-core";
-import { findProgramWorkout, type ProgramSchedule } from "../../packages/workout-core";
+import { fromDateKey, getPacificDateKey } from "@frankie-fit/dashboard-core";
+import { findProgramWorkout, type ProgramSchedule } from "@frankie-fit/workout-core";
 
 type ProgramCalendarProps = {
   schedule: ProgramSchedule;

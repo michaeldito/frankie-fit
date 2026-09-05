@@ -1,7 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { formatList, formatScheduleNotes, getAccountLabel, getDisplayName } from "@/packages/profile-core";
+import { formatList, formatScheduleNotes, getAccountLabel, getDisplayName } from "@frankie-fit/profile-core";
 
 export { formatList, formatScheduleNotes, getAccountLabel, getDisplayName };
 

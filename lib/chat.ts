@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { AppProfile, CurrentAppContext } from "@/lib/profile";
-import { addDays, getPacificToday, toDateKey } from "../packages/dashboard-core";
+import { addDays, getPacificToday, toDateKey } from "@frankie-fit/dashboard-core";
 
 export const MAX_CHAT_MESSAGE_LENGTH = 4000;
 

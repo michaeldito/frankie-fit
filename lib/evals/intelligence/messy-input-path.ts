@@ -1,4 +1,4 @@
-import { getPacificDateKey } from "@/packages/dashboard-core";
+import { getPacificDateKey } from "@frankie-fit/dashboard-core";
 import type {
   ExpectedActivity,
   ExpectedDietEntry,

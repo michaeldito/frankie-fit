@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { programSchedules } from "@/packages/workout-core";
+import { programSchedules } from "@frankie-fit/workout-core";
 
 export default function ProgramsPage() {
   return (
