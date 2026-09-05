@@ -9,15 +9,6 @@ export default async function WorkoutsPage() {
 
   return (
     <div className="space-y-6 lg:space-y-7">
-      <section className="ff-panel-strong p-5 sm:p-6">
-        <p className="ff-kicker">Log a session</p>
-        <h1 className="mt-3 text-xl font-semibold tracking-[-0.03em]">Workouts</h1>
-        <p className="mt-2 max-w-2xl leading-7 text-[var(--muted)]">
-          Pick an exercise, add sets as you go, or build a superset or circuit round by round.
-          Start from a curated WOD if you want a preset structure.
-        </p>
-      </section>
-
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Suspense fallback={null}>
           <WorkoutLogger />
