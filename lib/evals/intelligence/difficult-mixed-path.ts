@@ -184,7 +184,10 @@ export const DIFFICULT_MIXED_PATH_INTELLIGENCE_CASES: IntelligenceEvalCase[] = [
         mealType: "breakfast"
       },
       {
-        description: "tacos and beer",
+        // Alcohol is excluded from dietEntries by design (see the "substance_alcohol" rule in
+        // extract-user-update.ts) — beer belongs only in lifestyleEntries, which this harness
+        // doesn't assert on yet, so it's intentionally absent here rather than a missed case.
+        description: "tacos",
         loggedForDate: "2026-05-06",
         mealType: "dinner"
       }

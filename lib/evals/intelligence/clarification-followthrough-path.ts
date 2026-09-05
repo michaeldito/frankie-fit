@@ -1,6 +1,8 @@
+import { getPacificDateKey } from "@/packages/dashboard-core";
 import type { IntelligenceEvalCase, IntelligenceEvalExpected } from "@/lib/evals/intelligence/types";
 
-const TODAY = "2026-09-02";
+// Computed at run time so this never goes stale — see messy-input-path.ts for the same fix.
+const TODAY = getPacificDateKey();
 
 function activityExpected(activities: IntelligenceEvalExpected["activities"]): IntelligenceEvalExpected {
   return {

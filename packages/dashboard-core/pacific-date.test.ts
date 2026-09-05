@@ -1,5 +1,19 @@
-import { describe, expect, it } from "vitest";
-import { addDays, formatShortDate, formatShortDay, fromDateKey, getPacificDateKey, getWeekStart, toDateKey } from "./pacific-date";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  addDays,
+  formatShortDate,
+  formatShortDay,
+  fromDateKey,
+  getPacificDateKey,
+  getPacificDayUtcRange,
+  getPacificYesterday,
+  getWeekStart,
+  toDateKey
+} from "./pacific-date";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("getPacificDateKey", () => {
   it("stays on the prior Pacific day for a UTC timestamp just after UTC midnight", () => {
@@ -10,6 +24,38 @@ describe("getPacificDateKey", () => {
   it("rolls to the next Pacific day once UTC crosses the Pacific offset", () => {
     // 2026-03-05T08:01:00Z is 2026-03-05T00:01:00-08:00 in Los Angeles.
     expect(getPacificDateKey(new Date("2026-03-05T08:01:00.000Z"))).toBe("2026-03-05");
+  });
+});
+
+describe("getPacificYesterday", () => {
+  it("returns the day before Pacific today", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-05T20:00:00.000Z"));
+
+    expect(toDateKey(getPacificYesterday())).toBe("2026-03-04");
+  });
+});
+
+describe("getPacificDayUtcRange", () => {
+  it("anchors to Pacific midnight during standard time (UTC-8)", () => {
+    const range = getPacificDayUtcRange("2026-01-15");
+
+    expect(range.startUtcIso).toBe("2026-01-15T08:00:00.000Z");
+    expect(range.endUtcIso).toBe("2026-01-16T08:00:00.000Z");
+  });
+
+  it("anchors to Pacific midnight during daylight time (UTC-7)", () => {
+    const range = getPacificDayUtcRange("2026-07-15");
+
+    expect(range.startUtcIso).toBe("2026-07-15T07:00:00.000Z");
+    expect(range.endUtcIso).toBe("2026-07-16T07:00:00.000Z");
+  });
+
+  it("always spans exactly 24 hours", () => {
+    const range = getPacificDayUtcRange("2026-11-01");
+    const spanMs = new Date(range.endUtcIso).getTime() - new Date(range.startUtcIso).getTime();
+
+    expect(spanMs).toBe(24 * 60 * 60 * 1000);
   });
 });
 

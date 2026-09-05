@@ -5,7 +5,11 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["**/*.test.ts"],
-    exclude: ["node_modules", "apps/mobile", ".next"],
+    // Bare "node_modules" only matches the top-level folder, not nested ones (e.g. a git
+    // worktree checked out under .claude/worktrees/ brings its own node_modules) — the custom
+    // exclude list here replaces vitest's own recursive default rather than extending it, so
+    // this has to be explicit and recursive itself.
+    exclude: ["**/node_modules/**", "apps/mobile/**", ".next/**", ".claude/worktrees/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
@@ -13,9 +17,12 @@ export default defineConfig({
       // actually covered rather than being diluted by the much larger untested app surface
       // (components, routes, Supabase-bound modules). Add a file here when you add its test.
       include: [
+        "components/admin/coaching-memory-grid.tsx",
         "components/chat/logged-entry-format.ts",
         "components/chat/quick-start.ts",
         "lib/admin.ts",
+        "lib/chat.ts",
+        "lib/notifications.ts",
         "lib/rate-limit.ts",
         "lib/workouts/validation.ts",
         "lib/ai/context/load-chat-context.ts",
@@ -24,20 +31,30 @@ export default defineConfig({
         "lib/ai/prompts/extract-user-update.ts",
         "lib/ai/prompts/personas.ts",
         "lib/ai/schemas/extracted-user-update.ts",
+        "lib/ai/tools/log-activity.ts",
+        "lib/ai/tools/log-diet.ts",
+        "lib/ai/tools/log-lifestyle.ts",
+        "lib/ai/tools/log-wellness.ts",
         "lib/ai/tools/shared.ts",
+        "lib/ai/tracing/ai-trace-runs.ts",
         "lib/programs/enroll-in-program.ts",
         "lib/programs/get-program-progress.ts",
         "packages/dashboard-core/dashboard.ts",
         "packages/dashboard-core/pacific-date.ts",
+        "packages/profile-core/profile-format.ts",
         "packages/workout-core/exercise-catalog.ts"
       ],
-      // Set just below the current baseline (as of this commit: ~85% stmts/lines, ~89% funcs,
-      // ~70% branches) so CI catches a real regression. Ratchet these up as coverage improves.
+      // Set just below the current baseline (as of this commit: ~75% stmts/lines, ~82% funcs,
+      // ~65% branches) so CI catches a real regression. This dropped from the prior baseline
+      // when lib/chat.ts, lib/notifications.ts, and coaching-memory-grid.tsx were added to the
+      // include list above — those files have tests for specific exported helpers, not full-file
+      // coverage, so being honest about including them lowered the aggregate. Ratchet these up
+      // as coverage improves (see the "test the log-writing layer" roadmap item).
       thresholds: {
-        lines: 80,
-        statements: 80,
-        functions: 85,
-        branches: 65
+        lines: 70,
+        statements: 70,
+        functions: 78,
+        branches: 60
       }
     }
   },

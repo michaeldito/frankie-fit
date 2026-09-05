@@ -19,6 +19,7 @@ import {
 } from "@/lib/ai/prompts/coach-response";
 import { buildExtractUserUpdatePrompt } from "@/lib/ai/prompts/extract-user-update";
 import { getPersona } from "@/lib/ai/prompts/personas";
+import type { LatestCoachSummary } from "@/lib/ai/summaries/frankie-summaries";
 import {
   createStructuredOpenAiResponse,
   createTextOpenAiResponse,
@@ -1206,6 +1207,7 @@ export async function orchestrateFrankieReply(input: {
   recentMessages: ChatMessage[];
   skipCoachResponse?: boolean;
   pendingClarification?: PendingClarification;
+  latestCoachSummary?: LatestCoachSummary | null;
 }): Promise<FrankieOrchestrationResult> {
   if (!hasOpenAiApiKey()) {
     return buildUnavailableReply("OPENAI_API_KEY is not configured.");
@@ -1336,6 +1338,7 @@ export async function orchestrateFrankieReply(input: {
             profile: input.profile,
             userMessage: input.message,
             recentConversation: context.recentConversation,
+            coachingMemory: input.latestCoachSummary?.summaryText ?? null,
             activities: parsedActivities,
             dietEntries: parsedDietEntries,
             lifestyleEntries: parsedLifestyleEntries,

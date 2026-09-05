@@ -5,11 +5,12 @@ import {
   type PendingClarification
 } from "@/lib/ai/orchestrator/frankie-orchestrator";
 import { recordAiTraceRun } from "@/lib/ai/tracing/ai-trace-runs";
+import { getLatestCoachSummary } from "@/lib/ai/summaries/frankie-summaries";
 import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
 import { logLifestyleEntries } from "@/lib/ai/tools/log-lifestyle";
 import { logWellnessCheckin } from "@/lib/ai/tools/log-wellness";
-import { MAX_CHAT_MESSAGE_LENGTH } from "@/lib/chat";
+import { loadChatThreadAndMessages, MAX_CHAT_MESSAGE_LENGTH } from "@/lib/chat";
 import type { AppProfile } from "@/lib/profile";
 import { getDisplayName } from "@/lib/profile";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -19,7 +20,6 @@ import type { Database } from "@/types/database";
 const CHAT_RATE_LIMIT_PER_MINUTE = 20;
 
 type MobileSupabaseClient = SupabaseClient<Database>;
-type ChatThread = Database["public"]["Tables"]["conversation_threads"]["Row"];
 type ChatMessage = Database["public"]["Tables"]["conversation_messages"]["Row"];
 
 function getBearerToken(request: NextRequest) {
@@ -31,28 +31,6 @@ function getBearerToken(request: NextRequest) {
   }
 
   return token;
-}
-
-function isMissingChatTable(message: string | null | undefined) {
-  if (!message) {
-    return false;
-  }
-
-  return (
-    message.includes("public.conversation_threads") ||
-    message.includes("public.conversation_messages") ||
-    message.includes("public.activity_logs") ||
-    message.includes("public.diet_logs") ||
-    message.includes("public.wellness_checkins")
-  );
-}
-
-function buildInitialAssistantMessage(profile: AppProfile | null) {
-  if (profile?.onboarding_summary) {
-    return `${profile.onboarding_summary} A good place to start is simple: log today's workout, tell me what you ate, or give me a quick wellness check-in and I will take it from there.`;
-  }
-
-  return "Good to see you. Want to log something, check in, or plan today?";
 }
 
 async function createMobileContext(request: NextRequest) {
@@ -98,133 +76,19 @@ async function createMobileContext(request: NextRequest) {
   };
 }
 
-async function getOrCreatePrimaryThread(
-  supabase: MobileSupabaseClient,
-  userId: string,
-  title: string
-) {
-  const { data: existingThread, error: existingThreadError } = await supabase
-    .from("conversation_threads")
-    .select("*")
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (existingThreadError) {
-    return {
-      error: existingThreadError.message,
-      thread: null
-    };
-  }
-
-  if (existingThread) {
-    return {
-      error: null,
-      thread: existingThread
-    };
-  }
-
-  const { data: createdThread, error: createdThreadError } = await supabase
-    .from("conversation_threads")
-    .insert({
-      user_id: userId,
-      title
-    })
-    .select("*")
-    .single();
-
-  return {
-    error: createdThreadError?.message ?? null,
-    thread: createdThread
-  };
-}
-
-async function seedInitialAssistantMessage(
-  supabase: MobileSupabaseClient,
-  threadId: string,
-  userId: string,
-  profile: AppProfile | null
-) {
-  const { data: existingMessages, error: existingMessagesError } = await supabase
-    .from("conversation_messages")
-    .select("id")
-    .eq("thread_id", threadId)
-    .limit(1);
-
-  if (existingMessagesError) {
-    return existingMessagesError.message;
-  }
-
-  if (existingMessages && existingMessages.length > 0) {
-    return null;
-  }
-
-  const { error: insertError } = await supabase.from("conversation_messages").insert({
-    thread_id: threadId,
-    user_id: userId,
-    role: "assistant",
-    message_type: profile?.onboarding_summary ? "summary" : "chat",
-    content: buildInitialAssistantMessage(profile),
-    structured_payload: profile?.onboarding_summary
-      ? {
-          seededFromOnboarding: true
-        }
-      : {}
-  });
-
-  return insertError?.message ?? null;
-}
-
-async function loadChatExperience(input: {
+function loadChatExperience(input: {
   profile: AppProfile | null;
   supabase: MobileSupabaseClient;
   user: User;
 }) {
   const displayName = getDisplayName(input.user, input.profile);
-  const { thread, error: threadError } = await getOrCreatePrimaryThread(
-    input.supabase,
-    input.user.id,
-    `${displayName}'s Frankie chat`
-  );
 
-  if (!thread) {
-    return {
-      error: threadError,
-      messages: [] as ChatMessage[],
-      schemaReady: !isMissingChatTable(threadError),
-      thread: null as ChatThread | null
-    };
-  }
-
-  const seedError = await seedInitialAssistantMessage(
-    input.supabase,
-    thread.id,
-    input.user.id,
-    input.profile
-  );
-
-  if (seedError) {
-    return {
-      error: seedError,
-      messages: [] as ChatMessage[],
-      schemaReady: !isMissingChatTable(seedError),
-      thread
-    };
-  }
-
-  const { data: messages, error: messagesError } = await input.supabase
-    .from("conversation_messages")
-    .select("*")
-    .eq("thread_id", thread.id)
-    .order("created_at", { ascending: true });
-
-  return {
-    error: messagesError?.message ?? null,
-    messages: messages ?? [],
-    schemaReady: !isMissingChatTable(messagesError?.message),
-    thread
-  };
+  return loadChatThreadAndMessages({
+    supabase: input.supabase,
+    userId: input.user.id,
+    profile: input.profile,
+    threadTitle: `${displayName}'s Frankie chat`
+  });
 }
 
 export async function GET(request: NextRequest) {
@@ -374,11 +238,16 @@ export async function POST(request: NextRequest) {
       ? (previousMessage.structured_payload as { pendingClarification?: PendingClarification } | null)
           ?.pendingClarification
       : undefined;
+  const latestCoachSummary = await getLatestCoachSummary({
+    supabase: context.supabase,
+    userId: context.user.id
+  });
   const reply = await orchestrateFrankieReply({
     profile: context.profile,
     message: messageForReply,
     recentMessages: chatExperience.messages,
-    pendingClarification
+    pendingClarification,
+    latestCoachSummary
   });
   const persistedLogIds = {
     activityLogIds: [] as string[],

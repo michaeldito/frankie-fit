@@ -1,6 +1,9 @@
 import type { User } from "@supabase/supabase-js";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatList, formatScheduleNotes, getAccountLabel, getDisplayName } from "@/packages/profile-core";
+
+export { formatList, formatScheduleNotes, getAccountLabel, getDisplayName };
 
 const profileSelect = `
   full_name,
@@ -133,35 +136,6 @@ export async function getCurrentAppContext(): Promise<CurrentAppContext> {
   };
 }
 
-export function getDisplayName(user: User | null, profile: AppProfile | null) {
-  const metadataName =
-    typeof user?.user_metadata?.full_name === "string"
-      ? user.user_metadata.full_name
-      : null;
-
-  return (
-    profile?.full_name?.trim() ||
-    metadataName?.trim() ||
-    user?.email?.split("@")[0] ||
-    "Frankie Fit member"
-  );
-}
-
-export function getAccountLabel(accountType: string | null | undefined) {
-  switch (accountType) {
-    case "admin":
-      return "Admin account";
-    case "internal_test":
-    case "test":
-      return "Internal test account";
-    case "synthetic_demo":
-    case "synthetic":
-      return "Synthetic demo account";
-    default:
-      return "Frankie Fit member";
-  }
-}
-
 export function getInitials(name: string) {
   const segments = name
     .split(" ")
@@ -174,19 +148,6 @@ export function getInitials(name: string) {
   }
 
   return segments.map((segment) => segment[0]?.toUpperCase() ?? "").join("");
-}
-
-export function formatList(values: string[] | null | undefined, fallback = "Not set yet") {
-  return values && values.length > 0 ? values.join(", ") : fallback;
-}
-
-export function formatScheduleNotes(profile: AppProfile | null | undefined) {
-  const notes =
-    typeof profile?.preferred_schedule?.notes === "string"
-      ? profile.preferred_schedule.notes.trim()
-      : "";
-
-  return notes || "Not set yet";
 }
 
 export function isOnboardingRequired(context: CurrentAppContext) {

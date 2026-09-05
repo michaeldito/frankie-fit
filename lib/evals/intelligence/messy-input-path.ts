@@ -1,3 +1,4 @@
+import { getPacificDateKey } from "@/packages/dashboard-core";
 import type {
   ExpectedActivity,
   ExpectedDietEntry,
@@ -5,7 +6,10 @@ import type {
   IntelligenceEvalExpected
 } from "@/lib/evals/intelligence/types";
 
-const TODAY = "2026-09-02";
+// Computed at run time (rather than hardcoded) so implicit_today cases never go stale as real
+// dates move forward — this must match the same Pacific-date logic the extraction prompt uses
+// to tell the model what "today" is (see buildExtractUserUpdatePrompt).
+const TODAY = getPacificDateKey();
 
 function activityOnly(activities: ExpectedActivity[]): IntelligenceEvalExpected {
   return {

@@ -296,6 +296,42 @@ async function upsertSummary(input: {
   return data;
 }
 
+export type LatestCoachSummary = {
+  summaryText: string;
+  summaryType: "daily" | "weekly";
+  periodEnd: string;
+};
+
+/**
+ * The single most recently generated coach_summaries row for a user, regardless of type.
+ * Used to give the live coach-reply prompt background context on the user's recent patterns —
+ * never fed into extraction, which must stay grounded only in the current message (see
+ * docs/frankie-eval-loop-design.md's "Extraction should stay grounded in the current user
+ * message" guiding principle).
+ */
+export async function getLatestCoachSummary(input: {
+  supabase: SupabaseServerClient;
+  userId: string;
+}): Promise<LatestCoachSummary | null> {
+  const { data, error } = await input.supabase
+    .from("coach_summaries")
+    .select("summary_text, summary_type, period_end")
+    .eq("user_id", input.userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return {
+    summaryText: data.summary_text,
+    summaryType: data.summary_type,
+    periodEnd: data.period_end
+  };
+}
+
 export async function generateDailyCoachSummary(input: {
   date: string;
   profile: AppProfile | null;

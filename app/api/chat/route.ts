@@ -4,6 +4,7 @@ import {
   type PendingClarification
 } from "@/lib/ai/orchestrator/frankie-orchestrator";
 import { recordAiTraceRun } from "@/lib/ai/tracing/ai-trace-runs";
+import { getLatestCoachSummary } from "@/lib/ai/summaries/frankie-summaries";
 import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
 import { logLifestyleEntries } from "@/lib/ai/tools/log-lifestyle";
@@ -195,11 +196,16 @@ export async function POST(request: NextRequest) {
       ? (previousMessage.structured_payload as { pendingClarification?: PendingClarification } | null)
           ?.pendingClarification
       : undefined;
+  const latestCoachSummary = await getLatestCoachSummary({
+    supabase,
+    userId: context.user.id
+  });
   const reply = await orchestrateFrankieReply({
     profile: context.profile,
     message: messageForReply,
     recentMessages: chatExperience.messages,
-    pendingClarification
+    pendingClarification,
+    latestCoachSummary
   });
   const persistedLogIds = {
     activityLogIds: [] as string[],

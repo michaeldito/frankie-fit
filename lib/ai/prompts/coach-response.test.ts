@@ -143,6 +143,22 @@ describe("buildCoachResponseUserPrompt", () => {
     expect(prompt).toContain("Recent conversation: No recent conversation context.");
   });
 
+  it("falls back to a placeholder when there's no coaching memory", () => {
+    const prompt = buildCoachResponseUserPrompt(baseInput());
+    expect(prompt).toContain(
+      "Coaching memory (background context only, not this turn's facts): None yet."
+    );
+  });
+
+  it("includes the coaching memory text, trimmed, when present", () => {
+    const prompt = buildCoachResponseUserPrompt(
+      baseInput({ coachingMemory: "  Consistent morning runs this week.  " })
+    );
+    expect(prompt).toContain(
+      "Coaching memory (background context only, not this turn's facts): Consistent morning runs this week."
+    );
+  });
+
   it("reports 'None.' for each structured section when nothing was parsed", () => {
     const prompt = buildCoachResponseUserPrompt(baseInput());
     expect(prompt).toContain("Structured activity updates:\n\nNone.");

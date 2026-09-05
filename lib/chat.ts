@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { AppProfile, CurrentAppContext } from "@/lib/profile";
@@ -256,22 +257,6 @@ function splitActivityClauses(message: string) {
     .filter(Boolean);
 }
 
-function splitDietClauses(message: string) {
-  return message
-    .split(
-      /\s*(?:,|;|\band then\b|\bthen\b|\bplus\b|&|\band (?=(?:i\s+(?:had|ate|drank|snacked)\b|for\s+(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b|(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b)))\s*/i
-    )
-    .map((clause) => clause.trim())
-    .filter(Boolean);
-}
-
-function splitWellnessClauses(message: string) {
-  return message
-    .split(/\s*(?:,|;|\band\b|\bbut\b|\bwhile\b|&|\.)\s*/i)
-    .map((clause) => clause.trim())
-    .filter(Boolean);
-}
-
 function getDurationMinutes(clause: string) {
   const normalizedClause = clause.toLowerCase();
   const minuteMatch = normalizedClause.match(/(\d+)\s*(minutes?|mins?|min)\b/);
@@ -504,25 +489,6 @@ function hasFoodCue(clause: string) {
   });
 }
 
-function cleanDietDescription(clause: string) {
-  return clause
-    .replace(
-      /^(?:for\s+)?(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b\s*(?:was|were|is|=|:)?\s*/i,
-      ""
-    )
-    .replace(/^i\s+(?:had|ate|drank|snacked(?:\s+on)?)\s+/i, "")
-    .replace(
-      /\s+for\s+(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b/i,
-      ""
-    )
-    .replace(
-      /\s+(?:as\s+a\s+)?(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b/i,
-      ""
-    )
-    .replace(/[.]+$/g, "")
-    .trim();
-}
-
 function looksLikeDietClause(clause: string, mealMatch: MealMatch | null) {
   const normalizedClause = clause.toLowerCase();
   const hasDietVerb = /\b(?:had|ate|drank|snacked(?:\s+on)?)\b/i.test(normalizedClause);
@@ -559,378 +525,13 @@ export function isLikelyActivityClause(clause: string) {
   return findActivityMatch(clause) !== null;
 }
 
-function hasAnyCue(clause: string, cues: string[]) {
-  return cues.some((cue) => {
-    const regex = new RegExp(`\\b${escapeRegex(cue)}\\b`, "i");
-    return regex.test(clause);
-  });
-}
+type SupabaseServerClient = SupabaseClient<Database>;
 
-function hasCueDescriptorPattern(
-  clause: string,
-  cues: string[],
-  descriptors: string[]
+async function getOrCreatePrimaryThread(
+  supabase: SupabaseServerClient,
+  userId: string,
+  title: string
 ) {
-  const cuePattern = cues.map((cue) => escapeRegex(cue)).join("|");
-  const descriptorPattern = descriptors
-    .sort((left, right) => right.length - left.length)
-    .map((descriptor) => escapeRegex(descriptor))
-    .join("|");
-
-  if (!cuePattern || !descriptorPattern) {
-    return false;
-  }
-
-  return new RegExp(
-    `\\b(?:${cuePattern})\\b(?:\\s+(?:is|feels|felt|seems|has been))?\\s+(?:${descriptorPattern})\\b`,
-    "i"
-  ).test(clause);
-}
-
-function getNumericScore(clause: string, cues: string[]) {
-  const normalizedClause = clause.toLowerCase();
-
-  for (const cue of cues) {
-    const escapedCue = escapeRegex(cue);
-    const afterCue = new RegExp(
-      `\\b${escapedCue}\\b[^\\d]{0,16}([1-5])(?:\\s*(?:\\/|out of)\\s*5)?`,
-      "i"
-    );
-    const afterMatch = normalizedClause.match(afterCue);
-
-    if (afterMatch) {
-      return Number.parseInt(afterMatch[1], 10);
-    }
-
-    const beforeCue = new RegExp(
-      `([1-5])(?:\\s*(?:\\/|out of)\\s*5)?[^\\d]{0,16}\\b${escapedCue}\\b`,
-      "i"
-    );
-    const beforeMatch = normalizedClause.match(beforeCue);
-
-    if (beforeMatch) {
-      return Number.parseInt(beforeMatch[1], 10);
-    }
-  }
-
-  return null;
-}
-
-function getEnergyScore(clause: string) {
-  const numericScore = getNumericScore(clause, ["energy"]);
-
-  if (numericScore !== null) {
-    return numericScore;
-  }
-
-  const normalizedClause = clause.toLowerCase();
-  const hasEnergyCue = hasAnyCue(normalizedClause, [
-    "energy",
-    "energized",
-    "energised",
-    "tired",
-    "fatigued",
-    "fatigue",
-    "exhausted",
-    "drained",
-    "wiped",
-    "sluggish"
-  ]);
-
-  if (!hasEnergyCue) {
-    return null;
-  }
-
-  if (/\b(?:no energy|zero energy|exhausted|drained|wiped)\b/i.test(normalizedClause)) {
-    return 1;
-  }
-
-  if (
-    /\b(?:low energy|tired|fatigued|fatigue|sluggish|a bit tired)\b/i.test(
-      normalizedClause
-    ) ||
-    hasCueDescriptorPattern(normalizedClause, ["energy"], ["low", "tired", "sluggish"])
-  ) {
-    return 2;
-  }
-
-  if (
-    /\b(?:okay|ok|fine|decent|moderate|all right|alright)\b/i.test(normalizedClause) ||
-    hasCueDescriptorPattern(normalizedClause, ["energy"], ["okay", "ok", "fine", "decent"])
-  ) {
-    return 3;
-  }
-
-  if (
-    /\b(?:great|amazing|excellent|energized|energised|high energy)\b/i.test(
-      normalizedClause
-    ) ||
-    hasCueDescriptorPattern(normalizedClause, ["energy"], ["great", "amazing", "excellent", "high"])
-  ) {
-    return 5;
-  }
-
-  if (
-    /\b(?:solid|good|steady|pretty good)\b/i.test(normalizedClause) ||
-    hasCueDescriptorPattern(normalizedClause, ["energy"], ["solid", "good", "steady"])
-  ) {
-    return 4;
-  }
-
-  return 3;
-}
-
-function getSorenessScore(clause: string) {
-  const numericScore = getNumericScore(clause, ["soreness", "sore", "recovery"]);
-
-  if (numericScore !== null) {
-    return numericScore;
-  }
-
-  const normalizedClause = clause.toLowerCase();
-  const hasSorenessCue = hasAnyCue(normalizedClause, [
-    "sore",
-    "soreness",
-    "stiff",
-    "beat up",
-    "wrecked",
-    "fresh",
-    "recovered",
-    "recovery"
-  ]);
-
-  if (!hasSorenessCue) {
-    return null;
-  }
-
-  if (/\b(?:not sore|no soreness|fresh|fully recovered)\b/i.test(normalizedClause)) {
-    return 1;
-  }
-
-  if (
-    /\b(?:a little sore|slightly sore|mild soreness|light soreness)\b/i.test(
-      normalizedClause
-    ) ||
-    hasCueDescriptorPattern(normalizedClause, ["soreness", "sore"], ["light", "mild", "slight"])
-  ) {
-    return 2;
-  }
-
-  if (
-    /\b(?:very sore|pretty sore|quite sore|beat up)\b/i.test(normalizedClause) ||
-    hasCueDescriptorPattern(normalizedClause, ["soreness", "sore"], ["high", "very sore"])
-  ) {
-    return 4;
-  }
-
-  if (/\b(?:wrecked|extremely sore|can barely move)\b/i.test(normalizedClause)) {
-    return 5;
-  }
-
-  if (
-    /\b(?:sore|soreness|stiff|tight)\b/i.test(normalizedClause) ||
-    hasCueDescriptorPattern(normalizedClause, ["soreness", "sore"], ["moderate", "okay", "ok"])
-  ) {
-    return 3;
-  }
-
-  return 3;
-}
-
-function getStressScore(clause: string) {
-  const numericScore = getNumericScore(clause, ["stress", "stressed"]);
-
-  if (numericScore !== null) {
-    return numericScore;
-  }
-
-  const normalizedClause = clause.toLowerCase();
-  const hasStressCue = hasAnyCue(normalizedClause, [
-    "stress",
-    "stressed",
-    "overwhelmed",
-    "tense",
-    "pressure",
-    "anxious",
-    "anxiety",
-    "calm",
-    "relaxed"
-  ]);
-
-  if (!hasStressCue) {
-    return null;
-  }
-
-  if (/\b(?:calm|relaxed|low stress|stress is low)\b/i.test(normalizedClause)) {
-    return 1;
-  }
-
-  if (
-    /\b(?:manageable|a little stressed|slight stress|some pressure)\b/i.test(
-      normalizedClause
-    ) ||
-    hasCueDescriptorPattern(normalizedClause, ["stress"], ["manageable", "light", "slight"])
-  ) {
-    return 2;
-  }
-
-  if (
-    /\b(?:moderate stress|stress is okay|stress is fine|some stress)\b/i.test(
-      normalizedClause
-    ) ||
-    hasCueDescriptorPattern(normalizedClause, ["stress"], ["moderate", "okay", "ok", "fine"])
-  ) {
-    return 3;
-  }
-
-  if (/\b(?:extremely stressed|maxed out|swamped|burned out)\b/i.test(normalizedClause)) {
-    return 5;
-  }
-
-  if (
-    /\b(?:stressed|high stress|overwhelmed|tense|anxious)\b/i.test(normalizedClause) ||
-    hasCueDescriptorPattern(normalizedClause, ["stress"], ["high"])
-  ) {
-    return 4;
-  }
-
-  return 3;
-}
-
-function getMotivationScore(clause: string) {
-  const numericScore = getNumericScore(clause, ["motivation", "motivated"]);
-
-  if (numericScore !== null) {
-    return numericScore;
-  }
-
-  const normalizedClause = clause.toLowerCase();
-  const hasMotivationCue = hasAnyCue(normalizedClause, [
-    "motivation",
-    "motivated",
-    "unmotivated",
-    "drive",
-    "fired up",
-    "not feeling it",
-    "ready to train"
-  ]);
-
-  if (!hasMotivationCue) {
-    return null;
-  }
-
-  if (/\b(?:no motivation|zero motivation|unmotivated|not feeling it)\b/i.test(normalizedClause)) {
-    return 1;
-  }
-
-  if (
-    /\b(?:low motivation|hard to get going|motivation is low)\b/i.test(normalizedClause) ||
-    hasCueDescriptorPattern(normalizedClause, ["motivation"], ["low"])
-  ) {
-    return 2;
-  }
-
-  if (
-    /\b(?:mixed motivation|okay motivation|motivation is okay|some motivation)\b/i.test(
-      normalizedClause
-    ) ||
-    hasCueDescriptorPattern(normalizedClause, ["motivation"], ["okay", "ok", "fine", "mixed", "steady"])
-  ) {
-    return 3;
-  }
-
-  if (
-    /\b(?:fired up|very motivated|high motivation)\b/i.test(normalizedClause) ||
-    hasCueDescriptorPattern(normalizedClause, ["motivation"], ["high"])
-  ) {
-    return 5;
-  }
-
-  if (
-    /\b(?:motivated|ready to train|solid motivation)\b/i.test(normalizedClause) ||
-    hasCueDescriptorPattern(normalizedClause, ["motivation"], ["solid", "good"])
-  ) {
-    return 4;
-  }
-
-  return 3;
-}
-
-function getMoodScore(clause: string) {
-  const numericScore = getNumericScore(clause, ["mood", "headspace", "mindset"]);
-
-  if (numericScore !== null) {
-    return numericScore;
-  }
-
-  const normalizedClause = clause.toLowerCase();
-  const hasOtherWellnessCue =
-    getEnergyScore(clause) !== null ||
-    getSorenessScore(clause) !== null ||
-    getStressScore(clause) !== null ||
-    getMotivationScore(clause) !== null;
-  const hasMoodCue =
-    hasAnyCue(normalizedClause, [
-      "mood",
-      "headspace",
-      "mindset",
-      "mental",
-      "emotionally"
-    ]) ||
-    (/\b(?:feel|feeling)\b/i.test(normalizedClause) && !hasOtherWellnessCue);
-
-  if (!hasMoodCue) {
-    return null;
-  }
-
-  if (/\b(?:awful|terrible|miserable|really down)\b/i.test(normalizedClause)) {
-    return 1;
-  }
-
-  if (/\b(?:rough|off|not great|down|low mood)\b/i.test(normalizedClause)) {
-    return 2;
-  }
-
-  if (
-    /\b(?:okay|ok|fine|neutral|steady)\b/i.test(normalizedClause) ||
-    hasCueDescriptorPattern(normalizedClause, ["mood", "headspace", "mindset"], [
-      "okay",
-      "ok",
-      "fine",
-      "neutral",
-      "steady"
-    ])
-  ) {
-    return 3;
-  }
-
-  if (
-    /\b(?:great|excellent|amazing|really good)\b/i.test(normalizedClause) ||
-    hasCueDescriptorPattern(normalizedClause, ["mood", "headspace", "mindset"], [
-      "great",
-      "excellent",
-      "amazing"
-    ])
-  ) {
-    return 5;
-  }
-
-  if (
-    /\b(?:good|calm|pretty good|positive)\b/i.test(normalizedClause) ||
-    hasCueDescriptorPattern(normalizedClause, ["mood", "headspace", "mindset"], [
-      "good",
-      "calm",
-      "positive"
-    ])
-  ) {
-    return 4;
-  }
-
-  return 3;
-}
-
-async function getOrCreatePrimaryThread(userId: string, title: string) {
-  const supabase = await createSupabaseServerClient();
   const { data: existingThread, error: existingThreadError } = await supabase
     .from("conversation_threads")
     .select("*")
@@ -969,11 +570,11 @@ async function getOrCreatePrimaryThread(userId: string, title: string) {
 }
 
 async function seedInitialAssistantMessage(
+  supabase: SupabaseServerClient,
   threadId: string,
   userId: string,
   profile: AppProfile | null
 ) {
-  const supabase = await createSupabaseServerClient();
   const { data: existingMessages, error: existingMessagesError } = await supabase
     .from("conversation_messages")
     .select("id")
@@ -1005,6 +606,63 @@ async function seedInitialAssistantMessage(
   return insertError?.message ?? null;
 }
 
+/**
+ * Client-agnostic core shared by the web and mobile chat routes: get-or-create the user's
+ * primary thread, seed its opening assistant message if empty, then load the full message
+ * history. Takes an already-constructed Supabase client so callers can use whichever auth
+ * style fits their transport (cookie-based on web, bearer-token on mobile).
+ */
+export async function loadChatThreadAndMessages(input: {
+  supabase: SupabaseServerClient;
+  userId: string;
+  profile: AppProfile | null;
+  threadTitle: string;
+}): Promise<ChatExperience> {
+  const { thread, error: threadError } = await getOrCreatePrimaryThread(
+    input.supabase,
+    input.userId,
+    input.threadTitle
+  );
+
+  if (!thread) {
+    return {
+      schemaReady: !isMissingChatTable(threadError),
+      thread: null,
+      messages: [],
+      error: threadError
+    };
+  }
+
+  const seedError = await seedInitialAssistantMessage(
+    input.supabase,
+    thread.id,
+    input.userId,
+    input.profile
+  );
+
+  if (seedError) {
+    return {
+      schemaReady: !isMissingChatTable(seedError),
+      thread,
+      messages: [],
+      error: seedError
+    };
+  }
+
+  const { data: messages, error: messagesError } = await input.supabase
+    .from("conversation_messages")
+    .select("*")
+    .eq("thread_id", thread.id)
+    .order("created_at", { ascending: true });
+
+  return {
+    schemaReady: !isMissingChatTable(messagesError?.message),
+    thread,
+    messages: messages ?? [],
+    error: messagesError?.message ?? null
+  };
+}
+
 export async function getChatExperience(
   context: CurrentAppContext,
   displayName: string
@@ -1018,49 +676,14 @@ export async function getChatExperience(
     };
   }
 
-  const threadTitle = `${displayName}'s Frankie chat`;
-  const { thread, error: threadError } = await getOrCreatePrimaryThread(
-    context.user.id,
-    threadTitle
-  );
-
-  if (!thread) {
-    return {
-      schemaReady: !isMissingChatTable(threadError),
-      thread: null,
-      messages: [],
-      error: threadError
-    };
-  }
-
-  const seedError = await seedInitialAssistantMessage(
-    thread.id,
-    context.user.id,
-    context.profile
-  );
-
-  if (seedError) {
-    return {
-      schemaReady: !isMissingChatTable(seedError),
-      thread,
-      messages: [],
-      error: seedError
-    };
-  }
-
   const supabase = await createSupabaseServerClient();
-  const { data: messages, error: messagesError } = await supabase
-    .from("conversation_messages")
-    .select("*")
-    .eq("thread_id", thread.id)
-    .order("created_at", { ascending: true });
 
-  return {
-    schemaReady: !isMissingChatTable(messagesError?.message),
-    thread,
-    messages: messages ?? [],
-    error: messagesError?.message ?? null
-  };
+  return loadChatThreadAndMessages({
+    supabase,
+    userId: context.user.id,
+    profile: context.profile,
+    threadTitle: `${displayName}'s Frankie chat`
+  });
 }
 
 export function parseActivityMessage(message: string): ParsedActivity[] {
@@ -1098,135 +721,6 @@ export function parseActivityMessage(message: string): ParsedActivity[] {
   });
 
   return parsedActivities;
-}
-
-export function parseDietMessage(message: string): ParsedDietEntry[] {
-  const clauses = splitDietClauses(message);
-  const parsedEntries: ParsedDietEntry[] = [];
-  const seenKeys = new Set<string>();
-
-  clauses.forEach((clause) => {
-    const mealMatch = findMealMatch(clause);
-
-    if (!looksLikeDietClause(clause, mealMatch)) {
-      return;
-    }
-
-    const cleanedDescription = cleanDietDescription(clause);
-    const timeReferenceText = extractTimeReferenceText(clause);
-    const loggedForDate = getLoggedForDate(clause);
-
-    if (!cleanedDescription) {
-      return;
-    }
-
-    const entry: ParsedDietEntry = {
-      description: cleanedDescription,
-      mealType: mealMatch?.label ?? null,
-      confidence: mealMatch ? 0.92 : hasFoodCue(clause) ? 0.82 : 0.7,
-      detectedKeyword: mealMatch?.keyword ?? "food_update",
-      timeReferenceText,
-      loggedForDate
-    };
-    const dedupeKey = `${entry.mealType ?? "unknown"}::${entry.description.toLowerCase()}`;
-
-    if (seenKeys.has(dedupeKey)) {
-      return;
-    }
-
-    seenKeys.add(dedupeKey);
-    parsedEntries.push(entry);
-  });
-
-  return parsedEntries;
-}
-
-export function parseWellnessMessage(message: string): ParsedWellnessCheckin | null {
-  const clauses = splitWellnessClauses(message);
-  const relevantClauses: string[] = [];
-  const detectedSignals = new Set<string>();
-  let energyScore: number | null = null;
-  let sorenessScore: number | null = null;
-  let moodScore: number | null = null;
-  let stressScore: number | null = null;
-  let motivationScore: number | null = null;
-
-  clauses.forEach((clause) => {
-    const normalizedClause = clause.trim();
-
-    if (!normalizedClause) {
-      return;
-    }
-
-    let clauseMatched = false;
-
-    const nextEnergyScore = getEnergyScore(normalizedClause);
-
-    if (nextEnergyScore !== null) {
-      energyScore = nextEnergyScore;
-      detectedSignals.add("energy");
-      clauseMatched = true;
-    }
-
-    const nextSorenessScore = getSorenessScore(normalizedClause);
-
-    if (nextSorenessScore !== null) {
-      sorenessScore = nextSorenessScore;
-      detectedSignals.add("soreness");
-      clauseMatched = true;
-    }
-
-    const nextMoodScore = getMoodScore(normalizedClause);
-
-    if (nextMoodScore !== null) {
-      moodScore = nextMoodScore;
-      detectedSignals.add("mood");
-      clauseMatched = true;
-    }
-
-    const nextStressScore = getStressScore(normalizedClause);
-
-    if (nextStressScore !== null) {
-      stressScore = nextStressScore;
-      detectedSignals.add("stress");
-      clauseMatched = true;
-    }
-
-    const nextMotivationScore = getMotivationScore(normalizedClause);
-
-    if (nextMotivationScore !== null) {
-      motivationScore = nextMotivationScore;
-      detectedSignals.add("motivation");
-      clauseMatched = true;
-    }
-
-    if (clauseMatched) {
-      relevantClauses.push(normalizedClause.replace(/[.]+$/g, ""));
-    }
-  });
-
-  if (
-    energyScore === null &&
-    sorenessScore === null &&
-    moodScore === null &&
-    stressScore === null &&
-    motivationScore === null
-  ) {
-    return null;
-  }
-
-  const loggedForDate = getLoggedForDate(message);
-
-  return {
-    energyScore,
-    sorenessScore,
-    moodScore,
-    stressScore,
-    motivationScore,
-    notes: relevantClauses.length > 0 ? relevantClauses.join("; ") : null,
-    detectedSignals: Array.from(detectedSignals),
-    loggedForDate
-  };
 }
 
 function formatActivityConfirmation(activity: ParsedActivity) {
@@ -1434,33 +928,5 @@ export function buildStructuredLogConfirmation(
     parsedWellnessCheckin,
     parsedLifestyleEntries,
     reply: `Nice. I logged ${confirmationText}.${goalText} If you want, tell me how it felt, how the meals lined up with your day, or how recovery is trending and I can help shape the next step.`
-  };
-}
-
-export function buildAssistantReply(profile: AppProfile | null, message: string) {
-  const parsedActivities = parseActivityMessage(message);
-  const parsedDietEntries = parseDietMessage(message);
-  const parsedWellnessCheckin = parseWellnessMessage(message);
-  const structuredConfirmation = buildStructuredLogConfirmation(
-    profile,
-    parsedActivities,
-    parsedDietEntries,
-    parsedWellnessCheckin
-  );
-
-  if (structuredConfirmation) {
-    return structuredConfirmation;
-  }
-
-  const coachingStyleText = profile?.coaching_style
-    ? ` I will keep the tone ${profile.coaching_style.toLowerCase()}.`
-    : "";
-
-  return {
-    assistantMessageType: "chat" as const,
-    parsedActivities: [],
-    parsedDietEntries: [],
-    parsedWellnessCheckin: null,
-    reply: `I am ready to help with that.${coachingStyleText} Right now the live workflows are activity logging, food logging, and wellness check-ins, so if you tell me what movement you did, what you ate, or how energy and recovery feel, I can save it and respond from there.`
   };
 }
