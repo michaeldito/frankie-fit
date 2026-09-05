@@ -16,14 +16,18 @@ export default defineConfig({
       // Scoped to files that currently have tests, so the percentage reflects what we've
       // actually covered rather than being diluted by the much larger untested app surface
       // (components, routes, Supabase-bound modules). Add a file here when you add its test.
-      // Note: the 4 app/api/logs/*/[id]/route.ts handlers have real, passing tests
-      // (route.test.ts next to each) but are deliberately NOT listed here — @vitest/coverage-v8
-      // drops the coverage entry for any executed file living under a Next.js bracket-path
-      // segment (e.g. "[id]") during its remap step, while an un-executed sibling with the same
-      // pattern still shows up fine as 0%. Confirmed by scoping a run to just one of these route
-      // tests: the file that actually ran vanishes from the report entirely instead of showing
-      // coverage, while the other three (never executed) list normally at 0%. This is a tooling
-      // limitation, not a signal that these files are untested.
+      // Note: every app/api/**/route.ts handler with a co-located route.test.ts (the 4
+      // app/api/logs/*/[id]/route.ts handlers, app/api/notifications/route.ts,
+      // app/api/notifications/read-all/route.ts, app/api/notifications/[id]/read/route.ts,
+      // app/api/programs/[slug]/enroll/route.ts) has real, passing tests but is deliberately NOT
+      // listed here — @vitest/coverage-v8 drops the coverage entry for any route.ts file that
+      // actually executes during a test run (regardless of whether its path has a bracket
+      // segment), while an un-executed sibling with the same include pattern still shows up fine
+      // as 0%. Confirmed by scoping runs to individual route tests one at a time: whichever
+      // route.ts actually ran vanishes from the report entirely instead of showing real coverage,
+      // while never-executed included files list normally at 0%. This is a tooling limitation in
+      // coverage-v8's handling of this directory shape, not a signal that these files are
+      // untested — see their route.test.ts files for the real coverage.
       include: [
         "components/admin/coaching-memory-grid.tsx",
         "components/chat/logged-entry-format.ts",
