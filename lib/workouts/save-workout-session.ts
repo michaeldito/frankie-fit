@@ -4,6 +4,30 @@ import { findProgramWorkout, wodTemplates, type WorkoutSessionInput } from "../.
 
 type SupabaseServerClient = SupabaseClient<Database>;
 
+function resolveActivityType(input: WorkoutSessionInput): string {
+  if (!input.wodTemplateSlug) {
+    return "weight lifting";
+  }
+
+  if (wodTemplates.some((template) => template.slug === input.wodTemplateSlug)) {
+    return "crossfit";
+  }
+
+  const programWorkout = findProgramWorkout(input.wodTemplateSlug);
+
+  switch (programWorkout?.category) {
+    case "cardio":
+      return "cardio";
+    case "flexibility":
+      return "mobility";
+    case "core":
+      return "core";
+    case "strength":
+    default:
+      return "weight lifting";
+  }
+}
+
 function buildActivityDescription(input: WorkoutSessionInput) {
   if (input.wodTemplateSlug) {
     const template = wodTemplates.find((candidate) => candidate.slug === input.wodTemplateSlug);
@@ -46,7 +70,7 @@ export async function saveWorkoutSession(input: {
     .from("activity_logs")
     .insert({
       user_id: userId,
-      activity_type: "weight lifting",
+      activity_type: resolveActivityType(session),
       description: buildActivityDescription(session),
       duration_minutes: session.totalTimeSeconds ? Math.round(session.totalTimeSeconds / 60) : null,
       logged_for_date: session.loggedForDate

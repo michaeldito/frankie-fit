@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { CoachingMemoryGrid } from "@/components/admin/coaching-memory-grid";
 import { EvalScenarioActions } from "@/components/admin/eval-scenario-actions";
+import { EvalTabSection } from "@/components/admin/eval-tab-section";
 import { TuningNoteForm } from "@/components/admin/tuning-note-form";
 import { TuningNotesExportModal } from "@/components/admin/tuning-notes-export-modal";
 import {
@@ -737,30 +738,11 @@ export default async function AdminEvalsPage({
         ) : null}
       </section>
 
-      <nav className="flex gap-1 border-b border-[var(--border)]">
-        <Link
-          className={`-mb-px rounded-t-[0.5rem] border border-b-0 px-3 py-2 text-sm font-semibold transition ${
-            activeTab === "runs"
-              ? "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--foreground)]"
-              : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
-          }`}
-          href="/app/admin/evals?tab=runs"
-        >
-          Eval runs <span className="text-xs text-[var(--muted)]">{evalData.runs.length}</span>
-        </Link>
-        <Link
-          className={`-mb-px rounded-t-[0.5rem] border border-b-0 px-3 py-2 text-sm font-semibold transition ${
-            activeTab === "memory"
-              ? "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--foreground)]"
-              : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
-          }`}
-          href="/app/admin/evals?tab=memory"
-        >
-          Coaching memory{" "}
-          <span className="text-xs text-[var(--muted)]">{evalData.summaries.length}</span>
-        </Link>
-      </nav>
-
+      <EvalTabSection
+        activeTab={activeTab}
+        memoryCount={evalData.summaries.length}
+        runsCount={evalData.runs.length}
+      >
       {activeTab === "runs" ? (
         <>
           <section className="grid gap-2.5 sm:grid-cols-4">
@@ -976,6 +958,7 @@ export default async function AdminEvalsPage({
           <CoachingMemoryGrid summaries={evalData.summaries} />
         </SectionCard>
       )}
+      </EvalTabSection>
 
     </div>
   );

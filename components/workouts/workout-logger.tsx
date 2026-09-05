@@ -34,6 +34,8 @@ type CircuitSlotState = {
   defaultDuration: string;
   defaultReps: string;
   defaultWeight: string;
+  /** True when every round was already known up front (from a template) and there's nothing left to add. */
+  fixedRounds: boolean;
   name: string;
   rounds: EditableSet[];
   slug: string;
@@ -110,6 +112,7 @@ function buildCircuitSlotsFromExercises(
       defaultReps,
       defaultWeight,
       defaultDuration,
+      fixedRounds: rounds.length > 0,
       rounds
     };
   });
@@ -154,6 +157,79 @@ function buildExercisesInput(
       return { exerciseSlug: entry.slug, exerciseName: entry.name, position, sets };
     })
     .filter((exercise) => exercise.sets.length > 0);
+}
+
+type CircuitSlotEntry = { slot: CircuitSlotState; index: number };
+
+type CircuitRoundGridProps = {
+  entries: CircuitSlotEntry[];
+  maxRounds: number;
+  onRoundChange: (slotIndex: number, roundIndex: number, patch: Partial<EditableSet>) => void;
+  onRemoveRound?: (slotIndex: number, roundIndex: number) => void;
+};
+
+function CircuitRoundGrid({ entries, maxRounds, onRoundChange, onRemoveRound }: CircuitRoundGridProps) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: maxRounds }, (_, roundIndex) => {
+        const rows = entries.filter(({ slot }) => slot.rounds[roundIndex]);
+
+        if (rows.length === 0) {
+          return null;
+        }
+
+        return (
+          <div className="ff-card-soft space-y-2 p-4" key={`round-${roundIndex}`}>
+            <p className="ff-kicker">Round {roundIndex + 1}</p>
+            <div className="space-y-2">
+              {rows.map(({ slot, index }) => {
+                const round = slot.rounds[roundIndex];
+
+                return (
+                  <div className="flex flex-wrap items-center gap-2" key={`${slot.slug}-${index}`}>
+                    <span className="w-40 shrink-0 text-sm">{slot.name}</span>
+                    <input
+                      className="ff-input w-20"
+                      inputMode="numeric"
+                      onChange={(event) => onRoundChange(index, roundIndex, { reps: event.target.value })}
+                      placeholder="Reps"
+                      type="text"
+                      value={round.reps}
+                    />
+                    <input
+                      className="ff-input w-24"
+                      inputMode="decimal"
+                      onChange={(event) => onRoundChange(index, roundIndex, { weight: event.target.value })}
+                      placeholder="Weight"
+                      type="text"
+                      value={round.weight}
+                    />
+                    <input
+                      className="ff-input w-24"
+                      onChange={(event) => onRoundChange(index, roundIndex, { durationSeconds: event.target.value })}
+                      placeholder="mm:ss"
+                      type="text"
+                      value={round.durationSeconds}
+                    />
+                    {onRemoveRound ? (
+                      <button
+                        aria-label="Remove"
+                        className="ff-button-secondary h-9 w-9 cursor-pointer p-0 text-sm"
+                        onClick={() => onRemoveRound(index, roundIndex)}
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function WorkoutLogger() {
@@ -243,7 +319,15 @@ export function WorkoutLogger() {
   function handleCircuitExerciseSelect(entry: SelectedExercise) {
     setCircuitSlots((current) => [
       ...current,
-      { slug: entry.slug, name: entry.name, defaultReps: "", defaultWeight: "", defaultDuration: "", rounds: [] }
+      {
+        slug: entry.slug,
+        name: entry.name,
+        defaultReps: "",
+        defaultWeight: "",
+        defaultDuration: "",
+        fixedRounds: false,
+        rounds: []
+      }
     ]);
     setPendingCircuitPicker(false);
   }
@@ -263,28 +347,16 @@ export function WorkoutLogger() {
 
   function handleCompleteRound() {
     setCircuitSlots((current) =>
-      current.map((slot) => ({
-        ...slot,
-        rounds: [
-          ...slot.rounds,
-          { reps: slot.defaultReps, weight: slot.defaultWeight, durationSeconds: slot.defaultDuration }
-        ]
-      }))
-    );
-  }
-
-  function handleAddCircuitRound(slotIndex: number) {
-    setCircuitSlots((current) =>
-      current.map((slot, index) =>
-        index === slotIndex
-          ? {
+      current.map((slot) =>
+        slot.fixedRounds
+          ? slot
+          : {
               ...slot,
               rounds: [
                 ...slot.rounds,
                 { reps: slot.defaultReps, weight: slot.defaultWeight, durationSeconds: slot.defaultDuration }
               ]
             }
-          : slot
       )
     );
   }
@@ -336,6 +408,17 @@ export function WorkoutLogger() {
     setProgramSlug(dayContext?.programSlug ?? null);
     setProgramDay(dayContext?.day ?? null);
     setCircuitSlots(buildCircuitSlotsFromExercises(workout.exercises, true));
+  }
+
+  function handleChangeTemplate() {
+    setWodTemplateSlug(null);
+    setTitle(null);
+    setForTime(false);
+    setTimeText("");
+    setProgramSlug(null);
+    setProgramDay(null);
+    setCircuitSlots([]);
+    setPendingCircuitPicker(true);
   }
 
   function resetBuilder() {
@@ -487,23 +570,39 @@ export function WorkoutLogger() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div>
-            <p className="ff-kicker">CrossFit WODs</p>
-            <div className="mt-3">
-              <WodPicker onSelect={handleTemplateSelect} templates={wodTemplates} />
+          {title ? (
+            <div className="ff-card-soft flex flex-wrap items-center justify-between gap-3 p-4">
+              <div>
+                <p className="font-medium">{title}</p>
+                {programDay ? (
+                  <p className="mt-1 text-sm text-[var(--muted)]">Logging this toward P90X day {programDay}.</p>
+                ) : null}
+              </div>
+              <button
+                className="ff-button-secondary cursor-pointer px-3 py-1.5 text-xs"
+                onClick={handleChangeTemplate}
+                type="button"
+              >
+                Change template
+              </button>
             </div>
-          </div>
+          ) : (
+            <>
+              <div>
+                <p className="ff-kicker">CrossFit WODs</p>
+                <div className="mt-3">
+                  <WodPicker onSelect={handleTemplateSelect} templates={wodTemplates} />
+                </div>
+              </div>
 
-          <div>
-            <p className="ff-kicker">P90X</p>
-            <div className="mt-3">
-              <ProgramWorkoutPicker onSelect={(workout) => handleProgramWorkoutSelect(workout)} templates={programWorkoutTemplates} />
-            </div>
-          </div>
-
-          {programDay ? (
-            <p className="text-sm text-[var(--muted)]">Logging this toward P90X day {programDay}.</p>
-          ) : null}
+              <div>
+                <p className="ff-kicker">P90X</p>
+                <div className="mt-3">
+                  <ProgramWorkoutPicker onSelect={(workout) => handleProgramWorkoutSelect(workout)} templates={programWorkoutTemplates} />
+                </div>
+              </div>
+            </>
+          )}
 
           <label className="flex items-center gap-2 text-sm">
             <input checked={forTime} onChange={(event) => setForTime(event.target.checked)} type="checkbox" />
@@ -512,64 +611,95 @@ export function WorkoutLogger() {
 
           {forTime ? <Stopwatch onChange={setTimeText} value={timeText} /> : null}
 
-          {circuitSlots.map((slot, slotIndex) => (
-            <div className="ff-card-soft space-y-3 p-4" key={`${slot.slug}-${slotIndex}`}>
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-medium">{slot.name}</p>
-                <button
-                  className="ff-button-secondary cursor-pointer px-3 py-1.5 text-xs"
-                  onClick={() => handleRemoveCircuitSlot(slotIndex)}
-                  type="button"
-                >
-                  Remove
-                </button>
-              </div>
+          {(() => {
+            const entries = circuitSlots.map((slot, index) => ({ slot, index }));
+            const fixedEntries = entries.filter(({ slot }) => slot.fixedRounds);
+            const openEntries = entries.filter(({ slot }) => !slot.fixedRounds);
+            const fixedMaxRounds = Math.max(0, ...fixedEntries.map(({ slot }) => slot.rounds.length));
+            const openMaxRounds = Math.max(0, ...openEntries.map(({ slot }) => slot.rounds.length));
 
-              <div className="flex flex-wrap gap-2">
-                <input
-                  className="ff-input w-24"
-                  inputMode="numeric"
-                  onChange={(event) => handleCircuitDefaultChange(slotIndex, { defaultReps: event.target.value })}
-                  placeholder="Reps / round"
-                  type="text"
-                  value={slot.defaultReps}
-                />
-                <input
-                  className="ff-input w-24"
-                  inputMode="decimal"
-                  onChange={(event) => handleCircuitDefaultChange(slotIndex, { defaultWeight: event.target.value })}
-                  placeholder="Weight"
-                  type="text"
-                  value={slot.defaultWeight}
-                />
-                <input
-                  className="ff-input w-24"
-                  onChange={(event) => handleCircuitDefaultChange(slotIndex, { defaultDuration: event.target.value })}
-                  placeholder="mm:ss"
-                  type="text"
-                  value={slot.defaultDuration}
-                />
-              </div>
+            return (
+              <>
+                {fixedEntries.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="ff-card-soft flex flex-wrap gap-2 p-3">
+                      {fixedEntries.map(({ slot, index }) => (
+                        <span
+                          className="flex items-center gap-1.5 rounded-full bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)] px-3 py-1.5 text-xs"
+                          key={`${slot.slug}-${index}`}
+                        >
+                          {slot.name}
+                          <button
+                            aria-label={`Remove ${slot.name}`}
+                            className="cursor-pointer text-[var(--muted)] hover:text-[var(--foreground)]"
+                            onClick={() => handleRemoveCircuitSlot(index)}
+                            type="button"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
 
-              {slot.rounds.length > 0 ? (
-                <details>
-                  <summary className="cursor-pointer text-sm text-[var(--muted)]">
-                    {slot.rounds.length} round{slot.rounds.length === 1 ? "" : "s"} logged — edit individual rounds
-                  </summary>
-                  <div className="mt-3">
-                    <SetRows
-                      addLabel="+ Add round"
-                      onAdd={() => handleAddCircuitRound(slotIndex)}
-                      onChange={(roundIndex, patch) => handleCircuitRoundChange(slotIndex, roundIndex, patch)}
-                      onRemove={(roundIndex) => handleRemoveCircuitRound(slotIndex, roundIndex)}
-                      roundLabels
-                      sets={slot.rounds}
+                    <CircuitRoundGrid
+                      entries={fixedEntries}
+                      maxRounds={fixedMaxRounds}
+                      onRoundChange={handleCircuitRoundChange}
                     />
                   </div>
-                </details>
-              ) : null}
-            </div>
-          ))}
+                ) : null}
+
+                {openEntries.length > 0 ? (
+                  <div className="space-y-3">
+                    {openEntries.map(({ slot, index }) => (
+                      <div className="ff-card-soft flex flex-wrap items-center justify-between gap-2 p-3" key={`${slot.slug}-${index}`}>
+                        <p className="font-medium">{slot.name}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            className="ff-input w-24"
+                            inputMode="numeric"
+                            onChange={(event) => handleCircuitDefaultChange(index, { defaultReps: event.target.value })}
+                            placeholder="Reps / round"
+                            type="text"
+                            value={slot.defaultReps}
+                          />
+                          <input
+                            className="ff-input w-24"
+                            inputMode="decimal"
+                            onChange={(event) => handleCircuitDefaultChange(index, { defaultWeight: event.target.value })}
+                            placeholder="Weight"
+                            type="text"
+                            value={slot.defaultWeight}
+                          />
+                          <input
+                            className="ff-input w-24"
+                            onChange={(event) => handleCircuitDefaultChange(index, { defaultDuration: event.target.value })}
+                            placeholder="mm:ss"
+                            type="text"
+                            value={slot.defaultDuration}
+                          />
+                          <button
+                            className="ff-button-secondary cursor-pointer px-3 py-1.5 text-xs"
+                            onClick={() => handleRemoveCircuitSlot(index)}
+                            type="button"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <CircuitRoundGrid
+                      entries={openEntries}
+                      maxRounds={openMaxRounds}
+                      onRemoveRound={handleRemoveCircuitRound}
+                      onRoundChange={handleCircuitRoundChange}
+                    />
+                  </div>
+                ) : null}
+              </>
+            );
+          })()}
 
           {pendingCircuitPicker ? (
             <ExercisePicker onSelect={handleCircuitExerciseSelect} placeholder="Add an exercise to the circuit…" />
@@ -583,7 +713,7 @@ export function WorkoutLogger() {
             </button>
           )}
 
-          {circuitSlots.length > 0 ? (
+          {circuitSlots.some((slot) => !slot.fixedRounds) ? (
             <button
               className="ff-button-primary cursor-pointer px-4 py-2.5 text-sm"
               onClick={handleCompleteRound}
