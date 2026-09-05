@@ -20,8 +20,9 @@ export default defineConfig({
       // app/api/logs/*/[id]/route.ts handlers, app/api/notifications/route.ts,
       // app/api/notifications/read-all/route.ts, app/api/notifications/[id]/read/route.ts,
       // app/api/programs/[slug]/enroll/route.ts, app/api/workouts/route.ts,
-      // app/api/cron/notifications/route.ts) has real, passing tests but is deliberately NOT
-      // listed here — @vitest/coverage-v8 drops the coverage entry for any route.ts file that
+      // app/api/cron/notifications/route.ts, and the 7 app/api/admin/evals/** routes) has real,
+      // passing tests but is deliberately NOT listed here — @vitest/coverage-v8 drops the coverage
+      // entry for any route.ts file that
       // actually executes during a test run (regardless of whether its path has a bracket
       // segment), while an un-executed sibling with the same include pattern still shows up fine
       // as 0%. Confirmed by scoping runs to individual route tests one at a time: whichever
