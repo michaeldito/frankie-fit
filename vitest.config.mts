@@ -30,6 +30,7 @@ export default defineConfig({
         "lib/ai/prompts/coach-response.ts",
         "lib/ai/prompts/extract-user-update.ts",
         "lib/ai/prompts/personas.ts",
+        "lib/ai/run-frankie-turn.ts",
         "lib/ai/schemas/extracted-user-update.ts",
         "lib/ai/tools/log-activity.ts",
         "lib/ai/tools/log-diet.ts",

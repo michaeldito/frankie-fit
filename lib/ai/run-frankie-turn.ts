@@ -1,7 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AppProfile } from "@/lib/profile";
 import type { Database, Json } from "@/types/database";
-import { orchestrateFrankieReply } from "@/lib/ai/orchestrator/frankie-orchestrator";
+import {
+  orchestrateFrankieReply,
+  type PendingClarification
+} from "@/lib/ai/orchestrator/frankie-orchestrator";
 import { recordAiTraceRun } from "@/lib/ai/tracing/ai-trace-runs";
 import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
@@ -12,16 +15,36 @@ import { getLatestCoachSummary } from "@/lib/ai/summaries/frankie-summaries";
 type SupabaseServerClient = SupabaseClient<Database>;
 type ChatMessage = Database["public"]["Tables"]["conversation_messages"]["Row"];
 
-type PersistedLogIds = {
+export type PersistedLogIds = {
   activityLogIds: string[];
   dietLogIds: string[];
   lifestyleLogIds: string[];
   wellnessCheckinIds: string[];
 };
 
-function buildAssistantStructuredPayload(
-  reply: Awaited<ReturnType<typeof orchestrateFrankieReply>>
-): Json {
+export function derivePendingClarification(
+  previousMessage: ChatMessage | undefined
+): PendingClarification | undefined {
+  return previousMessage?.role === "assistant" &&
+    previousMessage.message_type === "clarification_request"
+    ? (
+        previousMessage.structured_payload as {
+          pendingClarification?: PendingClarification;
+        } | null
+      )?.pendingClarification
+    : undefined;
+}
+
+export function buildAssistantStructuredPayload(input: {
+  persistedLogIds: PersistedLogIds;
+  reply: Awaited<ReturnType<typeof orchestrateFrankieReply>>;
+}): Json {
+  const { persistedLogIds, reply } = input;
+
+  if (reply.metadata.pendingClarification) {
+    return { pendingClarification: reply.metadata.pendingClarification };
+  }
+
   if (
     !reply.shouldPersistStructuredData ||
     (reply.parsedActivities.length === 0 &&
@@ -34,7 +57,8 @@ function buildAssistantStructuredPayload(
 
   return {
     activitiesLogged: reply.persistPlan.activities
-      ? reply.parsedActivities.map((activity) => ({
+      ? reply.parsedActivities.map((activity, index) => ({
+          id: persistedLogIds.activityLogIds[index] ?? null,
           activityType: activity.activityType,
           description: activity.description,
           activityCategory: activity.activityCategory,
@@ -50,7 +74,8 @@ function buildAssistantStructuredPayload(
         }))
       : [],
     dietLogged: reply.persistPlan.dietEntries
-      ? reply.parsedDietEntries.map((entry) => ({
+      ? reply.parsedDietEntries.map((entry, index) => ({
+          id: persistedLogIds.dietLogIds[index] ?? null,
           confidence: entry.confidence,
           description: entry.description,
           mealType: entry.mealType,
@@ -59,7 +84,8 @@ function buildAssistantStructuredPayload(
         }))
       : [],
     lifestyleLogged: reply.persistPlan.lifestyleEntries
-      ? reply.parsedLifestyleEntries.map((entry) => ({
+      ? reply.parsedLifestyleEntries.map((entry, index) => ({
+          id: persistedLogIds.lifestyleLogIds[index] ?? null,
           category: entry.category,
           confidence: entry.confidence,
           description: entry.description,
@@ -71,6 +97,7 @@ function buildAssistantStructuredPayload(
     wellnessLogged:
       reply.persistPlan.wellnessCheckin && reply.parsedWellnessCheckin
         ? {
+            id: persistedLogIds.wellnessCheckinIds[0] ?? null,
             detectedSignals: reply.parsedWellnessCheckin.detectedSignals,
             energyScore: reply.parsedWellnessCheckin.energyScore,
             loggedForDate: reply.parsedWellnessCheckin.loggedForDate,
@@ -104,29 +131,51 @@ function buildActualJson(input: {
 export async function runFrankieTurn(input: {
   displayName: string;
   message: string;
+  pendingClarification?: PendingClarification;
   profile: AppProfile | null;
   recentMessages: ChatMessage[];
+  sourceMessageId?: string;
   supabase: SupabaseServerClient;
   threadId: string;
   threadTitle: string | null;
   userEmail: string | null;
   userId: string;
 }) {
-  const { data: userMessage, error: userMessageError } = await input.supabase
-    .from("conversation_messages")
-    .insert({
-      thread_id: input.threadId,
-      user_id: input.userId,
-      role: "user",
-      message_type: "chat",
-      content: input.message,
-      structured_payload: {}
-    })
-    .select("*")
-    .single();
+  let userMessage: ChatMessage;
 
-  if (userMessageError || !userMessage) {
-    throw new Error(userMessageError?.message ?? "Frankie could not save the user message.");
+  if (input.sourceMessageId) {
+    const { data: existingMessage, error: existingMessageError } = await input.supabase
+      .from("conversation_messages")
+      .select("*")
+      .eq("id", input.sourceMessageId)
+      .single();
+
+    if (existingMessageError || !existingMessage) {
+      throw new Error(
+        existingMessageError?.message ?? "Frankie could not find the saved message."
+      );
+    }
+
+    userMessage = existingMessage;
+  } else {
+    const { data: insertedMessage, error: userMessageError } = await input.supabase
+      .from("conversation_messages")
+      .insert({
+        thread_id: input.threadId,
+        user_id: input.userId,
+        role: "user",
+        message_type: "chat",
+        content: input.message,
+        structured_payload: {}
+      })
+      .select("*")
+      .single();
+
+    if (userMessageError || !insertedMessage) {
+      throw new Error(userMessageError?.message ?? "Frankie could not save the user message.");
+    }
+
+    userMessage = insertedMessage;
   }
 
   const startedAt = Date.now();
@@ -138,6 +187,7 @@ export async function runFrankieTurn(input: {
     profile: input.profile,
     message: input.message,
     recentMessages: input.recentMessages,
+    pendingClarification: input.pendingClarification,
     latestCoachSummary
   });
   const persistedLogIds: PersistedLogIds = {
@@ -221,12 +271,14 @@ export async function runFrankieTurn(input: {
         persistedLogIds,
         reply,
         runStatus: "log_write_failed",
+        structuredPayload: buildAssistantStructuredPayload({ persistedLogIds, reply }),
         traceId,
         userMessage
       };
     }
   }
 
+  const structuredPayload = buildAssistantStructuredPayload({ persistedLogIds, reply });
   const { data: assistantMessage, error: assistantMessageError } = await input.supabase
     .from("conversation_messages")
     .insert({
@@ -235,7 +287,7 @@ export async function runFrankieTurn(input: {
       role: "assistant",
       message_type: reply.assistantMessageType,
       content: reply.reply,
-      structured_payload: buildAssistantStructuredPayload(reply)
+      structured_payload: structuredPayload
     })
     .select("*")
     .single();
@@ -267,6 +319,7 @@ export async function runFrankieTurn(input: {
       persistedLogIds,
       reply,
       runStatus: "assistant_message_failed",
+      structuredPayload,
       traceId,
       userMessage
     };
@@ -304,8 +357,11 @@ export async function runFrankieTurn(input: {
     persistedLogIds,
     reply,
     runStatus,
+    structuredPayload,
     traceId,
     userMessage
   };
 }
+
+export type RunFrankieTurnResult = Awaited<ReturnType<typeof runFrankieTurn>>;
 
