@@ -13,9 +13,12 @@ export default defineConfig({
       // actually covered rather than being diluted by the much larger untested app surface
       // (components, routes, Supabase-bound modules). Add a file here when you add its test.
       include: [
+        "components/admin/coaching-memory-grid.tsx",
         "components/chat/logged-entry-format.ts",
         "components/chat/quick-start.ts",
         "lib/admin.ts",
+        "lib/chat.ts",
+        "lib/notifications.ts",
         "lib/rate-limit.ts",
         "lib/workouts/validation.ts",
         "lib/ai/context/load-chat-context.ts",
@@ -31,13 +34,17 @@ export default defineConfig({
         "packages/dashboard-core/pacific-date.ts",
         "packages/workout-core/exercise-catalog.ts"
       ],
-      // Set just below the current baseline (as of this commit: ~85% stmts/lines, ~89% funcs,
-      // ~70% branches) so CI catches a real regression. Ratchet these up as coverage improves.
+      // Set just below the current baseline (as of this commit: ~75% stmts/lines, ~82% funcs,
+      // ~65% branches) so CI catches a real regression. This dropped from the prior baseline
+      // when lib/chat.ts, lib/notifications.ts, and coaching-memory-grid.tsx were added to the
+      // include list above — those files have tests for specific exported helpers, not full-file
+      // coverage, so being honest about including them lowered the aggregate. Ratchet these up
+      // as coverage improves (see the "test the log-writing layer" roadmap item).
       thresholds: {
-        lines: 80,
-        statements: 80,
-        functions: 85,
-        branches: 65
+        lines: 70,
+        statements: 70,
+        functions: 78,
+        branches: 60
       }
     }
   },
