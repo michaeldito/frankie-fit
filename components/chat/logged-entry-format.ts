@@ -1,6 +1,7 @@
 export type LoggedActivity = {
   id: string | null;
   activityType: string;
+  description: string;
   durationMinutes: number | null;
   intensity: string | null;
   loggedForDate: string | null;
@@ -52,6 +53,10 @@ export function formatActivityDetail(activity: LoggedActivity) {
 
   if (activity.intensity) {
     parts.push(activity.intensity);
+  }
+
+  if (activity.description && activity.description.toLowerCase() !== activity.activityType.toLowerCase()) {
+    parts.push(activity.description);
   }
 
   return parts.length > 0 ? parts.join(" • ") : null;

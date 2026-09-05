@@ -152,15 +152,40 @@ describe("buildCoachResponseUserPrompt", () => {
   });
 
   it("omits duration and intensity from an activity line when they're absent", () => {
-    const prompt = buildCoachResponseUserPrompt(baseInput({ activities: [activity()] }));
+    const prompt = buildCoachResponseUserPrompt(
+      baseInput({ activities: [activity({ description: "running" })] })
+    );
     expect(prompt).toContain("- running\n");
   });
 
   it("includes duration and intensity in an activity line when present", () => {
     const prompt = buildCoachResponseUserPrompt(
-      baseInput({ activities: [activity({ durationMinutes: 30, intensity: "Hard" })] })
+      baseInput({ activities: [activity({ description: "running", durationMinutes: 30, intensity: "Hard" })] })
     );
     expect(prompt).toContain("- running for 30 minutes at hard intensity");
+  });
+
+  it("appends the description in parentheses when it differs from the activity type", () => {
+    const prompt = buildCoachResponseUserPrompt(
+      baseInput({
+        activities: [
+          activity({
+            activityType: "mixed workout",
+            description: "running and stretching",
+            durationMinutes: 45,
+            intensity: "Light"
+          })
+        ]
+      })
+    );
+    expect(prompt).toContain("- mixed workout for 45 minutes at light intensity (running and stretching)");
+  });
+
+  it("does not duplicate the description when it matches the activity type", () => {
+    const prompt = buildCoachResponseUserPrompt(
+      baseInput({ activities: [activity({ activityType: "running", description: "Running" })] })
+    );
+    expect(prompt).toContain("- running\n");
   });
 
   it("labels a diet entry with 'meal' when mealType is unset", () => {

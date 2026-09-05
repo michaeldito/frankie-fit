@@ -697,7 +697,7 @@ function mergeActivity(existing: ParsedActivity, incoming: ParsedActivity): Pars
   };
 }
 
-function dedupeActivities(activities: ParsedActivity[]) {
+function dedupeActivities(activities: ParsedActivity[], message: string) {
   const likelyDuplicates = new Map<string, ParsedActivity>();
 
   for (const activity of activities) {
@@ -730,7 +730,7 @@ function dedupeActivities(activities: ParsedActivity[]) {
     deduped.set(key, existing ? mergeActivity(existing, activity) : activity);
   }
 
-  return consolidateSameSessionActivities(Array.from(deduped.values()));
+  return consolidateSameSessionActivities(Array.from(deduped.values()), message);
 }
 
 // Catches a shape the two passes above don't: several *distinctly* named exercises (so they
@@ -752,9 +752,44 @@ function getSameSessionKey(activity: ParsedActivity) {
     activity.loggedForDate,
     activity.timeReferenceText?.toLowerCase().trim() ?? "",
     activity.durationMinutes,
-    activity.intensity ?? "",
-    activity.activityCategory?.trim().toLowerCase() ?? ""
+    activity.intensity ?? ""
   ].join("::");
+}
+
+// activityCategory is deliberately not part of the key above: a shared duration can span
+// categories (e.g. running + stretching, cardio + mobility). But a coincidental duration/date/
+// time match across genuinely separate activities (e.g. "did squats for 30 minutes, also walked
+// for 30 minutes") would collide on that same key. The extraction model can't reliably flag this
+// distinction itself, so instead of trusting it, this checks the raw message directly: a shared
+// session states its duration once ("running and stretching for 45 minutes"), while restated
+// durations state it once per activity ("30 minutes ... also ... 30 minutes"). Only merge a
+// mixed-category group when the duration is stated exactly once.
+function countExactDurationMentions(message: string, minutes: number) {
+  const pattern = new RegExp(`\\b${minutes}\\s*(?:minutes?|mins?|min)\\b`, "gi");
+  return message.match(pattern)?.length ?? 0;
+}
+
+function isMixedCategoryGroup(group: ParsedActivity[]) {
+  const categories = new Set(
+    group.map((activity) => activity.activityCategory?.trim().toLowerCase() ?? "")
+  );
+
+  return categories.size > 1;
+}
+
+function mergeMixedCategorySessionGroup(group: ParsedActivity[]): ParsedActivity {
+  const [firstActivity] = group;
+
+  return {
+    ...firstActivity,
+    activityType: "mixed workout",
+    activityCategory: "other",
+    description: joinDescriptions(group.map((activity) => activity.description)),
+    sessionCount: Math.max(...group.map((activity) => activity.sessionCount ?? 1)),
+    confidence: Math.max(...group.map((activity) => activity.confidence ?? 0.7)),
+    missingFields: Array.from(new Set(group.flatMap((activity) => activity.missingFields))),
+    ambiguityFlags: Array.from(new Set(group.flatMap((activity) => activity.ambiguityFlags)))
+  };
 }
 
 function chooseConsolidatedActivityType(group: ParsedActivity[]) {
@@ -801,7 +836,7 @@ function mergeSameSessionActivityGroup(group: ParsedActivity[]): ParsedActivity 
   };
 }
 
-function consolidateSameSessionActivities(activities: ParsedActivity[]) {
+function consolidateSameSessionActivities(activities: ParsedActivity[], message: string) {
   const sessionGroups = new Map<string, ParsedActivity[]>();
   const ungrouped: ParsedActivity[] = [];
 
@@ -823,7 +858,26 @@ function consolidateSameSessionActivities(activities: ParsedActivity[]) {
     sessionGroups.set(key, [activity]);
   }
 
-  return [...Array.from(sessionGroups.values()).map(mergeSameSessionActivityGroup), ...ungrouped];
+  const merged: ParsedActivity[] = [];
+
+  for (const group of sessionGroups.values()) {
+    if (!isMixedCategoryGroup(group)) {
+      merged.push(mergeSameSessionActivityGroup(group));
+      continue;
+    }
+
+    const durationMinutes = group[0].durationMinutes;
+    const isSharedDuration =
+      durationMinutes != null && countExactDurationMentions(message, durationMinutes) === 1;
+
+    if (isSharedDuration) {
+      merged.push(mergeMixedCategorySessionGroup(group));
+    } else {
+      merged.push(...group);
+    }
+  }
+
+  return [...merged, ...ungrouped];
 }
 
 function ensureField(fields: string[], field: string) {
@@ -841,7 +895,7 @@ function normalizeMissingFields(fields: string[]) {
 }
 
 function sanitizeActivities(activities: ParsedActivity[], message: string) {
-  const dedupedActivities = dedupeActivities(activities);
+  const dedupedActivities = dedupeActivities(activities, message);
 
   return dedupedActivities
     .filter((activity) => {

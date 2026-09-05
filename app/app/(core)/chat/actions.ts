@@ -122,6 +122,7 @@ export async function sendChatMessage(formData: FormData) {
           ? {
             activitiesLogged: reply.persistPlan.activities ? reply.parsedActivities.map((activity) => ({
             activityType: activity.activityType,
+            description: activity.description,
             activityCategory: activity.activityCategory,
             sessionCount: activity.sessionCount,
             durationMinutes: activity.durationMinutes,

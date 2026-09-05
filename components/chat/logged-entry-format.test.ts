@@ -20,6 +20,7 @@ function activity(overrides: Partial<LoggedActivity> = {}): LoggedActivity {
   return {
     id: "activity-1",
     activityType: "running",
+    description: "running",
     durationMinutes: 30,
     intensity: "Hard",
     loggedForDate: "2026-09-03",
@@ -103,8 +104,39 @@ describe("formatActivityDetail", () => {
     );
   });
 
-  it("returns null when neither duration nor intensity is known", () => {
-    expect(formatActivityDetail(activity({ durationMinutes: null, intensity: null }))).toBeNull();
+  it("returns null when neither duration, intensity, nor a differing description is known", () => {
+    expect(
+      formatActivityDetail(activity({ durationMinutes: null, intensity: null, description: "running" }))
+    ).toBeNull();
+  });
+
+  it("appends the description when it differs from the activity type", () => {
+    expect(
+      formatActivityDetail(
+        activity({
+          activityType: "mixed workout",
+          description: "running and stretching",
+          durationMinutes: 45,
+          intensity: "Light"
+        })
+      )
+    ).toBe("45 min • Light • running and stretching");
+  });
+
+  it("does not duplicate the description when it matches the activity type", () => {
+    expect(
+      formatActivityDetail(
+        activity({ activityType: "running", description: "Running", durationMinutes: 30, intensity: "Hard" })
+      )
+    ).toBe("30 min • Hard");
+  });
+
+  it("does not append an empty description", () => {
+    expect(
+      formatActivityDetail(
+        activity({ activityType: "running", description: "", durationMinutes: 30, intensity: "Hard" })
+      )
+    ).toBe("30 min • Hard");
   });
 });
 
