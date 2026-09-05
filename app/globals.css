@@ -107,6 +107,18 @@ textarea::placeholder {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
+  .ff-skeleton {
+    border-radius: 0.5rem;
+    background: linear-gradient(
+      100deg,
+      var(--surface-strong) 30%,
+      var(--surface-contrast) 50%,
+      var(--surface-strong) 70%
+    );
+    background-size: 200% 100%;
+    animation: ff-skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+
   .ff-kicker {
     color: var(--muted);
     font-size: 0.66rem;
@@ -382,5 +394,15 @@ textarea::placeholder {
     border-color: color-mix(in srgb, var(--brand) 45%, var(--border) 55%);
     background: color-mix(in srgb, var(--brand) 16%, var(--surface-strong) 84%);
     color: var(--foreground);
+  }
+}
+
+@keyframes ff-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
   }
 }
