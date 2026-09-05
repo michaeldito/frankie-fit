@@ -16,10 +16,19 @@ export default defineConfig({
       // Scoped to files that currently have tests, so the percentage reflects what we've
       // actually covered rather than being diluted by the much larger untested app surface
       // (components, routes, Supabase-bound modules). Add a file here when you add its test.
+      // Note: the 4 app/api/logs/*/[id]/route.ts handlers have real, passing tests
+      // (route.test.ts next to each) but are deliberately NOT listed here — @vitest/coverage-v8
+      // drops the coverage entry for any executed file living under a Next.js bracket-path
+      // segment (e.g. "[id]") during its remap step, while an un-executed sibling with the same
+      // pattern still shows up fine as 0%. Confirmed by scoping a run to just one of these route
+      // tests: the file that actually ran vanishes from the report entirely instead of showing
+      // coverage, while the other three (never executed) list normally at 0%. This is a tooling
+      // limitation, not a signal that these files are untested.
       include: [
         "components/admin/coaching-memory-grid.tsx",
         "components/chat/logged-entry-format.ts",
         "components/chat/quick-start.ts",
+        "lib/admin-evals-data.ts",
         "lib/admin.ts",
         "lib/chat.ts",
         "lib/notifications.ts",
