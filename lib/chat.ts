@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { AppProfile, CurrentAppContext } from "@/lib/profile";
@@ -524,8 +525,13 @@ export function isLikelyActivityClause(clause: string) {
   return findActivityMatch(clause) !== null;
 }
 
-async function getOrCreatePrimaryThread(userId: string, title: string) {
-  const supabase = await createSupabaseServerClient();
+type SupabaseServerClient = SupabaseClient<Database>;
+
+async function getOrCreatePrimaryThread(
+  supabase: SupabaseServerClient,
+  userId: string,
+  title: string
+) {
   const { data: existingThread, error: existingThreadError } = await supabase
     .from("conversation_threads")
     .select("*")
@@ -564,11 +570,11 @@ async function getOrCreatePrimaryThread(userId: string, title: string) {
 }
 
 async function seedInitialAssistantMessage(
+  supabase: SupabaseServerClient,
   threadId: string,
   userId: string,
   profile: AppProfile | null
 ) {
-  const supabase = await createSupabaseServerClient();
   const { data: existingMessages, error: existingMessagesError } = await supabase
     .from("conversation_messages")
     .select("id")
@@ -600,6 +606,63 @@ async function seedInitialAssistantMessage(
   return insertError?.message ?? null;
 }
 
+/**
+ * Client-agnostic core shared by the web and mobile chat routes: get-or-create the user's
+ * primary thread, seed its opening assistant message if empty, then load the full message
+ * history. Takes an already-constructed Supabase client so callers can use whichever auth
+ * style fits their transport (cookie-based on web, bearer-token on mobile).
+ */
+export async function loadChatThreadAndMessages(input: {
+  supabase: SupabaseServerClient;
+  userId: string;
+  profile: AppProfile | null;
+  threadTitle: string;
+}): Promise<ChatExperience> {
+  const { thread, error: threadError } = await getOrCreatePrimaryThread(
+    input.supabase,
+    input.userId,
+    input.threadTitle
+  );
+
+  if (!thread) {
+    return {
+      schemaReady: !isMissingChatTable(threadError),
+      thread: null,
+      messages: [],
+      error: threadError
+    };
+  }
+
+  const seedError = await seedInitialAssistantMessage(
+    input.supabase,
+    thread.id,
+    input.userId,
+    input.profile
+  );
+
+  if (seedError) {
+    return {
+      schemaReady: !isMissingChatTable(seedError),
+      thread,
+      messages: [],
+      error: seedError
+    };
+  }
+
+  const { data: messages, error: messagesError } = await input.supabase
+    .from("conversation_messages")
+    .select("*")
+    .eq("thread_id", thread.id)
+    .order("created_at", { ascending: true });
+
+  return {
+    schemaReady: !isMissingChatTable(messagesError?.message),
+    thread,
+    messages: messages ?? [],
+    error: messagesError?.message ?? null
+  };
+}
+
 export async function getChatExperience(
   context: CurrentAppContext,
   displayName: string
@@ -613,49 +676,14 @@ export async function getChatExperience(
     };
   }
 
-  const threadTitle = `${displayName}'s Frankie chat`;
-  const { thread, error: threadError } = await getOrCreatePrimaryThread(
-    context.user.id,
-    threadTitle
-  );
-
-  if (!thread) {
-    return {
-      schemaReady: !isMissingChatTable(threadError),
-      thread: null,
-      messages: [],
-      error: threadError
-    };
-  }
-
-  const seedError = await seedInitialAssistantMessage(
-    thread.id,
-    context.user.id,
-    context.profile
-  );
-
-  if (seedError) {
-    return {
-      schemaReady: !isMissingChatTable(seedError),
-      thread,
-      messages: [],
-      error: seedError
-    };
-  }
-
   const supabase = await createSupabaseServerClient();
-  const { data: messages, error: messagesError } = await supabase
-    .from("conversation_messages")
-    .select("*")
-    .eq("thread_id", thread.id)
-    .order("created_at", { ascending: true });
 
-  return {
-    schemaReady: !isMissingChatTable(messagesError?.message),
-    thread,
-    messages: messages ?? [],
-    error: messagesError?.message ?? null
-  };
+  return loadChatThreadAndMessages({
+    supabase,
+    userId: context.user.id,
+    profile: context.profile,
+    threadTitle: `${displayName}'s Frankie chat`
+  });
 }
 
 export function parseActivityMessage(message: string): ParsedActivity[] {

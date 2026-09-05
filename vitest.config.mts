@@ -5,7 +5,11 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["**/*.test.ts"],
-    exclude: ["node_modules", "apps/mobile", ".next"],
+    // Bare "node_modules" only matches the top-level folder, not nested ones (e.g. a git
+    // worktree checked out under .claude/worktrees/ brings its own node_modules) — the custom
+    // exclude list here replaces vitest's own recursive default rather than extending it, so
+    // this has to be explicit and recursive itself.
+    exclude: ["**/node_modules/**", "apps/mobile/**", ".next/**", ".claude/worktrees/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
