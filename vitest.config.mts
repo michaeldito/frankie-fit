@@ -19,7 +19,8 @@ export default defineConfig({
       // Note: every app/api/**/route.ts handler with a co-located route.test.ts (the 4
       // app/api/logs/*/[id]/route.ts handlers, app/api/notifications/route.ts,
       // app/api/notifications/read-all/route.ts, app/api/notifications/[id]/read/route.ts,
-      // app/api/programs/[slug]/enroll/route.ts) has real, passing tests but is deliberately NOT
+      // app/api/programs/[slug]/enroll/route.ts, app/api/workouts/route.ts,
+      // app/api/cron/notifications/route.ts) has real, passing tests but is deliberately NOT
       // listed here — @vitest/coverage-v8 drops the coverage entry for any route.ts file that
       // actually executes during a test run (regardless of whether its path has a bracket
       // segment), while an un-executed sibling with the same include pattern still shows up fine
