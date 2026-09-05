@@ -37,6 +37,7 @@ export default defineConfig({
         "lib/chat.ts",
         "lib/notifications.ts",
         "lib/rate-limit.ts",
+        "lib/workouts/save-workout-session.ts",
         "lib/workouts/validation.ts",
         "lib/ai/context/load-chat-context.ts",
         "lib/ai/orchestrator/frankie-orchestrator.ts",
