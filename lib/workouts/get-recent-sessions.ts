@@ -1,6 +1,6 @@
 import type { CurrentAppContext } from "@/lib/profile";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { formatShortDate } from "../../packages/dashboard-core";
+import { formatShortDate } from "@frankie-fit/dashboard-core";
 
 export type RecentWorkoutSession = {
   id: string;

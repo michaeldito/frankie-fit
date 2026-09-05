@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getPacificDateKey } from "../../packages/dashboard-core";
+import { getPacificDateKey } from "@frankie-fit/dashboard-core";
 
 type ProgramEnrollFormProps = {
   programSlug: string;

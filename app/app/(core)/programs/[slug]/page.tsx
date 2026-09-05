@@ -3,7 +3,7 @@ import { ProgramCalendar } from "@/components/programs/program-calendar";
 import { ProgramEnrollForm } from "@/components/programs/program-enroll-form";
 import { getCurrentAppContext } from "@/lib/profile";
 import { getProgramProgress } from "@/lib/programs/get-program-progress";
-import { findProgramSchedule } from "@/packages/workout-core";
+import { findProgramSchedule } from "@frankie-fit/workout-core";
 
 export default async function ProgramDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

@@ -16,7 +16,7 @@ import {
   type LifestyleDashboardData,
   type WellnessDashboardData,
   type WellnessTrendPoint
-} from "../packages/dashboard-core";
+} from "@frankie-fit/dashboard-core";
 
 export type {
   DashboardMetric,

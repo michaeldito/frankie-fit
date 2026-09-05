@@ -14,6 +14,9 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@frankie-fit/dashboard-core": "workspace:*",
+    "@frankie-fit/profile-core": "workspace:*",
+    "@frankie-fit/workout-core": "workspace:*",
     "@kingstinct/react-native-healthkit": "^14.0.0",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",

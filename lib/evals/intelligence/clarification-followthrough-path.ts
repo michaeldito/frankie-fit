@@ -1,4 +1,4 @@
-import { getPacificDateKey } from "@/packages/dashboard-core";
+import { getPacificDateKey } from "@frankie-fit/dashboard-core";
 import type { IntelligenceEvalCase, IntelligenceEvalExpected } from "@/lib/evals/intelligence/types";
 
 // Computed at run time so this never goes stale — see messy-input-path.ts for the same fix.

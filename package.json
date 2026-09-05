@@ -27,6 +27,9 @@
     "lint:mobile": "pnpm --dir apps/mobile lint"
   },
   "dependencies": {
+    "@frankie-fit/dashboard-core": "workspace:*",
+    "@frankie-fit/profile-core": "workspace:*",
+    "@frankie-fit/workout-core": "workspace:*",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.3",
     "next": "^16.2.4",

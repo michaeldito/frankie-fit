@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatSeconds } from "../../packages/workout-core";
+import { formatSeconds } from "@frankie-fit/workout-core";
 
 type StopwatchProps = {
   onChange: (value: string) => void;

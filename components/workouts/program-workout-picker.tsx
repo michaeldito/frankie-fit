@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProgramWorkoutTemplate } from "../../packages/workout-core";
+import type { ProgramWorkoutTemplate } from "@frankie-fit/workout-core";
 
 type ProgramWorkoutPickerProps = {
   onSelect: (template: ProgramWorkoutTemplate) => void;

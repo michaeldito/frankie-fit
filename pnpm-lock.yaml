@@ -8,6 +8,15 @@ importers:
 
   .:
     dependencies:
+      '@frankie-fit/dashboard-core':
+        specifier: workspace:*
+        version: link:packages/dashboard-core
+      '@frankie-fit/profile-core':
+        specifier: workspace:*
+        version: link:packages/profile-core
+      '@frankie-fit/workout-core':
+        specifier: workspace:*
+        version: link:packages/workout-core
       '@supabase/ssr':
         specifier: ^0.10.2
         version: 0.10.2(@supabase/supabase-js@2.103.3)
@@ -66,6 +75,15 @@ importers:
       '@expo/vector-icons':
         specifier: ^15.0.3
         version: 15.1.1(expo-font@14.0.11(expo@54.0.34)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      '@frankie-fit/dashboard-core':
+        specifier: workspace:*
+        version: link:../../packages/dashboard-core
+      '@frankie-fit/profile-core':
+        specifier: workspace:*
+        version: link:../../packages/profile-core
+      '@frankie-fit/workout-core':
+        specifier: workspace:*
+        version: link:../../packages/workout-core
       '@kingstinct/react-native-healthkit':
         specifier: ^14.0.0
         version: 14.0.0(react-native-nitro-modules@0.35.6(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -166,6 +184,16 @@ importers:
       typescript:
         specifier: ~5.9.2
         version: 5.9.3
+
+  packages/dashboard-core: {}
+
+  packages/profile-core:
+    dependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.103.3
+        version: 2.103.3
+
+  packages/workout-core: {}
 
 packages:
 
@@ -1900,6 +1928,7 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@unrs/resolver-binding-android-arm-eabi@1.11.1':
     resolution: {integrity: sha512-ppLRUgHVaGRWUx0R0Ut06Mjo9gBaBkg3v/8AxusGLhsIotbBLuRk51rAzqLC8gq6NyyAojEXglNjzf6R948DNw==}

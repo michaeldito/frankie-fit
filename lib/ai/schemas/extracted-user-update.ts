@@ -11,7 +11,7 @@ import {
   extractTimeReferenceText,
   resolveLoggedForDateFromTimeReference
 } from "@/lib/chat";
-import { getPacificDateKey } from "../../../packages/dashboard-core";
+import { getPacificDateKey } from "@frankie-fit/dashboard-core";
 
 const intensityOptions = ["unknown", "Light", "Moderate", "Hard"] as const;
 const mealTypeOptions = ["unknown", "breakfast", "lunch", "dinner", "snack"] as const;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { findExercises, slugifyExerciseName } from "../../packages/workout-core";
+import { findExercises, slugifyExerciseName } from "@frankie-fit/workout-core";
 
 export type SelectedExercise = { slug: string; name: string };
 

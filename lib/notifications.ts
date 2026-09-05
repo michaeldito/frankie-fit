@@ -6,7 +6,7 @@ import {
   getPacificToday,
   getPacificYesterday,
   toDateKey
-} from "@/packages/dashboard-core";
+} from "@frankie-fit/dashboard-core";
 import { loadProfile } from "@/lib/admin-eval-runner";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 import { generateDailyCoachSummary, generateWeeklyCoachSummary } from "@/lib/ai/summaries/frankie-summaries";
