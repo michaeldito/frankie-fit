@@ -1,6 +1,6 @@
 ---
 name: test-coverage-checklist
-description: How to keep vitest.config.mts's coverage tracking honest when adding or changing a test file in frankie-fit — add the source file to coverage.include, and how to mock the Supabase/OpenAI boundary the way frankie-orchestrator.test.ts does. Use this whenever you write a new test file, add meaningful test coverage to an existing file, or notice a source file with real tests that isn't showing up in coverage numbers.
+description: How to keep vitest.config.mts's coverage tracking honest when adding or changing a test file in frankie-fit — add the source file to coverage.include, and how to mock the Supabase/OpenAI boundary the way frankie-orchestrator.test.ts and lib/admin.test.ts do. Use this whenever you write a new test file, add meaningful test coverage to an existing file, or notice a source file with real tests that isn't showing up in coverage numbers.
 ---
 
 # Test coverage checklist (frankie-fit)
@@ -36,6 +36,20 @@ async function importOrchestrator() {
 }
 ```
 
-`vi.hoisted` creates the mock functions before `vi.mock` needs to reference them, then each test sets `.mockResolvedValue`/`.mockImplementation` on the shared mock before dynamically importing the module under test. The same approach applies to a Supabase client boundary — hoist a mock client, `vi.mock` the module that constructs it, and let each test control what the client returns.
+`vi.hoisted` creates the mock functions before `vi.mock` needs to reference them, then each test sets `.mockResolvedValue`/`.mockImplementation` on the shared mock before dynamically importing the module under test. `lib/admin.test.ts` shows the same approach applied to the Supabase client boundary:
+
+```ts
+const { redirect, createSupabaseServerClient } = vi.hoisted(() => ({
+  redirect: vi.fn(() => {
+    throw new Error("REDIRECT");
+  }),
+  createSupabaseServerClient: vi.fn()
+}));
+
+vi.mock("next/navigation", () => ({ redirect }));
+vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient }));
+```
+
+Hoist a mock client function, `vi.mock` the module that constructs it (`@/lib/supabase/server`), and let each test set what `createSupabaseServerClient` returns before importing the module under test.
 
 This keeps tests fast and focused on the logic actually being tested, rather than depending on network calls or a real database — and it means a test failure points at a real logic bug rather than a flaky external dependency.
