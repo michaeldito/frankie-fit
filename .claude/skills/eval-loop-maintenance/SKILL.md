@@ -13,7 +13,7 @@ The intelligence eval suite is the main regression check for the AI extraction/o
 npm run eval:intelligence
 ```
 
-Add `-- --scenario <scenario-id>` to run a single scenario instead of the full suite. The runner (`scripts/eval-intelligence.mjs`) stubs the Supabase/profile boundary with fixtures under `scripts/eval-stubs/` so it can run without a real database, then dynamically imports the case arrays from `lib/evals/intelligence/*.ts` and compares actual vs. expected via `lib/evals/intelligence/compare.ts`.
+Add `-- --scenario <scenario-id>` to run a single scenario instead of the full suite. The runner (`scripts/eval-intelligence.mjs`) stubs the Supabase/profile boundary with fixtures under `scripts/eval-stubs/` so it can run without a real database, then dynamically imports the case arrays from `lib/evals/intelligence/*.ts` and compares actual vs. expected via `lib/evals/intelligence/compare.ts`. Add `-- --repeat N` (requires `--case` or `--scenario`) to re-run a specific case N times and measure its live pass rate instead of a single result.
 
 ## Diagnosing a failure: real regression vs. stale fixture
 
@@ -29,6 +29,19 @@ const TODAY = getPacificDateKey();
 ```
 
 If you're adding a new date-dependent case, use this pattern (`getPacificDateKey()` from `packages/dashboard-core/pacific-date.ts`) rather than a literal date string — it's what keeps the fixture's expectation in sync with the extractor's own notion of "today," regardless of when the suite runs. If an *existing* hardcoded-date fixture starts failing purely because of elapsed time, that's a sign to migrate it to the dynamic pattern rather than just bumping the literal date another few months forward.
+
+## Distinguishing a real regression from a known flake
+
+Some eval failures are genuine model non-determinism rather than a regression. Use `--repeat N` (10 is a reasonable sample size) before concluding an unexpected failure is a real bug:
+
+```bash
+npm run eval:intelligence -- --case lifting-wed-walk --repeat 10
+```
+
+- A consistent N/N failure (0% pass rate) across repeats is a real bug — investigate the extraction prompt or orchestrator logic.
+- A partial pass rate (neither 0% nor 100%) indicates non-determinism in the model call itself, not a code regression. `--repeat` reports this rate and always exits 0 — it's a diagnostic tool, not a pass/fail gate, so it won't fail CI on its own.
+
+`lifting-mixed-path`'s `lifting-wed-walk` case (`lib/evals/intelligence/lifting-mixed-path.ts`) is the known calibration example: gpt-4o-mini occasionally hallucinates a second, unstated activity from a single-activity message, and there's no temperature/seed pinning on this extraction call to eliminate it. Use its observed `--repeat` pass rate as a rough baseline for judging whether a *different* case's partial pass rate is similarly benign non-determinism or actually concerning.
 
 ## Keeping the design doc honest
 

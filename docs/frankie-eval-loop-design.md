@@ -26,7 +26,7 @@ As of the first implementation pass, the repo includes:
 - daily and weekly coach-summary generation grounded in persisted structured logs
 - a browser-local bullet progress indicator for message replay, driven by one request per replay step without storing temporary UI progress in the database
 - a local scripted intelligence eval runner, `npm run eval:intelligence`, that can run all scripted scenarios or one scenario with `-- --scenario <scenario-id>`
-- scripted extraction benchmarks for `cardio-happy-path`, `lifting-mixed-path`, `difficult-mixed-path`, `messy-input-path`, and `clarification-followthrough-path`; the current suite covers 74 isolated user updates. Expect 73/74 to pass consistently — `lifting-wed-walk` can intermittently fail because gpt-4o-mini occasionally hallucinates an unstated activity, which is model non-determinism rather than a regression (there's no temperature/seed pinning on this call)
+- scripted extraction benchmarks for `cardio-happy-path`, `lifting-mixed-path`, `difficult-mixed-path`, `messy-input-path`, and `clarification-followthrough-path`; the current suite covers 74 isolated user updates. Expect 73/74 to pass consistently — `lifting-wed-walk` can intermittently fail because gpt-4o-mini occasionally hallucinates an unstated activity, which is model non-determinism rather than a regression (there's no temperature/seed pinning on this call). Run `npm run eval:intelligence -- --case lifting-wed-walk --repeat 10` to measure its current flake frequency directly rather than assuming a fixed rate
 
 The next hardening pass should use the same loop to tune multi-pillar messages, daily summaries, weekly summaries, and eventually all seeded accounts.
 
