@@ -1,0 +1,1380 @@
+import type { Database } from "@/types/database";
+import type { AppProfile } from "@/lib/profile";
+import {
+  buildStructuredLogConfirmation,
+  extractTimeReferenceText,
+  isLikelyActivityClause,
+  isLikelyDietClause,
+  parseActivityMessage,
+  resolveLoggedForDateFromTimeReference,
+  type ParsedActivity,
+  type ParsedDietEntry,
+  type ParsedLifestyleEntry,
+  type ParsedWellnessCheckin
+} from "@/lib/chat";
+import { buildChatContext } from "@/lib/ai/context/load-chat-context";
+import {
+  buildCoachResponseSystemPrompt,
+  buildCoachResponseUserPrompt
+} from "@/lib/ai/prompts/coach-response";
+import { buildExtractUserUpdatePrompt } from "@/lib/ai/prompts/extract-user-update";
+import { getPersona } from "@/lib/ai/prompts/personas";
+import type { LatestCoachSummary } from "@/lib/ai/summaries/frankie-summaries";
+import {
+  createStructuredOpenAiResponse,
+  createTextOpenAiResponse,
+  hasOpenAiApiKey
+} from "@/lib/ai/openai-responses";
+import {
+  extractedUserUpdateJsonSchema,
+  type ExtractedUserUpdate,
+  mapExtractedActivities,
+  mapExtractedDietEntries,
+  mapExtractedLifestyleEntries,
+  mapExtractedWellnessCheckin,
+  parseExtractedUserUpdate
+} from "@/lib/ai/schemas/extracted-user-update";
+
+type ChatMessage = Database["public"]["Tables"]["conversation_messages"]["Row"];
+type ChatContextSnapshot = {
+  profileSummary: string;
+  recentConversation: string;
+};
+
+const DEFAULT_OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+export const FRANKIE_PROMPT_VERSION = "frankie-orchestrator-v10";
+const FRANKIE_UNAVAILABLE_REPLY = "Frankie is not reachable right now.";
+const BLOCKING_ACTIVITY_MISSING_FIELDS = new Set([
+  "activityType",
+  "loggedForDate",
+  "sessionSplit"
+]);
+const ALLOWED_ACTIVITY_MISSING_FIELDS = new Set([
+  "activityType",
+  "loggedForDate",
+  "sessionSplit",
+  "durationMinutes",
+  "intensity",
+  "movementFocus"
+]);
+
+export type PendingClarification = {
+  originalMessage: string;
+  clarificationQuestion: string;
+};
+
+export type FrankieOrchestrationResult = {
+  assistantMessageType: "chat" | "log_confirmation" | "clarification_request";
+  parsedActivities: ParsedActivity[];
+  parsedDietEntries: ParsedDietEntry[];
+  parsedLifestyleEntries: ParsedLifestyleEntry[];
+  parsedWellnessCheckin: ParsedWellnessCheckin | null;
+  reply: string;
+  orchestrationMode: "model" | "unavailable";
+  shouldPersistStructuredData: boolean;
+  persistPlan: {
+    activities: boolean;
+    dietEntries: boolean;
+    lifestyleEntries: boolean;
+    wellnessCheckin: boolean;
+  };
+  metadata: {
+    extractionSource: "model" | "unavailable";
+    usedOpenAi: boolean;
+    fallbackReason?: string;
+    intent?: string;
+    needsClarification?: boolean;
+    modelName?: string;
+    promptVersion: string;
+    contextSnapshot?: ChatContextSnapshot;
+    rawModelExtraction?: ExtractedUserUpdate;
+    pendingClarification?: PendingClarification;
+  };
+};
+
+function buildUnavailableReply(fallbackReason: string): FrankieOrchestrationResult {
+  return {
+    assistantMessageType: "chat",
+    parsedActivities: [],
+    parsedDietEntries: [],
+    parsedLifestyleEntries: [],
+    parsedWellnessCheckin: null,
+    reply: FRANKIE_UNAVAILABLE_REPLY,
+    orchestrationMode: "unavailable",
+    shouldPersistStructuredData: false,
+    persistPlan: {
+      activities: false,
+      dietEntries: false,
+      lifestyleEntries: false,
+      wellnessCheckin: false
+    },
+    metadata: {
+      extractionSource: "unavailable",
+      usedOpenAi: false,
+      fallbackReason,
+      promptVersion: FRANKIE_PROMPT_VERSION
+    }
+  };
+}
+
+function transpositionDistance(wordA: string, wordB: string) {
+  const rows = wordA.length + 1;
+  const cols = wordB.length + 1;
+  const distances: number[][] = Array.from({ length: rows }, () => new Array(cols).fill(0));
+
+  for (let row = 0; row <= wordA.length; row += 1) {
+    distances[row][0] = row;
+  }
+
+  for (let col = 0; col <= wordB.length; col += 1) {
+    distances[0][col] = col;
+  }
+
+  for (let row = 1; row <= wordA.length; row += 1) {
+    for (let col = 1; col <= wordB.length; col += 1) {
+      const cost = wordA[row - 1] === wordB[col - 1] ? 0 : 1;
+
+      distances[row][col] = Math.min(
+        distances[row - 1][col] + 1,
+        distances[row][col - 1] + 1,
+        distances[row - 1][col - 1] + cost
+      );
+
+      if (
+        row > 1 &&
+        col > 1 &&
+        wordA[row - 1] === wordB[col - 2] &&
+        wordA[row - 2] === wordB[col - 1]
+      ) {
+        distances[row][col] = Math.min(distances[row][col], distances[row - 2][col - 2] + 1);
+      }
+    }
+  }
+
+  return distances[wordA.length][wordB.length];
+}
+
+// Tolerates a single typo or adjacent-letter swap ("minuets" -> "minutes", "lunhc" -> "lunch")
+// without a wider distance that would also match unrelated words ("lunges" is 2 edits from "lunch").
+function isFuzzyWordMatch(word: string, target: string, maxDistance = 1) {
+  if (Math.abs(word.length - target.length) > maxDistance) {
+    return false;
+  }
+
+  return transpositionDistance(word, target) <= maxDistance;
+}
+
+function hasDurationMention(value: string) {
+  if (
+    /\b\d+\s*(?:minutes?|mins?|min|hours?|hrs?|hr)\b/i.test(value) ||
+    /\b(?:about|around|roughly)?\s*(?:an|one)\s+hour\b/i.test(value)
+  ) {
+    return true;
+  }
+
+  const durationUnitTargets = ["minutes", "hours"];
+  const numberWithWordPattern = /\b\d+\s*([a-z]+)\b/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = numberWithWordPattern.exec(value))) {
+    const token = match[1]?.toLowerCase();
+
+    if (token && durationUnitTargets.some((target) => isFuzzyWordMatch(token, target))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function hasIntensityMention(value: string) {
+  return /\b(?:light|easy|recovery|moderate|steady|hard|intense|heavy)\b/i.test(value);
+}
+
+function hasExplicitMealTypeEvidence(value: string) {
+  if (/\b(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b/i.test(value)) {
+    return true;
+  }
+
+  const mealTypeTargets = ["breakfast", "brunch", "lunch", "dinner", "supper", "snack", "dessert"];
+  const words = value.toLowerCase().match(/[a-z]+/g) ?? [];
+
+  return words.some((word) => mealTypeTargets.some((target) => isFuzzyWordMatch(word, target)));
+}
+
+const WELLNESS_SIGNAL_DEFINITIONS = [
+  { key: "energy", cues: ["energy", "energized", "energised", "tired", "fatigued"] },
+  { key: "soreness", cues: ["soreness", "sore", "aches", "achy"] },
+  { key: "mood", cues: ["mood", "positive", "calm", "good", "down", "off"] },
+  { key: "stress", cues: ["stress", "stressed"] },
+  { key: "motivation", cues: ["motivation", "motivated", "drive"] }
+] as const;
+
+const NEAREST_CUE_MAX_DISTANCE = 16;
+
+function escapeRegExpToken(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function findCueOccurrences(clause: string) {
+  const occurrences: Array<{ index: number; signalKey: string }> = [];
+
+  for (const signal of WELLNESS_SIGNAL_DEFINITIONS) {
+    for (const cue of signal.cues) {
+      const pattern = new RegExp(`\\b${escapeRegExpToken(cue)}\\b`, "gi");
+      let match: RegExpExecArray | null;
+
+      while ((match = pattern.exec(clause))) {
+        occurrences.push({ index: match.index, signalKey: signal.key });
+      }
+    }
+  }
+
+  return occurrences;
+}
+
+function findScoreOccurrences(clause: string) {
+  const pattern = /[1-5](?:\s*(?:\/|out of)\s*5)?/g;
+  const occurrences: Array<{ index: number }> = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(clause))) {
+    occurrences.push({ index: match.index });
+  }
+
+  return occurrences;
+}
+
+// A number is only attributed to the cue nearest to it, not any cue within range, so
+// "energy 2 sleep bad sore af" attaches the 2 to energy instead of also crediting soreness.
+function resolveScoreOwnersForClause(clause: string) {
+  const cueOccurrences = findCueOccurrences(clause);
+  const scoreOccurrences = findScoreOccurrences(clause);
+  const owningSignalKeys = new Set<string>();
+
+  for (const score of scoreOccurrences) {
+    let nearestSignalKey: string | null = null;
+    let nearestDistance = Infinity;
+
+    for (const cue of cueOccurrences) {
+      const distance = Math.abs(cue.index - score.index);
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestSignalKey = cue.signalKey;
+      }
+    }
+
+    if (nearestSignalKey && nearestDistance <= NEAREST_CUE_MAX_DISTANCE) {
+      owningSignalKeys.add(nearestSignalKey);
+    }
+  }
+
+  return owningSignalKeys;
+}
+
+function hasNumericScoreEvidence(value: string, signalKey: string) {
+  return splitEvidenceClauses(value).some((clause) =>
+    resolveScoreOwnersForClause(clause).has(signalKey)
+  );
+}
+
+function hasWellnessSignalEvidence(value: string, cues: readonly string[]) {
+  const normalizedValue = value.toLowerCase();
+
+  return cues.some((cue) => {
+    const escapedCue = cue.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`\\b${escapedCue}\\b`, "i").test(normalizedValue);
+  });
+}
+
+function isStrengthActivity(activity: ParsedActivity) {
+  return (
+    activity.activityCategory === "strength" ||
+    /\b(?:strength|lift|lifting|weight|weights|bench|squat|deadlift|clean)\b/i.test(
+      activity.activityType
+    )
+  );
+}
+
+function hasStrengthFocusEvidence(value: string) {
+  return /\b(?:bench|bench press|squat|squats|deadlift|deadlifts|clean|cleans|press|rows?|pullups?|pushups?|chest|back|shoulders|arms|biceps|triceps|legs|quads|hamstrings|glutes|core|upper body|lower body|full body)\b/i.test(
+    value
+  );
+}
+
+function splitEvidenceClauses(message: string) {
+  return message
+    .split(/\s*(?:[;,]|\band then\b|\bthen\b|\blater\b|\n)\s*/i)
+    .map((clause) => clause.trim())
+    .filter(Boolean);
+}
+
+function stripActivityScaffolding(value: string) {
+  return value
+    .toLowerCase()
+    .replace(
+      /\b(?:i|did|do|went|for|a|an|the|on|at|session|sessions|workout|workouts|activity|activities|today|yesterday|tomorrow|last night|this morning|this afternoon|tonight|\d+\s+days?\s+ago|sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday|s)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|weekend)\b/g,
+      " "
+    )
+    .replace(/\b\d+\s*(?:minutes?|mins?|min|hours?|hrs?|hr)\b/g, " ")
+    .replace(/\b(?:light|easy|recovery|moderate|steady|hard|intense|heavy)\b/g, " ")
+    .replace(/[()[\]/:-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function hasActivityEvidence(value: string) {
+  const stripped = stripActivityScaffolding(value);
+
+  if (!stripped) {
+    return false;
+  }
+
+  return !/^(?:and|plus|again|each|every|most|\d+|\s)+$/i.test(stripped);
+}
+
+function findActivityEvidence(message: string, activity: ParsedActivity) {
+  const clauses = splitEvidenceClauses(message);
+  const timeReferenceText = activity.timeReferenceText?.trim().toLowerCase();
+
+  if (clauses.length === 1) {
+    return clauses[0];
+  }
+
+  const description = activity.description.trim().toLowerCase();
+
+  if (description) {
+    const byDescription = clauses.find((clause) => clause.toLowerCase().includes(description));
+
+    if (byDescription) {
+      return byDescription;
+    }
+  }
+
+  const activityType = normalizeActivityType(activity.activityType);
+
+  if (activityType) {
+    const byActivityType = clauses.find((clause) =>
+      normalizeActivityType(clause).includes(activityType)
+    );
+
+    if (byActivityType) {
+      return byActivityType;
+    }
+  }
+
+  const descriptionTokens = stripActivityScaffolding(activity.description)
+    .split(" ")
+    .filter((token) => token.length >= 4);
+
+  if (descriptionTokens.length > 0) {
+    const byDescriptionTokens = clauses.find((clause) => {
+      const normalizedClause = stripActivityScaffolding(clause);
+      return descriptionTokens.some((token) => normalizedClause.includes(token));
+    });
+
+    if (byDescriptionTokens) {
+      return byDescriptionTokens;
+    }
+  }
+
+  if (timeReferenceText) {
+    const byTime = clauses.find((clause) => clause.toLowerCase().includes(timeReferenceText));
+
+    if (byTime) {
+      return byTime;
+    }
+  }
+
+  return activity.description;
+}
+
+function findDietEvidence(message: string, entry: ParsedDietEntry) {
+  const clauses = splitEvidenceClauses(message);
+
+  // Description is checked first because it's specific to this entry; a generic time word like
+  // "today" can appear in an unrelated clause of a multi-clause message and would otherwise win
+  // by accident (matches findActivityEvidence's ordering for the same reason).
+  const description = entry.description.trim().toLowerCase();
+
+  if (description) {
+    const byDescription = clauses.find((clause) => clause.toLowerCase().includes(description));
+
+    if (byDescription) {
+      return byDescription;
+    }
+  }
+
+  const timeReferenceText = entry.timeReferenceText?.trim().toLowerCase();
+
+  if (timeReferenceText) {
+    const byTime = clauses.find((clause) => clause.toLowerCase().includes(timeReferenceText));
+
+    if (byTime) {
+      return byTime;
+    }
+  }
+
+  return entry.description;
+}
+
+function cleanDietGroupDescription(value: string) {
+  return value
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")
+    .replace(
+      /\b(?:sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday|s)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?)\b/gi,
+      " "
+    )
+    .replace(/\bi\s+(?:had|ate|drank|snacked(?:\s+on)?)\s+/gi, " ")
+    .replace(
+      /^(?:\s*(?:for\s+)?(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b\s*(?:was|were|is|=|:)?\s*)/i,
+      " "
+    )
+    .replace(
+      /\s+for\s+(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b/i,
+      " "
+    )
+    .replace(
+      /\s+(?:as\s+a\s+)?(?:breakfast|brunch|lunch|dinner|supper|snack|snacks|dessert)\b/i,
+      " "
+    )
+    .replace(/^[\s,.;:-]*(?:a\s+|an\s+)?/i, "")
+    .replace(/[.]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeDietEvidence(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function joinDescriptions(rawDescriptions: string[]) {
+  const descriptions = rawDescriptions.map((description) => description.trim()).filter(Boolean);
+
+  if (descriptions.length <= 1) {
+    return descriptions[0] ?? "";
+  }
+
+  return `${descriptions.slice(0, -1).join(", ")} and ${descriptions[descriptions.length - 1]}`;
+}
+
+function joinDietDescriptions(entries: ParsedDietEntry[]) {
+  return joinDescriptions(entries.map((entry) => entry.description));
+}
+
+function getSkippedMealEntries(message: string): ParsedDietEntry[] {
+  const mealTypes = ["breakfast", "lunch", "dinner"] as const;
+  const timeReferenceText = extractTimeReferenceText(message);
+  const loggedForDate = resolveLoggedForDateFromTimeReference(timeReferenceText, null);
+
+  return mealTypes.flatMap((mealType) => {
+    const skippedMealPattern = new RegExp(
+      `\\b(?:${mealType}\\s+(?:was|got)?\\s*skipped|skipped\\s+${mealType}|missed\\s+${mealType})\\b`,
+      "i"
+    );
+
+    if (!skippedMealPattern.test(message)) {
+      return [];
+    }
+
+    return [
+      {
+        description: `skipped ${mealType}`,
+        mealType,
+        confidence: 0.9,
+        detectedKeyword: "skipped_meal",
+        timeReferenceText,
+        loggedForDate
+      }
+    ];
+  });
+}
+
+function splitDietEntryOnTimingTransition(input: {
+  entry: ParsedDietEntry;
+  evidence: string;
+}) {
+  const parts = input.evidence
+    .split(/\s*(?:,\s*)?(?:and then|then|later|but\s+i\s+also\s+had|but\s+also\s+had)\s*/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length < 2) {
+    return null;
+  }
+
+  const dietRelevantParts = parts.filter(
+    (part) => !isLikelyActivityClause(part) || isLikelyDietClause(part)
+  );
+
+  const splitEntries = dietRelevantParts
+    .map((part) => {
+      const description = cleanDietGroupDescription(part);
+
+      if (!description) {
+        return null;
+      }
+
+      const timeReferenceText = extractTimeReferenceText(part) ?? input.entry.timeReferenceText;
+
+      return {
+        entry: {
+          ...input.entry,
+          description,
+          mealType: hasExplicitMealTypeEvidence(part) ? input.entry.mealType : null,
+          timeReferenceText,
+          loggedForDate: resolveLoggedForDateFromTimeReference(
+            timeReferenceText,
+            input.entry.loggedForDate
+          )
+        },
+        evidence: part
+      };
+    })
+    .filter(
+      (entryWithEvidence): entryWithEvidence is { entry: ParsedDietEntry; evidence: string } =>
+        Boolean(entryWithEvidence)
+    );
+
+  return splitEntries.length > 0 ? splitEntries : null;
+}
+
+function normalizeActivityType(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/\b(?:session|sessions|workout|workouts)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeActivityDescription(value: string) {
+  return stripActivityScaffolding(value);
+}
+
+function canonicalizeSupplementalActivity(activity: ParsedActivity): ParsedActivity {
+  const normalizedDescription = normalizeActivityDescription(activity.description);
+  const normalizedType = normalizeActivityType(activity.activityType);
+  const isWalk = /\bwalk/.test(normalizedDescription) || normalizedType.includes("walking");
+  const isHike = /\bhik/.test(normalizedDescription);
+  const isRun = /\brun|\bran/.test(normalizedDescription) || normalizedType.includes("running");
+
+  if (isHike) {
+    return {
+      ...activity,
+      activityCategory: "outdoor_recreation",
+      activityType: "hiking",
+      description: "hiked"
+    };
+  }
+
+  if (isWalk) {
+    return {
+      ...activity,
+      activityCategory: "cardio",
+      activityType: "walking",
+      description: "walked"
+    };
+  }
+
+  if (isRun) {
+    return {
+      ...activity,
+      activityCategory: "cardio",
+      activityType: "running",
+      description: "ran"
+    };
+  }
+
+  return {
+    ...activity,
+    activityType: normalizedType || activity.activityType
+  };
+}
+
+function getActivityEvidenceKey(message: string, activity: ParsedActivity) {
+  return normalizeActivityDescription(findActivityEvidence(message, activity));
+}
+
+function supplementMissingActivityClauses(
+  activities: ParsedActivity[],
+  message: string
+) {
+  // Only look for an additional clause the model may have missed once the model has already
+  // confirmed the message is about activity at all — otherwise the legacy keyword parser below
+  // can fabricate an activity from an unrelated use of a trigger word (e.g. "meetings ran long").
+  if (activities.length === 0 || !/\b(?:and then|then|later)\b/i.test(message)) {
+    return activities;
+  }
+
+  const existingEvidenceKeys = new Set(
+    activities.map((activity) => getActivityEvidenceKey(message, activity)).filter(Boolean)
+  );
+  const supplementalActivities = parseActivityMessage(message)
+    .map(canonicalizeSupplementalActivity)
+    .filter((activity) => {
+      const evidenceKey = getActivityEvidenceKey(message, activity);
+
+      if (!evidenceKey || existingEvidenceKeys.has(evidenceKey)) {
+        return false;
+      }
+
+      existingEvidenceKeys.add(evidenceKey);
+      return true;
+    });
+
+  return [...activities, ...supplementalActivities];
+}
+
+function getActivityQualityScore(activity: ParsedActivity) {
+  return [
+    activity.confidence ?? 0,
+    activity.durationMinutes ? 0.25 : 0,
+    activity.intensity ? 0.25 : 0,
+    activity.timePrecision === "implicit_today" ? -0.25 : 0,
+    activity.missingFields.length * -0.1
+  ].reduce((total, score) => total + score, 0);
+}
+
+function shouldMergeLikelyDuplicateActivity(
+  existing: ParsedActivity,
+  incoming: ParsedActivity
+) {
+  if (normalizeActivityType(existing.activityType) !== normalizeActivityType(incoming.activityType)) {
+    return false;
+  }
+
+  if (
+    normalizeActivityDescription(existing.description) !==
+    normalizeActivityDescription(incoming.description)
+  ) {
+    return false;
+  }
+
+  return (
+    (incoming.confidence ?? 0) <= 0 ||
+    (existing.confidence ?? 0) <= 0 ||
+    incoming.timePrecision === "implicit_today" ||
+    existing.timePrecision === "implicit_today"
+  );
+}
+
+function mergeLikelyDuplicateActivity(
+  existing: ParsedActivity,
+  incoming: ParsedActivity
+) {
+  const existingScore = getActivityQualityScore(existing);
+  const incomingScore = getActivityQualityScore(incoming);
+
+  return existingScore >= incomingScore
+    ? mergeActivity(existing, incoming)
+    : mergeActivity(incoming, existing);
+}
+
+function mergeActivity(existing: ParsedActivity, incoming: ParsedActivity): ParsedActivity {
+  return {
+    ...existing,
+    activityCategory:
+      existing.activityCategory === "other" && incoming.activityCategory !== "other"
+        ? incoming.activityCategory
+        : existing.activityCategory,
+    sessionCount: Math.max(existing.sessionCount ?? 1, incoming.sessionCount ?? 1),
+    description:
+      incoming.description.length > existing.description.length
+        ? incoming.description
+        : existing.description,
+    durationMinutes: existing.durationMinutes ?? incoming.durationMinutes,
+    intensity: existing.intensity ?? incoming.intensity,
+    timeReferenceText: existing.timeReferenceText ?? incoming.timeReferenceText,
+    loggedForDate: existing.loggedForDate || incoming.loggedForDate,
+    confidence: Math.max(existing.confidence ?? 0.7, incoming.confidence ?? 0.7),
+    missingFields: Array.from(new Set([...existing.missingFields, ...incoming.missingFields])),
+    ambiguityFlags: Array.from(new Set([...existing.ambiguityFlags, ...incoming.ambiguityFlags]))
+  };
+}
+
+function dedupeActivities(activities: ParsedActivity[], message: string) {
+  const likelyDuplicates = new Map<string, ParsedActivity>();
+
+  for (const activity of activities) {
+    const duplicateKey = [
+      normalizeActivityType(activity.activityType),
+      normalizeActivityDescription(activity.description)
+    ].join("::");
+    const existing = likelyDuplicates.get(duplicateKey);
+
+    if (existing && shouldMergeLikelyDuplicateActivity(existing, activity)) {
+      likelyDuplicates.set(duplicateKey, mergeLikelyDuplicateActivity(existing, activity));
+      continue;
+    }
+
+    likelyDuplicates.set(duplicateKey, activity);
+  }
+
+  const deduped = new Map<string, ParsedActivity>();
+
+  for (const activity of likelyDuplicates.values()) {
+    const key = [
+      normalizeActivityType(activity.activityType),
+      activity.loggedForDate,
+      activity.timeReferenceText?.toLowerCase().trim() ?? "",
+      activity.durationMinutes ?? "",
+      activity.intensity ?? ""
+    ].join("::");
+    const existing = deduped.get(key);
+
+    deduped.set(key, existing ? mergeActivity(existing, activity) : activity);
+  }
+
+  return consolidateSameSessionActivities(Array.from(deduped.values()), message);
+}
+
+// Catches a shape the two passes above don't: several *distinctly* named exercises (so they
+// don't share a duplicateKey/key above) that were all described as part of one session with one
+// overall duration/intensity, e.g. "did deadlifts, squats, and shoulders today, 120 min, hard."
+// Left alone, each of those activityLogs rows would carry the full session duration, inflating
+// the dashboard's weekly minutes total by however many exercises were named.
+function getSameSessionKey(activity: ParsedActivity) {
+  // durationMinutes is the required trigger: it's a real explicit number when present, so a
+  // coincidental match across genuinely unrelated activities is unlikely. intensity only has 3
+  // possible values plus null, so it rides along as an equality-matched field rather than an
+  // independent trigger — requiring it too would miss the common case of a shared session
+  // duration with no stated intensity.
+  if (activity.durationMinutes == null) {
+    return null;
+  }
+
+  return [
+    activity.loggedForDate,
+    activity.timeReferenceText?.toLowerCase().trim() ?? "",
+    activity.durationMinutes,
+    activity.intensity ?? ""
+  ].join("::");
+}
+
+// activityCategory is deliberately not part of the key above: a shared duration can span
+// categories (e.g. running + stretching, cardio + mobility). But a coincidental duration/date/
+// time match across genuinely separate activities (e.g. "did squats for 30 minutes, also walked
+// for 30 minutes") would collide on that same key. The extraction model can't reliably flag this
+// distinction itself, so instead of trusting it, this checks the raw message directly: a shared
+// session states its duration once ("running and stretching for 45 minutes"), while restated
+// durations state it once per activity ("30 minutes ... also ... 30 minutes"). Only merge a
+// mixed-category group when the duration is stated exactly once.
+function countExactDurationMentions(message: string, minutes: number) {
+  const pattern = new RegExp(`\\b${minutes}\\s*(?:minutes?|mins?|min)\\b`, "gi");
+  return message.match(pattern)?.length ?? 0;
+}
+
+function isMixedCategoryGroup(group: ParsedActivity[]) {
+  const categories = new Set(
+    group.map((activity) => activity.activityCategory?.trim().toLowerCase() ?? "")
+  );
+
+  return categories.size > 1;
+}
+
+function mergeMixedCategorySessionGroup(group: ParsedActivity[]): ParsedActivity {
+  const [firstActivity] = group;
+
+  return {
+    ...firstActivity,
+    activityType: "mixed workout",
+    activityCategory: "other",
+    description: joinDescriptions(group.map((activity) => activity.description)),
+    sessionCount: Math.max(...group.map((activity) => activity.sessionCount ?? 1)),
+    confidence: Math.max(...group.map((activity) => activity.confidence ?? 0.7)),
+    missingFields: Array.from(new Set(group.flatMap((activity) => activity.missingFields))),
+    ambiguityFlags: Array.from(new Set(group.flatMap((activity) => activity.ambiguityFlags)))
+  };
+}
+
+function chooseConsolidatedActivityType(group: ParsedActivity[]) {
+  if (group.every((activity) => activity.activityCategory?.trim().toLowerCase() === "strength")) {
+    return "weight lifting";
+  }
+
+  const typeCounts = new Map<string, number>();
+
+  for (const activity of group) {
+    typeCounts.set(activity.activityType, (typeCounts.get(activity.activityType) ?? 0) + 1);
+  }
+
+  let bestType = group[0].activityType;
+  let bestCount = 0;
+
+  for (const activity of group) {
+    const count = typeCounts.get(activity.activityType) ?? 0;
+
+    if (count > bestCount) {
+      bestCount = count;
+      bestType = activity.activityType;
+    }
+  }
+
+  return bestType;
+}
+
+function mergeSameSessionActivityGroup(group: ParsedActivity[]): ParsedActivity {
+  if (group.length === 1) {
+    return group[0];
+  }
+
+  const [firstActivity] = group;
+
+  return {
+    ...firstActivity,
+    activityType: chooseConsolidatedActivityType(group),
+    description: joinDescriptions(group.map((activity) => activity.description)),
+    sessionCount: Math.max(...group.map((activity) => activity.sessionCount ?? 1)),
+    confidence: Math.max(...group.map((activity) => activity.confidence ?? 0.7)),
+    missingFields: Array.from(new Set(group.flatMap((activity) => activity.missingFields))),
+    ambiguityFlags: Array.from(new Set(group.flatMap((activity) => activity.ambiguityFlags)))
+  };
+}
+
+function consolidateSameSessionActivities(activities: ParsedActivity[], message: string) {
+  const sessionGroups = new Map<string, ParsedActivity[]>();
+  const ungrouped: ParsedActivity[] = [];
+
+  for (const activity of activities) {
+    const key = getSameSessionKey(activity);
+
+    if (!key) {
+      ungrouped.push(activity);
+      continue;
+    }
+
+    const existingGroup = sessionGroups.get(key);
+
+    if (existingGroup) {
+      existingGroup.push(activity);
+      continue;
+    }
+
+    sessionGroups.set(key, [activity]);
+  }
+
+  const merged: ParsedActivity[] = [];
+
+  for (const group of sessionGroups.values()) {
+    if (!isMixedCategoryGroup(group)) {
+      merged.push(mergeSameSessionActivityGroup(group));
+      continue;
+    }
+
+    const durationMinutes = group[0].durationMinutes;
+    const isSharedDuration =
+      durationMinutes != null && countExactDurationMentions(message, durationMinutes) === 1;
+
+    if (isSharedDuration) {
+      merged.push(mergeMixedCategorySessionGroup(group));
+    } else {
+      merged.push(...group);
+    }
+  }
+
+  return [...merged, ...ungrouped];
+}
+
+function ensureField(fields: string[], field: string) {
+  return fields.includes(field) ? fields : [...fields, field];
+}
+
+function removeField(fields: string[], field: string) {
+  return fields.filter((existingField) => existingField !== field);
+}
+
+function normalizeMissingFields(fields: string[]) {
+  return fields
+    .map((field) => field.trim())
+    .filter((field) => ALLOWED_ACTIVITY_MISSING_FIELDS.has(field));
+}
+
+function sanitizeActivities(activities: ParsedActivity[], message: string) {
+  const dedupedActivities = dedupeActivities(activities, message);
+
+  return dedupedActivities
+    .filter((activity) => {
+      const evidence =
+        dedupedActivities.length === 1 ? message : findActivityEvidence(message, activity);
+      return hasActivityEvidence(evidence) || !isLikelyDietClause(evidence);
+    })
+    .map((activity) => {
+      const evidence =
+        dedupedActivities.length === 1 ? message : findActivityEvidence(message, activity);
+      const hasActivity = hasActivityEvidence(evidence);
+      const hasDuration = hasDurationMention(evidence);
+      const hasIntensity = hasIntensityMention(evidence);
+      const hasStrengthFocus = isStrengthActivity(activity) && hasStrengthFocusEvidence(evidence);
+      let missingFields = normalizeMissingFields(activity.missingFields);
+      let ambiguityFlags = [...activity.ambiguityFlags];
+
+      missingFields = hasActivity
+        ? removeField(missingFields, "activityType")
+        : ensureField(missingFields, "activityType");
+      missingFields = hasDuration
+        ? removeField(missingFields, "durationMinutes")
+        : ensureField(missingFields, "durationMinutes");
+      missingFields = hasIntensity
+        ? removeField(missingFields, "intensity")
+        : ensureField(missingFields, "intensity");
+      missingFields = hasStrengthFocus
+        ? removeField(missingFields, "movementFocus")
+        : isStrengthActivity(activity)
+          ? ensureField(missingFields, "movementFocus")
+          : removeField(missingFields, "movementFocus");
+
+      if (!hasActivity) {
+        ambiguityFlags = Array.from(
+          new Set([...ambiguityFlags, "activity_type_inferred_without_evidence"])
+        );
+      }
+
+      return {
+        ...activity,
+        durationMinutes: hasDuration ? activity.durationMinutes : null,
+        intensity: hasIntensity ? activity.intensity : null,
+        missingFields,
+        ambiguityFlags
+      };
+    });
+}
+
+function sanitizeDietEntries(entries: ParsedDietEntry[], message: string) {
+  const entriesWithSkippedMeals = [...getSkippedMealEntries(message), ...entries];
+  const entriesWithEvidence = entriesWithSkippedMeals.map((entry) => {
+    const evidence =
+      entriesWithSkippedMeals.length === 1 &&
+      /\b(?:and then|then|later|but\s+i\s+also\s+had|but\s+also\s+had)\b/i.test(message)
+        ? message
+        : findDietEvidence(message, entry);
+    const timeReferenceText = extractTimeReferenceText(evidence) ?? entry.timeReferenceText;
+
+    return {
+      entry: {
+        ...entry,
+        description:
+          entry.detectedKeyword === "skipped_meal"
+            ? entry.description
+            : cleanDietGroupDescription(entry.description) || entry.description,
+        mealType:
+          hasExplicitMealTypeEvidence(evidence) ||
+          (entriesWithSkippedMeals.length === 1 && hasExplicitMealTypeEvidence(message))
+            ? entry.mealType
+            : null,
+        timeReferenceText,
+        loggedForDate: resolveLoggedForDateFromTimeReference(timeReferenceText, entry.loggedForDate)
+      },
+      evidence
+    };
+  });
+  const expandedEntriesWithEvidence = entriesWithEvidence.flatMap((entryWithEvidence) => {
+    return splitDietEntryOnTimingTransition(entryWithEvidence) ?? [entryWithEvidence];
+  });
+
+  const groupedEntries = new Map<
+    string,
+    { entries: ParsedDietEntry[]; evidence: string }
+  >();
+
+  for (const { entry, evidence } of expandedEntriesWithEvidence) {
+    const key = [
+      entry.loggedForDate,
+      entry.mealType ?? "",
+      normalizeDietEvidence(evidence)
+    ].join("::");
+    const existing = groupedEntries.get(key);
+
+    if (existing) {
+      existing.entries.push(entry);
+      continue;
+    }
+
+    groupedEntries.set(key, {
+      entries: [entry],
+      evidence
+    });
+  }
+
+  return Array.from(groupedEntries.values()).map(({ entries: grouped, evidence }) => {
+    const [firstEntry] = grouped;
+
+    if (!firstEntry || grouped.length === 1) {
+      return firstEntry;
+    }
+
+    return {
+      ...firstEntry,
+      description: cleanDietGroupDescription(evidence) || joinDietDescriptions(grouped),
+      confidence: Math.max(...grouped.map((entry) => entry.confidence))
+    };
+  }).filter((entry): entry is ParsedDietEntry => Boolean(entry));
+}
+
+function sanitizeLifestyleEntries(entries: ParsedLifestyleEntry[]) {
+  const seenKeys = new Set<string>();
+
+  return entries.filter((entry) => {
+    if (!entry.description.trim()) {
+      return false;
+    }
+
+    const key = [entry.loggedForDate, entry.category ?? "", entry.description.toLowerCase().trim()].join(
+      "::"
+    );
+
+    if (seenKeys.has(key)) {
+      return false;
+    }
+
+    seenKeys.add(key);
+    return true;
+  });
+}
+
+function sanitizeWellnessCheckin(
+  checkin: ParsedWellnessCheckin | null,
+  message: string
+) {
+  if (!checkin) {
+    return null;
+  }
+
+  const detectedSignals = new Set(checkin.detectedSignals);
+
+  for (const signal of WELLNESS_SIGNAL_DEFINITIONS) {
+    if (hasWellnessSignalEvidence(message, signal.cues)) {
+      detectedSignals.add(signal.key);
+    }
+  }
+
+  const energyScore = hasNumericScoreEvidence(message, "energy") ? checkin.energyScore : null;
+  const sorenessScore = hasNumericScoreEvidence(message, "soreness") ? checkin.sorenessScore : null;
+  const moodScore = hasNumericScoreEvidence(message, "mood") ? checkin.moodScore : null;
+  const stressScore = hasNumericScoreEvidence(message, "stress") ? checkin.stressScore : null;
+  const motivationScore = hasNumericScoreEvidence(message, "motivation")
+    ? checkin.motivationScore
+    : null;
+  const normalizedSignals = Array.from(detectedSignals);
+  const notes = checkin.notes ?? (normalizedSignals.length > 0 ? message.trim() : null);
+
+  // A model-supplied notes string alone (with no detected signal and no verified score) is not
+  // real wellness evidence — it's often just incidental color on an activity/diet message.
+  if (
+    normalizedSignals.length === 0 &&
+    !energyScore &&
+    !sorenessScore &&
+    !moodScore &&
+    !stressScore &&
+    !motivationScore
+  ) {
+    return null;
+  }
+
+  return {
+    ...checkin,
+    energyScore,
+    sorenessScore,
+    moodScore,
+    stressScore,
+    motivationScore,
+    notes,
+    detectedSignals: normalizedSignals,
+    loggedForDate: resolveLoggedForDateFromTimeReference(message, checkin.loggedForDate)
+  };
+}
+
+function getBlockingActivityFields(activity: ParsedActivity) {
+  return activity.missingFields.filter((field) => BLOCKING_ACTIVITY_MISSING_FIELDS.has(field));
+}
+
+function hasBlockingActivityIssue(activities: ParsedActivity[]) {
+  return activities.some(
+    (activity) =>
+      getBlockingActivityFields(activity).length > 0 ||
+      activity.ambiguityFlags.includes("multi_day_split_unclear") ||
+      activity.ambiguityFlags.includes("grouped_session_count_without_distribution")
+  );
+}
+
+function formatActivityLabel(activity: ParsedActivity) {
+  if (activity.missingFields.includes("activityType")) {
+    return "session";
+  }
+
+  return activity.activityType.toLowerCase();
+}
+
+function buildBlockingClarificationReply(activities: ParsedActivity[]) {
+  const missingActivityType = activities.some((activity) =>
+    activity.missingFields.includes("activityType")
+  );
+  const missingSessionSplit = activities.some(
+    (activity) =>
+      activity.missingFields.includes("sessionSplit") ||
+      activity.ambiguityFlags.includes("multi_day_split_unclear") ||
+      activity.ambiguityFlags.includes("grouped_session_count_without_distribution")
+  );
+  const missingDate = activities.some((activity) =>
+    activity.missingFields.includes("loggedForDate")
+  );
+
+  if (missingActivityType) {
+    return 'I can log the timing and details, but what activity was it? A format like "run 20 min light" or "yoga 30 min" works well.';
+  }
+
+  if (missingSessionSplit) {
+    const activityLabels = Array.from(new Set(activities.map(formatActivityLabel))).join(", ");
+    return `I can log that, but how were the ${activityLabels || "sessions"} split across the days? A format like "1 Monday, 1 Wednesday" works well.`;
+  }
+
+  if (missingDate) {
+    return "I can log that, but when did it happen?";
+  }
+
+  return "I can log that, but I need one key detail first.";
+}
+
+function buildDietLabel(entry: ParsedDietEntry) {
+  const timeText = entry.timeReferenceText?.trim();
+  const mealText = entry.mealType ? `${entry.mealType} ` : "";
+
+  return [timeText, `${mealText}${entry.description.toLowerCase()}`].filter(Boolean).join(" ");
+}
+
+function buildPartialPersistencePrefix(input: {
+  parsedDietEntries: ParsedDietEntry[];
+  parsedLifestyleEntries: ParsedLifestyleEntry[];
+  parsedWellnessCheckin: ParsedWellnessCheckin | null;
+}) {
+  const parts: string[] = [];
+
+  if (input.parsedDietEntries.length > 0) {
+    parts.push(`I logged ${input.parsedDietEntries.map(buildDietLabel).join(", ")}.`);
+  }
+
+  if (input.parsedLifestyleEntries.length > 0) {
+    parts.push(`I logged ${input.parsedLifestyleEntries.map((entry) => entry.description).join(", ")}.`);
+  }
+
+  if (input.parsedWellnessCheckin) {
+    parts.push("I logged your wellness check-in.");
+  }
+
+  return parts.length > 0 ? `${parts.join(" ")} ` : "";
+}
+
+function hasPersistableData(input: {
+  activities: ParsedActivity[];
+  dietEntries: ParsedDietEntry[];
+  lifestyleEntries: ParsedLifestyleEntry[];
+  wellnessCheckin: ParsedWellnessCheckin | null;
+}) {
+  return (
+    input.activities.length > 0 ||
+    input.dietEntries.length > 0 ||
+    input.lifestyleEntries.length > 0 ||
+    Boolean(input.wellnessCheckin)
+  );
+}
+
+// When `pendingClarification` is set, only these two labeled lines are combined for
+// extraction — deliberately not the wider conversation history, per the extraction prompt's
+// "stay grounded in the current message" rule (see buildExtractUserUpdatePrompt).
+function buildExtractionUserPrompt(input: {
+  message: string;
+  pendingClarification?: PendingClarification;
+}) {
+  if (!input.pendingClarification) {
+    return input.message;
+  }
+
+  return [
+    `Previous message: "${input.pendingClarification.originalMessage}"`,
+    `Frankie asked: "${input.pendingClarification.clarificationQuestion}"`,
+    `User's answer: "${input.message}"`
+  ].join("\n");
+}
+
+export async function orchestrateFrankieReply(input: {
+  profile: AppProfile | null;
+  message: string;
+  recentMessages: ChatMessage[];
+  skipCoachResponse?: boolean;
+  pendingClarification?: PendingClarification;
+  latestCoachSummary?: LatestCoachSummary | null;
+}): Promise<FrankieOrchestrationResult> {
+  if (!hasOpenAiApiKey()) {
+    return buildUnavailableReply("OPENAI_API_KEY is not configured.");
+  }
+
+  try {
+    const context = buildChatContext({
+      profile: input.profile,
+      recentMessages: input.recentMessages
+    });
+    const extractedUnknown = await createStructuredOpenAiResponse({
+      systemPrompt: buildExtractUserUpdatePrompt({
+        isAnsweringClarification: Boolean(input.pendingClarification)
+      }),
+      userPrompt: buildExtractionUserPrompt({
+        message: input.message,
+        pendingClarification: input.pendingClarification
+      }),
+      schemaName: "frankie_user_update",
+      schema: extractedUserUpdateJsonSchema
+    });
+    const extracted = parseExtractedUserUpdate(extractedUnknown);
+    const parsedActivities = sanitizeActivities(
+      supplementMissingActivityClauses(mapExtractedActivities(extracted.activities), input.message),
+      input.message
+    );
+    const parsedDietEntries = sanitizeDietEntries(
+      mapExtractedDietEntries(extracted.dietEntries),
+      input.message
+    );
+    const parsedLifestyleEntries = sanitizeLifestyleEntries(
+      mapExtractedLifestyleEntries(extracted.lifestyleEntries)
+    );
+    const parsedWellnessCheckin = sanitizeWellnessCheckin(
+      mapExtractedWellnessCheckin(extracted.wellness),
+      input.message
+    );
+    const structuredFallback = buildStructuredLogConfirmation(
+      input.profile,
+      parsedActivities,
+      parsedDietEntries,
+      parsedWellnessCheckin,
+      parsedLifestyleEntries
+    );
+    const blockingActivityIssue = hasBlockingActivityIssue(parsedActivities);
+    const usableData = hasPersistableData({
+      activities: parsedActivities,
+      dietEntries: parsedDietEntries,
+      lifestyleEntries: parsedLifestyleEntries,
+      wellnessCheckin: parsedWellnessCheckin
+    });
+
+    if (blockingActivityIssue) {
+      const persistPlan = {
+        activities: false,
+        dietEntries: parsedDietEntries.length > 0,
+        lifestyleEntries: parsedLifestyleEntries.length > 0,
+        wellnessCheckin: Boolean(parsedWellnessCheckin)
+      };
+      const reply = `${buildPartialPersistencePrefix({
+        parsedDietEntries,
+        parsedLifestyleEntries,
+        parsedWellnessCheckin
+      })}${buildBlockingClarificationReply(parsedActivities)}`;
+
+      return {
+        assistantMessageType: "clarification_request",
+        parsedActivities,
+        parsedDietEntries,
+        parsedLifestyleEntries,
+        parsedWellnessCheckin,
+        reply,
+        orchestrationMode: "model",
+        shouldPersistStructuredData:
+          persistPlan.dietEntries || persistPlan.lifestyleEntries || persistPlan.wellnessCheckin,
+        persistPlan,
+        metadata: {
+          extractionSource: "model",
+          usedOpenAi: true,
+          modelName: DEFAULT_OPENAI_MODEL,
+          promptVersion: FRANKIE_PROMPT_VERSION,
+          intent: extracted.intent,
+          needsClarification: true,
+          contextSnapshot: context,
+          rawModelExtraction: extracted,
+          pendingClarification: { originalMessage: input.message, clarificationQuestion: reply }
+        }
+      };
+    }
+
+    if (extracted.needsClarification && extracted.clarificationQuestion.trim() && !usableData) {
+      const reply = extracted.clarificationQuestion.trim();
+
+      return {
+        assistantMessageType: "clarification_request",
+        parsedActivities,
+        parsedDietEntries,
+        parsedLifestyleEntries,
+        parsedWellnessCheckin,
+        reply,
+        orchestrationMode: "model",
+        shouldPersistStructuredData: false,
+        persistPlan: {
+          activities: false,
+          dietEntries: false,
+          lifestyleEntries: false,
+          wellnessCheckin: false
+        },
+        metadata: {
+          extractionSource: "model",
+          usedOpenAi: true,
+          modelName: DEFAULT_OPENAI_MODEL,
+          promptVersion: FRANKIE_PROMPT_VERSION,
+          intent: extracted.intent,
+          needsClarification: true,
+          contextSnapshot: context,
+          rawModelExtraction: extracted,
+          pendingClarification: { originalMessage: input.message, clarificationQuestion: reply }
+        }
+      };
+    }
+
+    const reply = input.skipCoachResponse
+      ? null
+      : await createTextOpenAiResponse({
+          systemPrompt: buildCoachResponseSystemPrompt(getPersona(input.profile?.coach_persona)),
+          userPrompt: buildCoachResponseUserPrompt({
+            profile: input.profile,
+            userMessage: input.message,
+            recentConversation: context.recentConversation,
+            coachingMemory: input.latestCoachSummary?.summaryText ?? null,
+            activities: parsedActivities,
+            dietEntries: parsedDietEntries,
+            lifestyleEntries: parsedLifestyleEntries,
+            wellnessCheckin: parsedWellnessCheckin
+          })
+        });
+
+    return {
+      assistantMessageType: structuredFallback ? "log_confirmation" : "chat",
+      parsedActivities,
+      parsedDietEntries,
+      parsedLifestyleEntries,
+      parsedWellnessCheckin,
+      reply: reply || structuredFallback?.reply || FRANKIE_UNAVAILABLE_REPLY,
+      orchestrationMode: "model",
+      shouldPersistStructuredData: usableData,
+      persistPlan: {
+        activities: parsedActivities.length > 0,
+        dietEntries: parsedDietEntries.length > 0,
+        lifestyleEntries: parsedLifestyleEntries.length > 0,
+        wellnessCheckin: Boolean(parsedWellnessCheckin)
+      },
+      metadata: {
+        extractionSource: "model",
+        usedOpenAi: true,
+        modelName: DEFAULT_OPENAI_MODEL,
+        promptVersion: FRANKIE_PROMPT_VERSION,
+        intent: extracted.intent,
+        needsClarification: false,
+        contextSnapshot: context,
+        rawModelExtraction: extracted
+      }
+    };
+  } catch (error) {
+    return buildUnavailableReply(
+      error instanceof Error ? error.message : "Unknown AI orchestration error."
+    );
+  }
+}

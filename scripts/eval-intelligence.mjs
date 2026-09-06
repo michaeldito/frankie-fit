@@ -122,6 +122,7 @@ function parseArgs(argv) {
   const options = {
     caseId: null,
     includePassingRaw: false,
+    repeat: 1,
     scenarioId: null
   };
 
@@ -135,6 +136,12 @@ function parseArgs(argv) {
 
     if (arg === "--include-passing-raw") {
       options.includePassingRaw = true;
+    }
+
+    if (arg === "--repeat") {
+      const parsed = Number.parseInt(argv[index + 1] ?? "", 10);
+      options.repeat = Number.isFinite(parsed) && parsed > 0 ? parsed : options.repeat;
+      index += 1;
     }
 
     if (arg === "--scenario") {
@@ -343,6 +350,14 @@ async function main() {
 
   const options = parseArgs(process.argv.slice(2));
 
+  if (options.repeat > 1 && !options.caseId && !options.scenarioId) {
+    console.error(
+      "--repeat requires --case or --scenario to avoid an accidental full-suite Nx run (each repeat is a live OpenAI API call)."
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     console.error("OPENAI_API_KEY is required to run the intelligence eval.");
     process.exitCode = 1;
@@ -430,50 +445,81 @@ async function main() {
   console.log(`Model: ${process.env.OPENAI_MODEL ?? "gpt-4o-mini"}`);
   console.log("Mode: isolated extraction, coach response skipped\n");
 
-  const results = [];
+  const caseResults = [];
 
   for (const { scenario, testCase } of cases) {
-    let pendingClarification;
+    const attempts = [];
 
-    for (const precedingMessage of testCase.precedingMessages ?? []) {
-      const precedingResult = await orchestrateFrankieReply({
-        message: precedingMessage,
+    for (let attempt = 0; attempt < options.repeat; attempt += 1) {
+      let pendingClarification;
+
+      for (const precedingMessage of testCase.precedingMessages ?? []) {
+        const precedingResult = await orchestrateFrankieReply({
+          message: precedingMessage,
+          profile: scenario.profile,
+          recentMessages: [],
+          skipCoachResponse: true,
+          pendingClarification
+        });
+
+        pendingClarification = precedingResult.metadata.pendingClarification;
+      }
+
+      const orchestrationResult = await orchestrateFrankieReply({
+        message: testCase.message,
         profile: scenario.profile,
         recentMessages: [],
         skipCoachResponse: true,
         pendingClarification
       });
+      const actual = buildActualSnapshot(orchestrationResult);
+      const diffs = compareIntelligenceCase({
+        actual,
+        testCase
+      });
+      const attemptResult = {
+        actual,
+        diffs,
+        fixAreas: summarizeFixAreas(diffs),
+        passed: diffs.length === 0,
+        scenario,
+        testCase
+      };
 
-      pendingClarification = precedingResult.metadata.pendingClarification;
+      attempts.push(attemptResult);
+      process.stdout.write(attemptResult.passed ? "." : "F");
     }
 
-    const orchestrationResult = await orchestrateFrankieReply({
-      message: testCase.message,
-      profile: scenario.profile,
-      recentMessages: [],
-      skipCoachResponse: true,
-      pendingClarification
-    });
-    const actual = buildActualSnapshot(orchestrationResult);
-    const diffs = compareIntelligenceCase({
-      actual,
-      testCase
-    });
-    const result = {
-      actual,
-      diffs,
-      fixAreas: summarizeFixAreas(diffs),
-      passed: diffs.length === 0,
-      scenario,
-      testCase
-    };
-
-    results.push(result);
-    process.stdout.write(result.passed ? "." : "F");
+    caseResults.push({ attempts, scenario, testCase });
   }
 
   console.log("\n");
 
+  if (options.repeat > 1) {
+    for (const { attempts, scenario, testCase } of caseResults) {
+      const passedCount = attempts.filter((attempt) => attempt.passed).length;
+      const rate = Math.round((passedCount / attempts.length) * 100);
+
+      console.log(`${testCase.id}: ${passedCount}/${attempts.length} passed (${rate}%) [${scenario.label}]`);
+
+      if (passedCount < attempts.length) {
+        const firstFailure = attempts.find((attempt) => !attempt.passed);
+        console.log("First failing attempt diffs:");
+        for (const diff of firstFailure.diffs) {
+          console.log(
+            `  - ${diff.path} expected ${formatValue(diff.expected)}, got ${formatValue(diff.actual)}`
+          );
+        }
+      }
+    }
+
+    console.log(
+      "\n--repeat is a diagnostic mode measuring model non-determinism; it does not fail the build regardless of pass rate."
+    );
+    return;
+  }
+
+  const results = caseResults.flatMap((caseResult) => caseResult.attempts);
   const passed = results.filter((result) => result.passed);
   const failed = results.filter((result) => !result.passed);
 

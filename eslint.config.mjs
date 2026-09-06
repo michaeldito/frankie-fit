@@ -1,11 +1,9 @@
-import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTypeScript from "eslint-config-next/typescript";
 
 const config = [
   {
-    ignores: ["apps/mobile/**", "coverage/**"]
+    ignores: ["apps/**", "coverage/**", ".claude/worktrees/**"]
   },
-  ...nextVitals,
   ...nextTypeScript
 ];
 

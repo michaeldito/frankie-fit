@@ -1,4 +1,8 @@
-import type { Database } from "../../types/database";
+// TODO(Phase 3 / shared-types extraction): this reaches into apps/web/types by relative path,
+// which is backwards (a package depending on an app). Correct fix is to extract Database into
+// a packages/shared-types package per docs/mobile-repo-structure-plan.md Phase 3. Deferred here
+// to keep the apps/web move mechanical.
+import type { Database } from "../../apps/web/types/database";
 import { addDays, formatShortDate, formatShortDay, getPacificToday, getWeekStart, toDateKey } from "./pacific-date";
 
 export type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"];
