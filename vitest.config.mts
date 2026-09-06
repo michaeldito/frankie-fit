@@ -9,7 +9,7 @@ export default defineConfig({
     // worktree checked out under .claude/worktrees/ brings its own node_modules) — the custom
     // exclude list here replaces vitest's own recursive default rather than extending it, so
     // this has to be explicit and recursive itself.
-    exclude: ["**/node_modules/**", "apps/mobile/**", ".next/**", ".claude/worktrees/**"],
+    exclude: ["**/node_modules/**", "apps/mobile/**", "apps/web/.next/**", ".claude/worktrees/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
@@ -31,32 +31,32 @@ export default defineConfig({
       // coverage-v8's handling of this directory shape, not a signal that these files are
       // untested — see their route.test.ts files for the real coverage.
       include: [
-        "components/admin/coaching-memory-grid.tsx",
-        "components/chat/logged-entry-format.ts",
-        "components/chat/quick-start.ts",
-        "lib/admin-eval-runner.ts",
-        "lib/admin-evals-data.ts",
-        "lib/admin.ts",
-        "lib/chat.ts",
-        "lib/notifications.ts",
-        "lib/rate-limit.ts",
-        "lib/workouts/save-workout-session.ts",
-        "lib/workouts/validation.ts",
-        "lib/ai/context/load-chat-context.ts",
-        "lib/ai/orchestrator/frankie-orchestrator.ts",
-        "lib/ai/prompts/coach-response.ts",
-        "lib/ai/prompts/extract-user-update.ts",
-        "lib/ai/prompts/personas.ts",
-        "lib/ai/run-frankie-turn.ts",
-        "lib/ai/schemas/extracted-user-update.ts",
-        "lib/ai/tools/log-activity.ts",
-        "lib/ai/tools/log-diet.ts",
-        "lib/ai/tools/log-lifestyle.ts",
-        "lib/ai/tools/log-wellness.ts",
-        "lib/ai/tools/shared.ts",
-        "lib/ai/tracing/ai-trace-runs.ts",
-        "lib/programs/enroll-in-program.ts",
-        "lib/programs/get-program-progress.ts",
+        "apps/web/components/admin/coaching-memory-grid.tsx",
+        "apps/web/components/chat/logged-entry-format.ts",
+        "apps/web/components/chat/quick-start.ts",
+        "apps/web/lib/admin-eval-runner.ts",
+        "apps/web/lib/admin-evals-data.ts",
+        "apps/web/lib/admin.ts",
+        "apps/web/lib/chat.ts",
+        "apps/web/lib/notifications.ts",
+        "apps/web/lib/rate-limit.ts",
+        "apps/web/lib/workouts/save-workout-session.ts",
+        "apps/web/lib/workouts/validation.ts",
+        "apps/web/lib/ai/context/load-chat-context.ts",
+        "apps/web/lib/ai/orchestrator/frankie-orchestrator.ts",
+        "apps/web/lib/ai/prompts/coach-response.ts",
+        "apps/web/lib/ai/prompts/extract-user-update.ts",
+        "apps/web/lib/ai/prompts/personas.ts",
+        "apps/web/lib/ai/run-frankie-turn.ts",
+        "apps/web/lib/ai/schemas/extracted-user-update.ts",
+        "apps/web/lib/ai/tools/log-activity.ts",
+        "apps/web/lib/ai/tools/log-diet.ts",
+        "apps/web/lib/ai/tools/log-lifestyle.ts",
+        "apps/web/lib/ai/tools/log-wellness.ts",
+        "apps/web/lib/ai/tools/shared.ts",
+        "apps/web/lib/ai/tracing/ai-trace-runs.ts",
+        "apps/web/lib/programs/enroll-in-program.ts",
+        "apps/web/lib/programs/get-program-progress.ts",
         "packages/dashboard-core/dashboard.ts",
         "packages/dashboard-core/pacific-date.ts",
         "packages/profile-core/profile-format.ts",
@@ -78,7 +78,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, ".")
+      "@": path.resolve(import.meta.dirname, "apps/web")
     }
   }
 });
