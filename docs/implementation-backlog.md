@@ -6,7 +6,9 @@ This document translates the MVP architecture, schema, and product design into a
 
 ## Current Progress Snapshot
 
-As of May 1, 2026, the project has moved well beyond the planning-only stage.
+Refreshed September 5, 2026 — the snapshot below was originally written May 1, 2026 and had drifted well behind reality (four months of shipped work); this update replaces it rather than appending to it, so treat everything below as current rather than historical.
+
+As of September 5, 2026, the project has moved well beyond the planning-only stage.
 
 Completed in the app:
 
@@ -14,50 +16,46 @@ Completed in the app:
 - auth and protected app shell
 - onboarding and profile persistence
 - persistent chat threads and messages
-- activity logging from chat
-- diet logging from chat with multi-entry support
-- wellness check-ins from chat with multi-signal support
-- dashboard summaries backed by real saved data
+- activity, diet, wellness, and lifestyle logging from chat, all with multi-entry/multi-signal support (lifestyle added as the fourth pillar alongside the original three)
+- dashboard summaries backed by real saved data, across all four pillars
 - profile editing for core coaching context
+- coach persona selection
+- workout logging and P90X-style program scheduling, browsing, and enrollment
+- notifications v1: schema, a cron-driven nudge job, and daily/weekly coach summaries delivered as in-app notifications
 - admin overview with aggregate reporting across tracked accounts
 - admin debug view with turn-by-turn Frankie trace inspection
-- admin evals scaffold for benchmark personas, field-level checks, and review tags
-- first database-backed eval runner foundation with scenario replay, daily summaries, weekly summaries, and human review capture
+- a full admin evals benchmark-replay system (not just a scaffold): three seeded personas replayed through the real orchestrator, daily/weekly coach-summary generation, a seven-check field-level review rubric, and tuning notes — see `docs/frankie-eval-loop-design.md` for the current-state detail
+- a separate local scripted intelligence eval runner (`npm run eval:intelligence`) covering 74 isolated extraction cases across 5 scenarios, with a `--repeat` flag for measuring model flakiness
 - browser-local bullet progress for eval message replay so admins are not stuck waiting on one opaque long-running request
-- first-pass Frankie AI orchestration layer with model extraction and response fallbacks
+- Frankie AI orchestration layer with model-based structured extraction, now consolidated so both web and mobile chat run through the same `runFrankieTurn` path rather than separate implementations
 - Frankie trace capture for web and mobile chat turns via `ai_trace_runs`
 - first visual-system pass across the app shell, chat, dashboard, profile, and admin surfaces
 - stacked app shell refactor with modal actions, top-right user controls, and a fixed scrollable chat pane
 - public landing-page redesign with full-width header sections, calmer spacing, and a more deliberate Tailwind-style hero composition
 - LinkedIn/content notes that capture the build story as it evolves
+- CI-gated test coverage: every PR into `main`/`dev` runs lint, typecheck, `test:coverage`, and build (`.github/workflows/ci.yml`), with coverage thresholds enforced against an explicit, growing include-list (`vitest.config.mts`) — a recent sprint applied this systematically across the log routes, notifications, programs, workouts, cron, all 7 admin/evals routes, and `admin-eval-runner.ts`
 
 Completed in the repo:
 
 - demo seed-data plan and rerunnable seed script for 10 reviewable accounts
-- Expo / React Native mobile app scaffold in `apps/mobile`
+- Expo / React Native mobile app in `apps/mobile`, past the scaffold stage (see mobile detail below)
 - workspace tooling for web and mobile development from the root repo
-- mobile architecture plan for the Expo / React Native iPhone companion app
-- mobile v1 screen spec covering auth, onboarding, chat, dashboard, and profile
-- mobile repo structure plan and mobile UI direction docs
+- three shared domain packages formalized as pnpm workspace packages and consumed by both web and mobile: `packages/dashboard-core` (dashboard math, Pacific-date helpers), `packages/workout-core` (P90X/program model), `packages/profile-core` (profile formatting) — so this logic no longer lives in two copies
+- mobile architecture plan, v1 screen spec, repo structure plan, and UI direction docs
 - mobile Supabase auth flow using the same project and profile model as web
 - mobile onboarding/profile editor with field parity against the web onboarding flow, including multi-select answers where web supports them
-- mobile chat connected to server-side Frankie orchestration through the mobile chat API route
-- mobile dashboard/profile surfaces backed by real Supabase data
+- mobile chat connected to server-side Frankie orchestration through the mobile chat API route, now sharing the same orchestration path as web
+- mobile dashboard/profile surfaces backed by real Supabase data (exercise, diet, and wellness tabs — lifestyle not yet added as a mobile tab, see gap below)
 - read-only Apple Health development-build spike validated on a connected iPhone for workout and heart-rate preview capability
 
 Now in progress:
 
-- Frankie intelligence refinement
-- evals, traceability, and auditability around Frankie chat behavior
-- applying and testing the eval migration against Supabase
-- first real eval replay run for the three benchmark personas
-- extending the same stepwise progress pattern from message replay to full reset/replay/summarize runs
+- test coverage and hardening — the most recently active work, not new user-facing features
+- adding a lifestyle dashboard tab to mobile to match web's four-pillar parity
+- Frankie intelligence refinement: mixed-domain parsing, time-aware phrasing (`yesterday`, `last night`), and messy/typo-heavy input handling
 - family beta deployment and admin-side debug readiness
 - first Vercel MVP deployment preparation
 - mobile UI/UX refinement after device testing
-- mobile dashboard/profile parity against the web app
-- deeper AI-native migration beyond the first orchestration layer
-- lightweight AI observability, evals, and traceability around the new model-backed flow
 - open-vocabulary activity understanding so Frankie does not depend on a narrow built-in activity list
 
 Paused intentionally:
@@ -69,7 +67,7 @@ Paused intentionally:
 
 These are worth keeping in mind as we keep building.
 
-- Chat logging now has a first-pass AI orchestration layer, but the regex parser still exists as an intentional fallback while we harden the model-driven path.
+- Chat logging runs on the model-driven AI orchestration layer. A handful of the original regex-parser functions (activity clause detection, diet-clause detection, structured log confirmation copy) are still imported and called, but as evidence-grounding/supplemental helpers inside the orchestrator — not as a standby fallback path for when the model is unavailable.
 - Frankie logging should follow the contract in `docs/frankie-logging-contract.md`: log clear facts, treat optional detail as optional, and clarify only for core blockers.
 - Frankie quality tuning should follow `docs/frankie-eval-loop-design.md`: replay benchmark scenarios, review field-level checks, tune, then compare against prior runs.
 - Activity parsing supports multiple activities in one message, but interpretation is still keyword-heavy.
@@ -114,10 +112,9 @@ These are not blockers for the current MVP, but they are important follow-up are
 - add stronger handling for alcohol, hydration, and recovery-adjacent context
 - add cautious cross-signal reasoning so Frankie can suggest possible causes without overstating certainty
 - consider moving dashboard summaries to precomputed aggregates only after raw-log rendering becomes a performance or complexity problem
-- move Frankie from regex-first parsing to model-based structured extraction with deterministic tool writes
-- add traceability, eval fixtures, and prompt/version control before calling the app fully AI-native
-- expand context loading, add time-aware extraction, and introduce eval coverage before removing the fallback parser
 - redesign activity extraction and clarification so Frankie reasons from activity metadata like category, missing fields, and ambiguity flags instead of a short list of hard-coded activity names
+
+Done since this list was written: the move to model-based structured extraction with deterministic tool writes, traceability/eval fixtures/prompt-version control (see `docs/frankie-eval-loop-design.md`), and expanded context loading.
 
 ## Working Principle
 
@@ -520,8 +517,4 @@ Native mobile is now active in the repo, but the scope should stay tight:
 
 ## Recommended Next Build Artifact
 
-The next strongest artifact after this backlog would be one of:
-
-- a task board broken into tickets
-- the actual app scaffold
-- prompt and tool contract definitions for Frankie
+This section described pre-scaffold starting choices (a task board, the app scaffold, Frankie's tool contracts) when the backlog was first written; all of that now exists. The live "next" list is the "Now in progress" section under the Current Progress Snapshot above — currently led by test coverage/hardening and closing the mobile lifestyle-tab parity gap.
