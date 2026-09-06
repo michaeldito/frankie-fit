@@ -7,6 +7,7 @@ Standards for anyone (human or agent) making changes in this repo.
 - `main` — production. Only updated by the weekly promote workflow (or a direct hotfix, see below). Deploys to the production Vercel environment.
 - `dev` — integration branch. All day-to-day work merges here first. Deploys to a Vercel preview environment for real-world testing during the week.
 - Feature branches — cut from `dev`, named `feat/<short-name>`, `fix/<short-name>`, or `chore/<short-name>`. Open a PR into `dev`.
+- A Claude Code worktree session starts on an auto-generated branch name (e.g. `claude/<adjective>-<name>-<hex>`) that doesn't follow this convention — rename it (`git branch -m <old> <new>`) before opening a PR. Safe to do any time before the branch is pushed/tracked upstream; check `git rev-parse --abbrev-ref --symbolic-full-name @{u}` first if it might already be.
 
 Weekly release: once `dev` is in a good state, run the **Promote dev to production** GitHub Action (Actions tab → workflow_dispatch) to merge `dev` into `main` (`git merge --no-ff`, producing a "Promote dev to main" merge commit — not a fast-forward) and trigger a production deploy. Do not push directly to `main` outside of this workflow except for genuine hotfixes — and even then, prefer branching off `main`, PRing, and merging normally.
 
