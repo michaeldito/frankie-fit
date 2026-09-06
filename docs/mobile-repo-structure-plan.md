@@ -30,22 +30,21 @@ My recommendation is:
 
 This gives you structure without stalling progress.
 
-## Current Status - May 1, 2026
+## Current Status - September 5, 2026
 
-The repo has started the phased mobile path, and real-device iPhone testing has confirmed the current workspace shape is still workable.
+The repo has moved past the original phase-1 shape described here. Both preconditions this doc set for Phase 2 — "mobile is real enough to justify the reorganization" and "shared-package extraction is starting to matter" — have now been met.
 
 What is in place now:
 
-- root-level Next.js web app remains in place
-- Expo / React Native app exists at `apps/mobile`
+- root-level Next.js web app remains in place (Phase 2, promoting it into `apps/web`, has not happened yet)
+- Expo / React Native app exists at `apps/mobile` with real screens beyond the original scaffold: auth, onboarding, chat, dashboard, profile, and a read-only HealthKit spike
 - `pnpm-workspace.yaml` wires the repo as a workspace
 - root scripts expose explicit web and mobile commands
 - mobile calls trusted backend routes for Frankie orchestration
 - local physical-device testing uses both the mobile Metro server and the root Next.js web/API server
-- the read-only HealthKit spike lives inside the mobile app without forcing a broader repo restructure
-- shared package extraction has not started yet
+- **shared package extraction has started and is real**: `packages/dashboard-core`, `packages/workout-core`, and `packages/profile-core` are formalized pnpm workspace packages (each with its own `package.json`, published under the `@frankie-fit/*` npm scope, consumed by both web and mobile via ordinary bare-specifier imports like `@frankie-fit/dashboard-core`) — see "Recommended End-State Shape" below, which has been updated to reflect the actual structure rather than the kind-based one originally proposed here
 
-This means the repo is currently in the intended phase-1 shape: mobile exists, web has not been moved into `apps/web`, and shared packages should wait until duplication becomes painful.
+This means the repo is now in a phase-2-ready shape: mobile is real, shared-package extraction is proven out, and promoting the web app into `apps/web` (Phase 2) is unblocked whenever it's prioritized — not automatically triggered by this status update, just no longer gated. A detailed, ready-to-execute migration plan for that move exists (produced 2026-09-05); ask for it by referencing this doc's Phase 2 when picking the work back up.
 
 ## Recommended End-State Shape
 
@@ -55,16 +54,16 @@ frankie-fit/
     web/
     mobile/
   packages/
-    shared/
-      domain/
-      schemas/
-      frankie/
-      utils/
+    dashboard-core/
+    workout-core/
+    profile-core/
   supabase/
   docs/
   package.json
   pnpm-workspace.yaml
 ```
+
+Note: the original version of this doc proposed a `packages/shared/{domain,schemas,frankie,utils}` structure, organized *by kind*. What was actually built is organized *by feature* instead — `dashboard-core`, `workout-core`, `profile-core`, each a standalone package under the `@frankie-fit/*` npm scope with its own `package.json` (`main`/`types`/`exports` pointing at `./index.ts`). This tree reflects reality, not the original proposal.
 
 ## What This Means In Practice
 
@@ -92,18 +91,17 @@ Responsibilities:
 - profile
 - future HealthKit integration
 
-### `packages/shared`
+### `packages/*-core`
 
-This should contain only things that truly benefit both apps.
+Each package should contain only things that truly benefit both apps, extracted one feature area at a time rather than grouped under a single `shared/` namespace by kind.
 
-Good candidates:
+What exists today:
 
-- domain types
-- Zod schemas
-- Frankie request/response contracts
-- extracted-update schemas
-- formatting helpers
-- date and summary utilities
+- `packages/dashboard-core` — dashboard aggregation logic, Pacific-date helpers
+- `packages/workout-core` — exercise catalog, WOD templates, program workouts/schedules, time formatting
+- `packages/profile-core` — profile formatting helpers
+
+Each is a real pnpm workspace package: its own `package.json` under the `@frankie-fit/*` scope, `private: true`, `main`/`types`/`exports` all pointing at `./index.ts`, consumed by both apps via a normal bare-specifier import (e.g. `import { getPacificDateKey } from "@frankie-fit/dashboard-core"`) rather than a relative or `@/`-aliased path. Follow this exact pattern for the next extraction rather than introducing a new organizing scheme.
 
 ## What Should Not Be Shared
 
@@ -175,76 +173,13 @@ Do this only when:
 
 ## Phase 3: Extract Shared Packages
 
-Extract only the shared pieces that have become painful to duplicate.
+**Status: underway, but not via the extraction order originally recommended here.** `dashboard-core`, `workout-core`, and `profile-core` already exist (see "What This Means In Practice" above) — extracted by feature area, not by the kind-based `schemas`/`domain`/`frankie`/`utils` split this section originally proposed. That original order is superseded; keep extracting one real, feature-shaped package at a time as duplication actually becomes painful, following the established `@frankie-fit/*-core` pattern rather than reviving the kind-based scheme.
 
-Recommended extraction order:
+One concrete candidate identified since: `types/database.ts` (the generated Supabase schema type, currently web-app-local) is already reached into by `packages/dashboard-core/dashboard.ts` via a relative import that crosses the app/package boundary — a package depending on an app's internals, which is backwards. A `packages/shared-types`-style extraction (following the same `package.json`/`main`/`types`/`exports` pattern as the existing three packages) would fix this properly. Not urgent, but worth doing before that boundary-crossing import spreads to more call sites.
 
-1. `packages/shared/schemas`
-2. `packages/shared/domain`
-3. `packages/shared/frankie`
-4. `packages/shared/utils`
-
-This avoids premature abstraction.
-
-## Shared Package Recommendations
-
-## 1. `packages/shared/schemas`
-
-Purpose:
-
-- keep shared validation contracts in one place
-
-Good contents:
-
-- extracted user update schema
-- profile update schema
-- log payload schemas
-- recommendation payload schemas
-
-This is likely the first package worth extracting.
-
-## 2. `packages/shared/domain`
-
-Purpose:
-
-- keep conceptual types and enums shared between clients
-
-Good contents:
-
-- activity domain types
-- diet domain types
-- wellness domain types
-- recommendation types
-- account and profile types
-
-## 3. `packages/shared/frankie`
-
-Purpose:
-
-- keep Frankie contracts and orchestration-facing data shapes aligned
-
-Good contents:
-
-- orchestrator input/output contracts
-- message-shaping helpers
-- summary helpers
-- context formatting helpers
-
-Important note:
+## Important Note on Server-Side Logic
 
 The actual server-side OpenAI execution should stay on the trusted backend path, not inside a shared client package.
-
-## 4. `packages/shared/utils`
-
-Purpose:
-
-- hold simple general helpers worth using in both apps
-
-Good contents:
-
-- date formatting
-- score normalization
-- progress-summary helpers
 
 ## What Should Stay Server-Side
 
