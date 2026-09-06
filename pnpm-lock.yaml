@@ -7,50 +7,10 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@frankie-fit/dashboard-core':
-        specifier: workspace:*
-        version: link:packages/dashboard-core
-      '@frankie-fit/profile-core':
-        specifier: workspace:*
-        version: link:packages/profile-core
-      '@frankie-fit/workout-core':
-        specifier: workspace:*
-        version: link:packages/workout-core
-      '@supabase/ssr':
-        specifier: ^0.10.2
-        version: 0.10.2(@supabase/supabase-js@2.103.3)
-      '@supabase/supabase-js':
-        specifier: ^2.103.3
-        version: 2.103.3
-      next:
-        specifier: ^16.2.4
-        version: 16.2.4(@babel/core@7.29.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      react-dom:
-        specifier: ^19.2.5
-        version: 19.2.5(react@19.2.5)
-      react-markdown:
-        specifier: ^10.1.0
-        version: 10.1.0(@types/react@19.2.14)(react@19.2.5)
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
     devDependencies:
-      '@tailwindcss/postcss':
-        specifier: ^4.2.2
-        version: 4.2.2
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.14)
       '@vitest/coverage-v8':
         specifier: ^4.1.11
         version: 4.1.11(vitest@4.1.11)
@@ -60,9 +20,6 @@ importers:
       eslint-config-next:
         specifier: ^16.2.4
         version: 16.2.4(@typescript-eslint/parser@8.58.2(eslint@9.39.4(jiti@2.6.1))(typescript@6.0.3))(eslint@9.39.4(jiti@2.6.1))(typescript@6.0.3)
-      tailwindcss:
-        specifier: ^4.2.2
-        version: 4.2.2
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -184,6 +141,55 @@ importers:
       typescript:
         specifier: ~5.9.2
         version: 5.9.3
+
+  apps/web:
+    dependencies:
+      '@frankie-fit/dashboard-core':
+        specifier: workspace:*
+        version: link:../../packages/dashboard-core
+      '@frankie-fit/profile-core':
+        specifier: workspace:*
+        version: link:../../packages/profile-core
+      '@frankie-fit/workout-core':
+        specifier: workspace:*
+        version: link:../../packages/workout-core
+      '@supabase/ssr':
+        specifier: ^0.10.2
+        version: 0.10.2(@supabase/supabase-js@2.103.3)
+      '@supabase/supabase-js':
+        specifier: ^2.103.3
+        version: 2.103.3
+      next:
+        specifier: ^16.2.4
+        version: 16.2.4(@babel/core@7.29.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.2.5(react@19.2.5)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.2.14)(react@19.2.5)
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@tailwindcss/postcss':
+        specifier: ^4.2.2
+        version: 4.2.2
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      eslint-config-next:
+        specifier: ^16.2.4
+        version: 16.2.4(@typescript-eslint/parser@8.58.2(eslint@9.39.4(jiti@2.6.1))(typescript@6.0.3))(eslint@9.39.4(jiti@2.6.1))(typescript@6.0.3)
+      tailwindcss:
+        specifier: ^4.2.2
+        version: 4.2.2
 
   packages/dashboard-core: {}
 
@@ -4431,10 +4437,6 @@ packages:
     resolution: {integrity: sha512-OCVPnIObs4N29kxTjzLfUryOkvZEq+pf8jTF0lg8E7uETuWHA+v7j3c/xJmiqpX450191LlmZfUKkXxkTry7nA==}
     engines: {node: ^10 || ^12 || >=14}
 
-  postcss@8.5.10:
-    resolution: {integrity: sha512-pMMHxBOZKFU6HgAZ4eyGnwXF/EvPGGqUr0MnZ5+99485wwW41kW91A4LOGxSHhgugZmSChL5AlElNdwlNgcnLQ==}
-    engines: {node: ^10 || ^12 || >=14}
-
   postcss@8.5.26:
     resolution: {integrity: sha512-u82N74LFzG8ca+dD8puPnplTXoGH4fTPpVGuIbt36G3qvNlkvfD0lEAZSxaly3KX8TS/L1A1gsCEmvKmBcVbkQ==}
     engines: {node: ^10 || ^12 || >=14}
@@ -7385,7 +7387,7 @@ snapshots:
       '@alloc/quick-lru': 5.2.0
       '@tailwindcss/node': 4.2.2
       '@tailwindcss/oxide': 4.2.2
-      postcss: 8.5.10
+      postcss: 8.5.26
       tailwindcss: 4.2.2
 
   '@tybys/wasm-util@0.10.1':
@@ -10786,17 +10788,11 @@ snapshots:
 
   postcss@8.4.31:
     dependencies:
-      nanoid: 3.3.11
+      nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
   postcss@8.4.49:
-    dependencies:
-      nanoid: 3.3.11
-      picocolors: 1.1.1
-      source-map-js: 1.2.1
-
-  postcss@8.5.10:
     dependencies:
       nanoid: 3.3.11
       picocolors: 1.1.1

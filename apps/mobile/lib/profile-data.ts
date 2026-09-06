@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
-import type { Database } from '../../../types/database';
+// TODO(Phase 3 / shared-types extraction): reaches into apps/web by relative path — see
+// packages/dashboard-core/dashboard.ts for the same known IOU and its rationale.
+import type { Database } from '../../../apps/web/types/database';
 import { formatList, formatScheduleNotes, getAccountLabel, getDisplayName } from '@frankie-fit/profile-core';
 
 export { formatList, formatScheduleNotes, getAccountLabel, getDisplayName };

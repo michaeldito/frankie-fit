@@ -18,7 +18,9 @@ import {
 import { Screen, ScreenTitle, ScrollCard } from '@/components/frankie-ui';
 import { colors } from '@/constants/frankie-theme';
 import { frankieApiFetch } from '@/lib/api';
-import type { Database } from '../../../../types/database';
+// TODO(Phase 3 / shared-types extraction): reaches into apps/web by relative path — see
+// packages/dashboard-core/dashboard.ts for the same known IOU and its rationale.
+import type { Database } from '../../../../apps/web/types/database';
 
 type ChatMessageRow = Database['public']['Tables']['conversation_messages']['Row'];
 

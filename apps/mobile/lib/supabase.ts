@@ -2,7 +2,9 @@ import 'expo-sqlite/localStorage/install';
 
 import { createClient } from '@supabase/supabase-js';
 
-import type { Database } from '../../../types/database';
+// TODO(Phase 3 / shared-types extraction): reaches into apps/web by relative path — see
+// packages/dashboard-core/dashboard.ts for the same known IOU and its rationale.
+import type { Database } from '../../../apps/web/types/database';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
