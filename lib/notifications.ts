@@ -284,7 +284,7 @@ export async function evaluateDailySummaryNotifications() {
       continue;
     }
 
-    const profileData = await loadProfile(profile.id);
+    const profileData = await loadProfile(supabase, profile.id);
     const summary = await generateDailyCoachSummary({
       supabase,
       userId: profile.id,
@@ -341,7 +341,7 @@ export async function evaluateWeeklySummaryNotifications() {
       continue;
     }
 
-    const profileData = await loadProfile(profile.id);
+    const profileData = await loadProfile(supabase, profile.id);
     const summary = await generateWeeklyCoachSummary({
       supabase,
       userId: profile.id,

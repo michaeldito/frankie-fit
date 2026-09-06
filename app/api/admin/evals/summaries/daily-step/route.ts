@@ -3,6 +3,7 @@ import { isAdminProfile } from "@/lib/admin";
 import { getEvalScenarioById } from "@/lib/admin-evals";
 import { runEvalScenarioDailySummaryStep } from "@/lib/admin-eval-runner";
 import { getCurrentAppContext } from "@/lib/profile";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 
 async function requireAdminResponse() {
   const context = await getCurrentAppContext();
@@ -40,7 +41,8 @@ export async function POST(request: NextRequest) {
   const startedAt = Date.now();
 
   try {
-    const result = await runEvalScenarioDailySummaryStep({ dayIndex, scenario });
+    const supabase = createSupabaseServiceRoleClient();
+    const result = await runEvalScenarioDailySummaryStep({ dayIndex, scenario, supabase });
 
     return NextResponse.json({
       dayLabel: result.day.label,

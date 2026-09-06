@@ -1,4 +1,4 @@
-import type { User } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { AppProfile } from "@/lib/profile";
 import type { Database, Json } from "@/types/database";
 import { getScenarioReplaySteps, type EvalScenario } from "@/lib/admin-evals";
@@ -8,8 +8,8 @@ import {
   generateWeeklyCoachSummary
 } from "@/lib/ai/summaries/frankie-summaries";
 import { runFrankieTurn } from "@/lib/ai/run-frankie-turn";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 
+type SupabaseServerClient = SupabaseClient<Database>;
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 function toAppProfile(row: ProfileRow | null): AppProfile | null {
@@ -65,8 +65,7 @@ function getScenarioDates(scenario: EvalScenario) {
   };
 }
 
-async function resolveTargetUser(email: string) {
-  const supabase = createSupabaseServiceRoleClient();
+async function resolveTargetUser(supabase: SupabaseServerClient, email: string) {
   const { data, error } = await supabase.auth.admin.listUsers({
     page: 1,
     perPage: 1000
@@ -89,8 +88,10 @@ async function resolveTargetUser(email: string) {
 // Resolves every scenario's user in one listUsers() call instead of one per scenario, and
 // skips (rather than throws on) a scenario whose benchmark account doesn't exist yet — a
 // missing account shouldn't break admin pages that just want to scope data to known personas.
-export async function resolveEvalScenarioUserIds(scenarios: EvalScenario[]) {
-  const supabase = createSupabaseServiceRoleClient();
+export async function resolveEvalScenarioUserIds(
+  supabase: SupabaseServerClient,
+  scenarios: EvalScenario[]
+) {
   const { data, error } = await supabase.auth.admin.listUsers({
     page: 1,
     perPage: 1000
@@ -109,8 +110,7 @@ export async function resolveEvalScenarioUserIds(scenarios: EvalScenario[]) {
     .filter((id): id is string => Boolean(id));
 }
 
-export async function loadProfile(userId: string) {
-  const supabase = createSupabaseServiceRoleClient();
+export async function loadProfile(supabase: SupabaseServerClient, userId: string) {
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
@@ -124,8 +124,7 @@ export async function loadProfile(userId: string) {
   return toAppProfile(data);
 }
 
-async function listThreadIds(userId: string) {
-  const supabase = createSupabaseServiceRoleClient();
+async function listThreadIds(supabase: SupabaseServerClient, userId: string) {
   const { data, error } = await supabase
     .from("conversation_threads")
     .select("id")
@@ -138,10 +137,12 @@ async function listThreadIds(userId: string) {
   return (data ?? []).map((thread) => thread.id);
 }
 
-export async function resetEvalScenarioUser(scenario: EvalScenario) {
-  const supabase = createSupabaseServiceRoleClient();
-  const targetUser = await resolveTargetUser(scenario.userEmail);
-  const threadIds = await listThreadIds(targetUser.id);
+export async function resetEvalScenarioUser(
+  supabase: SupabaseServerClient,
+  scenario: EvalScenario
+) {
+  const targetUser = await resolveTargetUser(supabase, scenario.userEmail);
+  const threadIds = await listThreadIds(supabase, targetUser.id);
   const { data: evalRuns, error: evalRunsError } = await supabase
     .from("eval_runs")
     .select("id")
@@ -180,13 +181,13 @@ export async function resetEvalScenarioUser(scenario: EvalScenario) {
 }
 
 async function createEvalThread(input: {
-  scenario: EvalScenario;
-  user: User;
   profile: AppProfile | null;
+  scenario: EvalScenario;
+  supabase: SupabaseServerClient;
+  user: User;
 }) {
-  const supabase = createSupabaseServiceRoleClient();
   const title = `Eval: ${input.scenario.label}`;
-  const { data: thread, error } = await supabase
+  const { data: thread, error } = await input.supabase
     .from("conversation_threads")
     .insert({
       user_id: input.user.id,
@@ -202,7 +203,7 @@ async function createEvalThread(input: {
   const summaryText =
     input.profile?.onboarding_summary ??
     `${input.scenario.userName} benchmark profile for ${input.scenario.label}.`;
-  const { data: initialMessage, error: initialMessageError } = await supabase
+  const { data: initialMessage, error: initialMessageError } = await input.supabase
     .from("conversation_messages")
     .insert({
       thread_id: thread.id,
@@ -232,10 +233,10 @@ async function createEvalThread(input: {
 async function createEvalRun(input: {
   adminUserId: string;
   scenario: EvalScenario;
+  supabase: SupabaseServerClient;
 }) {
-  const supabase = createSupabaseServiceRoleClient();
   const { periodStart, periodEnd } = getScenarioDates(input.scenario);
-  const { data, error } = await supabase
+  const { data, error } = await input.supabase
     .from("eval_runs")
     .insert({
       suite_id: "frankie-benchmark-v1",
@@ -266,9 +267,9 @@ async function updateEvalRun(input: {
   errorMessage?: string | null;
   runId: string;
   status: "completed" | "failed";
+  supabase: SupabaseServerClient;
 }) {
-  const supabase = createSupabaseServiceRoleClient();
-  const { error } = await supabase
+  const { error } = await input.supabase
     .from("eval_runs")
     .update({
       status: input.status,
@@ -295,11 +296,11 @@ async function insertEvalRunItem(input: {
   runStatus: string;
   scenarioId: string;
   sourceMessageId: string | null;
+  supabase: SupabaseServerClient;
   traceId: string | null;
   userId: string;
 }) {
-  const supabase = createSupabaseServiceRoleClient();
-  const { error } = await supabase.from("eval_run_items").insert({
+  const { error } = await input.supabase.from("eval_run_items").insert({
     eval_run_id: input.evalRunId,
     scenario_id: input.scenarioId,
     user_id: input.userId,
@@ -322,11 +323,11 @@ async function insertEvalRunItem(input: {
 }
 
 async function loadThreadMessages(input: {
+  supabase: SupabaseServerClient;
   threadId: string;
   userId: string;
 }) {
-  const supabase = createSupabaseServiceRoleClient();
-  const { data, error } = await supabase
+  const { data, error } = await input.supabase
     .from("conversation_messages")
     .select("*")
     .eq("thread_id", input.threadId)
@@ -340,8 +341,7 @@ async function loadThreadMessages(input: {
   return data ?? [];
 }
 
-async function loadEvalRun(runId: string) {
-  const supabase = createSupabaseServiceRoleClient();
+async function loadEvalRun(supabase: SupabaseServerClient, runId: string) {
   const { data, error } = await supabase
     .from("eval_runs")
     .select("*")
@@ -356,11 +356,11 @@ async function loadEvalRun(runId: string) {
 }
 
 async function loadEvalThread(input: {
+  supabase: SupabaseServerClient;
   threadId: string;
   userId: string;
 }) {
-  const supabase = createSupabaseServiceRoleClient();
-  const { data, error } = await supabase
+  const { data, error } = await input.supabase
     .from("conversation_threads")
     .select("*")
     .eq("id", input.threadId)
@@ -377,17 +377,20 @@ async function loadEvalThread(input: {
 export async function beginEvalScenarioReplay(input: {
   adminUserId: string;
   scenario: EvalScenario;
+  supabase: SupabaseServerClient;
 }) {
-  const targetUser = await resolveTargetUser(input.scenario.userEmail);
-  const profile = await loadProfile(targetUser.id);
+  const targetUser = await resolveTargetUser(input.supabase, input.scenario.userEmail);
+  const profile = await loadProfile(input.supabase, targetUser.id);
   const evalRun = await createEvalRun({
     adminUserId: input.adminUserId,
-    scenario: input.scenario
+    scenario: input.scenario,
+    supabase: input.supabase
   });
   const { thread } = await createEvalThread({
     scenario: input.scenario,
     user: targetUser,
-    profile
+    profile,
+    supabase: input.supabase
   });
 
   return {
@@ -402,10 +405,11 @@ export async function runEvalScenarioReplayStep(input: {
   evalRunId: string;
   scenario: EvalScenario;
   stepIndex: number;
+  supabase: SupabaseServerClient;
   threadId: string;
 }) {
   const startedAt = Date.now();
-  const evalRun = await loadEvalRun(input.evalRunId);
+  const evalRun = await loadEvalRun(input.supabase, input.evalRunId);
 
   if (evalRun.scenario_id !== input.scenario.id) {
     throw new Error("Eval run does not match the requested scenario.");
@@ -422,19 +426,20 @@ export async function runEvalScenarioReplayStep(input: {
     throw new Error("Replay step index is out of range.");
   }
 
-  const supabase = createSupabaseServiceRoleClient();
-  const targetUser = await resolveTargetUser(input.scenario.userEmail);
-  const profile = await loadProfile(targetUser.id);
+  const targetUser = await resolveTargetUser(input.supabase, input.scenario.userEmail);
+  const profile = await loadProfile(input.supabase, targetUser.id);
   const thread = await loadEvalThread({
+    supabase: input.supabase,
     threadId: input.threadId,
     userId: targetUser.id
   });
   const recentMessages = await loadThreadMessages({
+    supabase: input.supabase,
     threadId: input.threadId,
     userId: targetUser.id
   });
   const result = await runFrankieTurn({
-    supabase,
+    supabase: input.supabase,
     userId: targetUser.id,
     userEmail: targetUser.email ?? input.scenario.userEmail,
     displayName: input.scenario.userName,
@@ -446,6 +451,7 @@ export async function runEvalScenarioReplayStep(input: {
   });
 
   await insertEvalRunItem({
+    supabase: input.supabase,
     evalRunId: evalRun.id,
     scenarioId: input.scenario.id,
     userId: targetUser.id,
@@ -477,8 +483,10 @@ export async function finishEvalScenarioReplay(input: {
   errorMessage?: string | null;
   evalRunId: string;
   status: "completed" | "failed";
+  supabase: SupabaseServerClient;
 }) {
   await updateEvalRun({
+    supabase: input.supabase,
     runId: input.evalRunId,
     status: input.status,
     errorMessage: input.errorMessage ?? null
@@ -493,6 +501,7 @@ export async function finishEvalScenarioReplay(input: {
 export async function runEvalScenarioDailySummaryStep(input: {
   dayIndex: number;
   scenario: EvalScenario;
+  supabase: SupabaseServerClient;
 }) {
   const day = input.scenario.days.find((candidate) => candidate.dayIndex === input.dayIndex);
 
@@ -500,11 +509,10 @@ export async function runEvalScenarioDailySummaryStep(input: {
     throw new Error("Daily summary step index is out of range.");
   }
 
-  const targetUser = await resolveTargetUser(input.scenario.userEmail);
-  const profile = await loadProfile(targetUser.id);
-  const supabase = createSupabaseServiceRoleClient();
+  const targetUser = await resolveTargetUser(input.supabase, input.scenario.userEmail);
+  const profile = await loadProfile(input.supabase, targetUser.id);
   const summary = await generateDailyCoachSummary({
-    supabase,
+    supabase: input.supabase,
     userId: targetUser.id,
     profile,
     date: day.date
@@ -513,10 +521,12 @@ export async function runEvalScenarioDailySummaryStep(input: {
   return { day, summary };
 }
 
-export async function runEvalScenarioWeeklySummary(scenario: EvalScenario) {
-  const targetUser = await resolveTargetUser(scenario.userEmail);
-  const profile = await loadProfile(targetUser.id);
-  const supabase = createSupabaseServiceRoleClient();
+export async function runEvalScenarioWeeklySummary(
+  supabase: SupabaseServerClient,
+  scenario: EvalScenario
+) {
+  const targetUser = await resolveTargetUser(supabase, scenario.userEmail);
+  const profile = await loadProfile(supabase, targetUser.id);
   const { periodStart, periodEnd } = getScenarioDates(scenario);
 
   return generateWeeklyCoachSummary({

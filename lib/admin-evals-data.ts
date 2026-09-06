@@ -3,6 +3,7 @@ import { isAdminProfile } from "@/lib/admin";
 import { EVAL_SCENARIOS, TUNING_REVIEW_CHECK_ID } from "@/lib/admin-evals";
 import { resolveEvalScenarioUserIds } from "@/lib/admin-eval-runner";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 import type { Database } from "@/types/database";
 
 type EvalRunRow = Database["public"]["Tables"]["eval_runs"]["Row"];
@@ -132,7 +133,9 @@ export async function getAdminEvalsData(input: {
           .select("id, eval_run_id, run_status")
           .in("eval_run_id", runIds)
       : Promise.resolve({ data: [], error: null }),
-    resolveEvalScenarioUserIds(EVAL_SCENARIOS).catch(() => [] as string[])
+    resolveEvalScenarioUserIds(createSupabaseServiceRoleClient(), EVAL_SCENARIOS).catch(
+      () => [] as string[]
+    )
   ]);
 
   // Scoped to the known benchmark personas rather than a flat global "most recent" query, so

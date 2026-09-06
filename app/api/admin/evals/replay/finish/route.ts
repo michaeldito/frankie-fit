@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminProfile } from "@/lib/admin";
 import { finishEvalScenarioReplay } from "@/lib/admin-eval-runner";
 import { getCurrentAppContext } from "@/lib/profile";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 
 async function requireAdminResponse() {
   const context = await getCurrentAppContext();
@@ -38,10 +39,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const supabase = createSupabaseServiceRoleClient();
     const result = await finishEvalScenarioReplay({
       evalRunId: runId,
       status,
-      errorMessage
+      errorMessage,
+      supabase
     });
 
     return NextResponse.json(result);

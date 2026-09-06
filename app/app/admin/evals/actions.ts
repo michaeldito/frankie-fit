@@ -6,6 +6,7 @@ import { getEvalScenarioById } from "@/lib/admin-evals";
 import { requireAdminContext } from "@/lib/admin";
 import { resetEvalScenarioUser } from "@/lib/admin-eval-runner";
 import { getCurrentAppContext } from "@/lib/profile";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 
 function getStringValue(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -51,7 +52,8 @@ function redirectToEvals(message: string, options?: { runId?: string; scenarioId
 export async function resetScenarioUserAction(formData: FormData) {
   const scenario = getScenarioFromForm(formData);
   await requireAdminUserId();
-  const result = await resetEvalScenarioUser(scenario);
+  const supabase = createSupabaseServiceRoleClient();
+  const result = await resetEvalScenarioUser(supabase, scenario);
 
   revalidatePath("/app/admin/evals");
   redirectToEvals(
