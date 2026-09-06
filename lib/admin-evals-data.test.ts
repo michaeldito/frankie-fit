@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppProfile, CurrentAppContext } from "@/lib/profile";
 
-const { createSupabaseServerClient, resolveEvalScenarioUserIds } = vi.hoisted(() => ({
-  createSupabaseServerClient: vi.fn(),
-  resolveEvalScenarioUserIds: vi.fn()
-}));
+const { createSupabaseServerClient, createSupabaseServiceRoleClient, resolveEvalScenarioUserIds } =
+  vi.hoisted(() => ({
+    createSupabaseServerClient: vi.fn(),
+    createSupabaseServiceRoleClient: vi.fn(),
+    resolveEvalScenarioUserIds: vi.fn()
+  }));
 
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient }));
+vi.mock("@/lib/supabase/service-role", () => ({ createSupabaseServiceRoleClient }));
 vi.mock("@/lib/admin-eval-runner", () => ({ resolveEvalScenarioUserIds }));
 
 async function importAdminEvalsData() {
@@ -15,6 +18,7 @@ async function importAdminEvalsData() {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  createSupabaseServiceRoleClient.mockReturnValue({ marker: "fake-supabase" });
   resolveEvalScenarioUserIds.mockResolvedValue([]);
 });
 

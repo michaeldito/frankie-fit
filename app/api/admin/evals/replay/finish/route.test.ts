@@ -2,16 +2,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { AppProfile, CurrentAppContext } from "@/lib/profile";
 
-const { getCurrentAppContext, finishEvalScenarioReplay } = vi.hoisted(() => ({
-  getCurrentAppContext: vi.fn(),
-  finishEvalScenarioReplay: vi.fn()
-}));
+const { getCurrentAppContext, finishEvalScenarioReplay, createSupabaseServiceRoleClient } =
+  vi.hoisted(() => ({
+    getCurrentAppContext: vi.fn(),
+    finishEvalScenarioReplay: vi.fn(),
+    createSupabaseServiceRoleClient: vi.fn()
+  }));
 
 vi.mock("@/lib/profile", () => ({ getCurrentAppContext }));
 vi.mock("@/lib/admin-eval-runner", () => ({ finishEvalScenarioReplay }));
+vi.mock("@/lib/supabase/service-role", () => ({ createSupabaseServiceRoleClient }));
+
+const fakeSupabaseClient = { marker: "fake-supabase" } as never;
 
 beforeEach(() => {
   vi.resetAllMocks();
+  createSupabaseServiceRoleClient.mockReturnValue(fakeSupabaseClient);
 });
 
 function readyContext(overrides: Partial<CurrentAppContext> = {}): CurrentAppContext {
@@ -78,7 +84,8 @@ describe("POST /api/admin/evals/replay/finish", () => {
     expect(finishEvalScenarioReplay).toHaveBeenCalledWith({
       evalRunId: "run-1",
       status: "failed",
-      errorMessage: "boom"
+      errorMessage: "boom",
+      supabase: fakeSupabaseClient
     });
   });
 
@@ -92,7 +99,8 @@ describe("POST /api/admin/evals/replay/finish", () => {
     expect(finishEvalScenarioReplay).toHaveBeenCalledWith({
       evalRunId: "run-1",
       status: "completed",
-      errorMessage: null
+      errorMessage: null,
+      supabase: fakeSupabaseClient
     });
   });
 

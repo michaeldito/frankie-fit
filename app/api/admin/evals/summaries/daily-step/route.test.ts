@@ -2,16 +2,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { AppProfile, CurrentAppContext } from "@/lib/profile";
 
-const { getCurrentAppContext, runEvalScenarioDailySummaryStep } = vi.hoisted(() => ({
+const {
+  getCurrentAppContext,
+  runEvalScenarioDailySummaryStep,
+  createSupabaseServiceRoleClient
+} = vi.hoisted(() => ({
   getCurrentAppContext: vi.fn(),
-  runEvalScenarioDailySummaryStep: vi.fn()
+  runEvalScenarioDailySummaryStep: vi.fn(),
+  createSupabaseServiceRoleClient: vi.fn()
 }));
 
 vi.mock("@/lib/profile", () => ({ getCurrentAppContext }));
 vi.mock("@/lib/admin-eval-runner", () => ({ runEvalScenarioDailySummaryStep }));
+vi.mock("@/lib/supabase/service-role", () => ({ createSupabaseServiceRoleClient }));
 
 beforeEach(() => {
   vi.resetAllMocks();
+  createSupabaseServiceRoleClient.mockReturnValue({ marker: "fake-supabase" });
 });
 
 function readyContext(overrides: Partial<CurrentAppContext> = {}): CurrentAppContext {

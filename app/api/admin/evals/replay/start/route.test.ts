@@ -2,16 +2,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { AppProfile, CurrentAppContext } from "@/lib/profile";
 
-const { getCurrentAppContext, beginEvalScenarioReplay } = vi.hoisted(() => ({
-  getCurrentAppContext: vi.fn(),
-  beginEvalScenarioReplay: vi.fn()
-}));
+const { getCurrentAppContext, beginEvalScenarioReplay, createSupabaseServiceRoleClient } =
+  vi.hoisted(() => ({
+    getCurrentAppContext: vi.fn(),
+    beginEvalScenarioReplay: vi.fn(),
+    createSupabaseServiceRoleClient: vi.fn()
+  }));
 
 vi.mock("@/lib/profile", () => ({ getCurrentAppContext }));
 vi.mock("@/lib/admin-eval-runner", () => ({ beginEvalScenarioReplay }));
+vi.mock("@/lib/supabase/service-role", () => ({ createSupabaseServiceRoleClient }));
+
+const fakeSupabaseClient = { marker: "fake-supabase" } as never;
 
 beforeEach(() => {
   vi.resetAllMocks();
+  createSupabaseServiceRoleClient.mockReturnValue(fakeSupabaseClient);
 });
 
 function readyContext(overrides: Partial<CurrentAppContext> = {}): CurrentAppContext {
@@ -88,7 +94,7 @@ describe("POST /api/admin/evals/replay/start", () => {
       threadId: "thread-1"
     });
     expect(beginEvalScenarioReplay).toHaveBeenCalledWith(
-      expect.objectContaining({ adminUserId: "admin-1" })
+      expect.objectContaining({ adminUserId: "admin-1", supabase: fakeSupabaseClient })
     );
   });
 

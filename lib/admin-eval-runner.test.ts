@@ -1,15 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { EvalScenario } from "@/lib/admin-evals";
 
-const { createSupabaseServiceRoleClient, runFrankieTurn, generateDailyCoachSummary, generateWeeklyCoachSummary } =
-  vi.hoisted(() => ({
-    createSupabaseServiceRoleClient: vi.fn(),
+const { runFrankieTurn, generateDailyCoachSummary, generateWeeklyCoachSummary } = vi.hoisted(
+  () => ({
     runFrankieTurn: vi.fn(),
     generateDailyCoachSummary: vi.fn(),
     generateWeeklyCoachSummary: vi.fn()
-  }));
+  })
+);
 
-vi.mock("@/lib/supabase/service-role", () => ({ createSupabaseServiceRoleClient }));
 vi.mock("@/lib/ai/run-frankie-turn", () => ({ runFrankieTurn }));
 vi.mock("@/lib/ai/summaries/frankie-summaries", () => ({
   generateDailyCoachSummary,
@@ -150,57 +149,55 @@ async function importRunner() {
 
 describe("resolveEvalScenarioUserIds", () => {
   it("matches scenarios to user ids case-insensitively", async () => {
-    createSupabaseServiceRoleClient.mockReturnValue(
-      fakeSupabase({ users: [{ id: "user-1", email: "Athlete@Example.com" }] }).client
-    );
+    const { client } = fakeSupabase({ users: [{ id: "user-1", email: "Athlete@Example.com" }] });
     const { resolveEvalScenarioUserIds } = await importRunner();
 
-    const ids = await resolveEvalScenarioUserIds([baseScenario({ userEmail: "athlete@EXAMPLE.com" })]);
+    const ids = await resolveEvalScenarioUserIds(client, [
+      baseScenario({ userEmail: "athlete@EXAMPLE.com" })
+    ]);
 
     expect(ids).toEqual(["user-1"]);
   });
 
   it("silently drops a scenario whose user doesn't exist", async () => {
-    createSupabaseServiceRoleClient.mockReturnValue(fakeSupabase({ users: [] }).client);
+    const { client } = fakeSupabase({ users: [] });
     const { resolveEvalScenarioUserIds } = await importRunner();
 
-    const ids = await resolveEvalScenarioUserIds([baseScenario()]);
+    const ids = await resolveEvalScenarioUserIds(client, [baseScenario()]);
 
     expect(ids).toEqual([]);
   });
 
   it("throws when listUsers errors", async () => {
-    createSupabaseServiceRoleClient.mockReturnValue(
-      fakeSupabase({ listUsersError: { message: "auth is down" } }).client
-    );
+    const { client } = fakeSupabase({ listUsersError: { message: "auth is down" } });
     const { resolveEvalScenarioUserIds } = await importRunner();
 
-    await expect(resolveEvalScenarioUserIds([baseScenario()])).rejects.toThrow("auth is down");
+    await expect(resolveEvalScenarioUserIds(client, [baseScenario()])).rejects.toThrow(
+      "auth is down"
+    );
   });
 });
 
 describe("loadProfile", () => {
   it("returns a mapped profile when found", async () => {
-    createSupabaseServiceRoleClient.mockReturnValue(
-      fakeSupabase({
-        tables: {
-          profiles: {
-            select: {
-              data: {
-                full_name: "Athlete",
-                role: "member",
-                preferred_schedule: { monday: "am" },
-                onboarding_summary: "likes running"
-              },
-              error: null
-            }
+    const { client } = fakeSupabase({
+      tables: {
+        profiles: {
+          select: {
+            data: {
+              full_name: "Athlete",
+              role: "member",
+              preferred_schedule: { monday: "am" },
+              onboarding_summary: "likes running"
+            },
+            error: null
           }
         }
-      }).client
-    );
+      }
+    });
     const { loadProfile } = await importRunner();
 
-    const profile = await loadProfile("user-1");
+    const profile = await loadProfile(client, "user-1");
 
     expect(profile).toMatchObject({
       full_name: "Athlete",
@@ -210,38 +207,32 @@ describe("loadProfile", () => {
   });
 
   it("normalizes a non-object preferred_schedule to null", async () => {
-    createSupabaseServiceRoleClient.mockReturnValue(
-      fakeSupabase({
-        tables: {
-          profiles: { select: { data: { preferred_schedule: ["not", "an", "object"] }, error: null } }
-        }
-      }).client
-    );
+    const { client } = fakeSupabase({
+      tables: {
+        profiles: { select: { data: { preferred_schedule: ["not", "an", "object"] }, error: null } }
+      }
+    });
     const { loadProfile } = await importRunner();
 
-    const profile = await loadProfile("user-1");
+    const profile = await loadProfile(client, "user-1");
 
     expect(profile?.preferred_schedule).toBeNull();
   });
 
   it("returns null (not a throw) when no profile is found", async () => {
-    createSupabaseServiceRoleClient.mockReturnValue(
-      fakeSupabase({ tables: { profiles: { select: { data: null, error: null } } } }).client
-    );
+    const { client } = fakeSupabase({ tables: { profiles: { select: { data: null, error: null } } } });
     const { loadProfile } = await importRunner();
 
-    await expect(loadProfile("user-1")).resolves.toBeNull();
+    await expect(loadProfile(client, "user-1")).resolves.toBeNull();
   });
 
   it("throws on a query error", async () => {
-    createSupabaseServiceRoleClient.mockReturnValue(
-      fakeSupabase({
-        tables: { profiles: { select: { data: null, error: { message: "db is down" } } } }
-      }).client
-    );
+    const { client } = fakeSupabase({
+      tables: { profiles: { select: { data: null, error: { message: "db is down" } } } }
+    });
     const { loadProfile } = await importRunner();
 
-    await expect(loadProfile("user-1")).rejects.toThrow("db is down");
+    await expect(loadProfile(client, "user-1")).rejects.toThrow("db is down");
   });
 });
 
@@ -254,10 +245,9 @@ describe("resetEvalScenarioUser", () => {
         eval_runs: { select: { data: [{ id: "run-1" }, { id: "run-2" }], error: null } }
       }
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { resetEvalScenarioUser } = await importRunner();
 
-    const result = await resetEvalScenarioUser(baseScenario());
+    const result = await resetEvalScenarioUser(client, baseScenario());
 
     expect(result).toEqual({
       deletedEvalRunCount: 2,
@@ -299,10 +289,9 @@ describe("resetEvalScenarioUser", () => {
         eval_runs: { select: { data: [], error: null } }
       }
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { resetEvalScenarioUser } = await importRunner();
 
-    await resetEvalScenarioUser(baseScenario());
+    await resetEvalScenarioUser(client, baseScenario());
 
     expect(deleteCalls.some((call) => call.table === "ai_trace_runs")).toBe(false);
     expect(deleteCalls.filter((call) => call.table === "eval_runs")).toHaveLength(0);
@@ -310,10 +299,10 @@ describe("resetEvalScenarioUser", () => {
   });
 
   it("propagates a not-found error from resolving the target user", async () => {
-    createSupabaseServiceRoleClient.mockReturnValue(fakeSupabase({ users: [] }).client);
+    const { client } = fakeSupabase({ users: [] });
     const { resetEvalScenarioUser } = await importRunner();
 
-    await expect(resetEvalScenarioUser(baseScenario())).rejects.toThrow(
+    await expect(resetEvalScenarioUser(client, baseScenario())).rejects.toThrow(
       "Could not find benchmark user athlete@example.com."
     );
   });
@@ -326,10 +315,9 @@ describe("resetEvalScenarioUser", () => {
         eval_runs: { select: { data: null, error: { message: "boom" } } }
       }
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { resetEvalScenarioUser } = await importRunner();
 
-    await expect(resetEvalScenarioUser(baseScenario())).rejects.toThrow("boom");
+    await expect(resetEvalScenarioUser(client, baseScenario())).rejects.toThrow("boom");
     expect(deleteCalls).toHaveLength(0);
   });
 });
@@ -339,10 +327,13 @@ describe("finishEvalScenarioReplay", () => {
     const { client, updatePayloads } = fakeSupabase({
       tables: { eval_runs: { update: { data: null, error: null } } }
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { finishEvalScenarioReplay } = await importRunner();
 
-    const result = await finishEvalScenarioReplay({ evalRunId: "run-1", status: "completed" });
+    const result = await finishEvalScenarioReplay({
+      evalRunId: "run-1",
+      status: "completed",
+      supabase: client
+    });
 
     expect(result).toEqual({ evalRunId: "run-1", status: "completed" });
     expect(updatePayloads.eval_runs[0]).toMatchObject({
@@ -355,10 +346,14 @@ describe("finishEvalScenarioReplay", () => {
     const { client, updatePayloads } = fakeSupabase({
       tables: { eval_runs: { update: { data: null, error: null } } }
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { finishEvalScenarioReplay } = await importRunner();
 
-    await finishEvalScenarioReplay({ evalRunId: "run-1", status: "failed", errorMessage: "boom" });
+    await finishEvalScenarioReplay({
+      evalRunId: "run-1",
+      status: "failed",
+      errorMessage: "boom",
+      supabase: client
+    });
 
     expect(updatePayloads.eval_runs[0]).toMatchObject({ status: "failed", error_message: "boom" });
   });
@@ -367,11 +362,10 @@ describe("finishEvalScenarioReplay", () => {
     const { client } = fakeSupabase({
       tables: { eval_runs: { update: { data: null, error: { message: "db is down" } } } }
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { finishEvalScenarioReplay } = await importRunner();
 
     await expect(
-      finishEvalScenarioReplay({ evalRunId: "run-1", status: "completed" })
+      finishEvalScenarioReplay({ evalRunId: "run-1", status: "completed", supabase: client })
     ).rejects.toThrow("db is down");
   });
 });
@@ -393,11 +387,10 @@ describe("beginEvalScenarioReplay", () => {
         conversation_messages: { insert: { data: { id: "message-1" }, error: null } }
       }
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { beginEvalScenarioReplay } = await importRunner();
     const scenario = baseScenario();
 
-    const result = await beginEvalScenarioReplay({ adminUserId: "admin-1", scenario });
+    const result = await beginEvalScenarioReplay({ adminUserId: "admin-1", scenario, supabase: client });
 
     expect(result.evalRunId).toBe("eval-run-1");
     expect(result.threadId).toBe("thread-1");
@@ -418,11 +411,10 @@ describe("beginEvalScenarioReplay", () => {
         conversation_messages: { insert: { data: { id: "message-1" }, error: null } }
       }
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { beginEvalScenarioReplay } = await importRunner();
     const scenario = baseScenario();
 
-    await beginEvalScenarioReplay({ adminUserId: "admin-1", scenario });
+    await beginEvalScenarioReplay({ adminUserId: "admin-1", scenario, supabase: client });
 
     expect(insertPayloads.conversation_messages[0]).toMatchObject({
       content: expect.stringContaining(`${scenario.userName} benchmark profile`)
@@ -437,11 +429,10 @@ describe("beginEvalScenarioReplay", () => {
         eval_runs: { insert: { data: null, error: { message: "insert failed" } } }
       }
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { beginEvalScenarioReplay } = await importRunner();
 
     await expect(
-      beginEvalScenarioReplay({ adminUserId: "admin-1", scenario: baseScenario() })
+      beginEvalScenarioReplay({ adminUserId: "admin-1", scenario: baseScenario(), supabase: client })
     ).rejects.toThrow("insert failed");
     expect(insertPayloads.conversation_threads).toBeUndefined();
   });
@@ -463,7 +454,6 @@ describe("runEvalScenarioReplayStep", () => {
       users: [scenarioUser()],
       tables: replayFixtureTables()
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     runFrankieTurn.mockResolvedValue({
       assistantReply: "Nice work!",
       actualJson: {},
@@ -480,6 +470,7 @@ describe("runEvalScenarioReplayStep", () => {
       evalRunId: "eval-run-1",
       scenario,
       stepIndex: 0,
+      supabase: client,
       threadId: "thread-1"
     });
 
@@ -513,7 +504,6 @@ describe("runEvalScenarioReplayStep", () => {
         eval_runs: { select: { data: { id: "eval-run-1", scenario_id: "other-scenario", status: "running" }, error: null } }
       })
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { runEvalScenarioReplayStep } = await importRunner();
 
     await expect(
@@ -521,6 +511,7 @@ describe("runEvalScenarioReplayStep", () => {
         evalRunId: "eval-run-1",
         scenario: baseScenario(),
         stepIndex: 0,
+        supabase: client,
         threadId: "thread-1"
       })
     ).rejects.toThrow("Eval run does not match the requested scenario.");
@@ -533,7 +524,6 @@ describe("runEvalScenarioReplayStep", () => {
         eval_runs: { select: { data: { id: "eval-run-1", scenario_id: "cardio-happy-path", status: "completed" }, error: null } }
       })
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { runEvalScenarioReplayStep } = await importRunner();
 
     await expect(
@@ -541,6 +531,7 @@ describe("runEvalScenarioReplayStep", () => {
         evalRunId: "eval-run-1",
         scenario: baseScenario(),
         stepIndex: 0,
+        supabase: client,
         threadId: "thread-1"
       })
     ).rejects.toThrow("Eval run is not active.");
@@ -551,7 +542,6 @@ describe("runEvalScenarioReplayStep", () => {
       users: [scenarioUser()],
       tables: replayFixtureTables()
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { runEvalScenarioReplayStep } = await importRunner();
 
     await expect(
@@ -559,6 +549,7 @@ describe("runEvalScenarioReplayStep", () => {
         evalRunId: "eval-run-1",
         scenario: baseScenario(),
         stepIndex: 99,
+        supabase: client,
         threadId: "thread-1"
       })
     ).rejects.toThrow("Replay step index is out of range.");
@@ -571,12 +562,11 @@ describe("runEvalScenarioDailySummaryStep", () => {
       users: [scenarioUser()],
       tables: { profiles: { select: { data: { onboarding_summary: "likes running" }, error: null } } }
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     generateDailyCoachSummary.mockResolvedValue({ summary_text: "Great day!" });
     const { runEvalScenarioDailySummaryStep } = await importRunner();
     const scenario = baseScenario();
 
-    const result = await runEvalScenarioDailySummaryStep({ dayIndex: 0, scenario });
+    const result = await runEvalScenarioDailySummaryStep({ dayIndex: 0, scenario, supabase: client });
 
     expect(result.day).toEqual(scenario.days[0]);
     expect(result.summary).toEqual({ summary_text: "Great day!" });
@@ -587,11 +577,10 @@ describe("runEvalScenarioDailySummaryStep", () => {
 
   it("throws when the dayIndex doesn't match any scenario day", async () => {
     const { client } = fakeSupabase({ users: [scenarioUser()] });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const { runEvalScenarioDailySummaryStep } = await importRunner();
 
     await expect(
-      runEvalScenarioDailySummaryStep({ dayIndex: 99, scenario: baseScenario() })
+      runEvalScenarioDailySummaryStep({ dayIndex: 99, scenario: baseScenario(), supabase: client })
     ).rejects.toThrow("Daily summary step index is out of range.");
   });
 });
@@ -602,13 +591,12 @@ describe("runEvalScenarioWeeklySummary", () => {
       users: [scenarioUser()],
       tables: { profiles: { select: { data: { onboarding_summary: "likes running" }, error: null } } }
     });
-    createSupabaseServiceRoleClient.mockReturnValue(client);
     const weeklySummary = { summary_text: "Great week!" };
     generateWeeklyCoachSummary.mockResolvedValue(weeklySummary);
     const { runEvalScenarioWeeklySummary } = await importRunner();
     const scenario = baseScenario();
 
-    const result = await runEvalScenarioWeeklySummary(scenario);
+    const result = await runEvalScenarioWeeklySummary(client, scenario);
 
     expect(result).toBe(weeklySummary);
     expect(generateWeeklyCoachSummary).toHaveBeenCalledWith(

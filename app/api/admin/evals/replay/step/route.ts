@@ -3,6 +3,7 @@ import { isAdminProfile } from "@/lib/admin";
 import { getEvalScenarioById } from "@/lib/admin-evals";
 import { runEvalScenarioReplayStep } from "@/lib/admin-eval-runner";
 import { getCurrentAppContext } from "@/lib/profile";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 
 async function requireAdminResponse() {
   const context = await getCurrentAppContext();
@@ -42,10 +43,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const supabase = createSupabaseServiceRoleClient();
     const result = await runEvalScenarioReplayStep({
       evalRunId: runId,
       scenario,
       stepIndex,
+      supabase,
       threadId
     });
 
