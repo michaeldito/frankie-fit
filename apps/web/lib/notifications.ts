@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { Expo } from "expo-server-sdk";
 import {
   addDays,
   getPacificDateKey,
@@ -13,6 +14,48 @@ import { generateDailyCoachSummary, generateWeeklyCoachSummary } from "@/lib/ai/
 import type { Database } from "@/types/database";
 
 const SUMMARY_NOTIFICATION_BODY_MAX_LENGTH = 400;
+const expo = new Expo();
+
+/**
+ * Best-effort push delivery on top of the in-app `notifications` row, which stays the
+ * source of truth. A user with no registered device (or a web-only user) is skipped silently.
+ */
+async function sendPushNotification(input: {
+  actionUrl: string | null;
+  body: string;
+  supabase: SupabaseServerClient;
+  title: string;
+  userId: string;
+}) {
+  const { data: tokenRows } = await input.supabase
+    .from("push_tokens")
+    .select("expo_push_token")
+    .eq("user_id", input.userId);
+
+  const pushTokens = (tokenRows ?? [])
+    .map((row) => row.expo_push_token)
+    .filter((token) => Expo.isExpoPushToken(token));
+
+  if (pushTokens.length === 0) {
+    return;
+  }
+
+  const messages = pushTokens.map((token) => ({
+    to: token,
+    sound: "default" as const,
+    title: input.title,
+    body: input.body,
+    data: { action_url: input.actionUrl }
+  }));
+
+  for (const chunk of expo.chunkPushNotifications(messages)) {
+    try {
+      await expo.sendPushNotificationsAsync(chunk);
+    } catch {
+      // Push delivery is best-effort; the in-app notification row already exists.
+    }
+  }
+}
 
 function truncateSummaryText(summaryText: string) {
   if (summaryText.length <= SUMMARY_NOTIFICATION_BODY_MAX_LENGTH) {
@@ -186,17 +229,23 @@ export async function evaluateCheckinNudges() {
       continue;
     }
 
+    const title = "Check in with Frankie";
+    const body = "You haven't logged anything today — a quick update helps keep tomorrow's coaching on track.";
+    const actionUrl = "/app/chat";
+
     const { error: insertError } = await supabase.from("notifications").insert({
       user_id: profile.id,
       type: "checkin_reminder",
-      title: "Check in with Frankie",
-      body: "You haven't logged anything today — a quick update helps keep tomorrow's coaching on track.",
-      action_url: "/app/chat"
+      title,
+      body,
+      action_url: actionUrl
     });
 
     if (insertError) {
       throw new Error(insertError.message);
     }
+
+    await sendPushNotification({ actionUrl, body, supabase, title, userId: profile.id });
 
     sentCount += 1;
   }
@@ -292,17 +341,23 @@ export async function evaluateDailySummaryNotifications() {
       date: yesterday
     });
 
+    const title = "Your daily summary from Frankie";
+    const body = truncateSummaryText(summary.summary_text);
+    const actionUrl = "/app/chat";
+
     const { error: insertError } = await supabase.from("notifications").insert({
       user_id: profile.id,
       type: "daily_summary",
-      title: "Your daily summary from Frankie",
-      body: truncateSummaryText(summary.summary_text),
-      action_url: "/app/chat"
+      title,
+      body,
+      action_url: actionUrl
     });
 
     if (insertError) {
       throw new Error(insertError.message);
     }
+
+    await sendPushNotification({ actionUrl, body, supabase, title, userId: profile.id });
 
     sentCount += 1;
   }
@@ -350,17 +405,23 @@ export async function evaluateWeeklySummaryNotifications() {
       periodEnd
     });
 
+    const title = "Your weekly summary from Frankie";
+    const body = truncateSummaryText(summary.summary_text);
+    const actionUrl = "/app/chat";
+
     const { error: insertError } = await supabase.from("notifications").insert({
       user_id: profile.id,
       type: "weekly_summary",
-      title: "Your weekly summary from Frankie",
-      body: truncateSummaryText(summary.summary_text),
-      action_url: "/app/chat"
+      title,
+      body,
+      action_url: actionUrl
     });
 
     if (insertError) {
       throw new Error(insertError.message);
     }
+
+    await sendPushNotification({ actionUrl, body, supabase, title, userId: profile.id });
 
     sentCount += 1;
   }
