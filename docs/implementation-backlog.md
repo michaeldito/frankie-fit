@@ -55,7 +55,7 @@ Now in progress:
 - family beta deployment and admin-side debug readiness
 - first Vercel MVP deployment preparation
 - mobile UI/UX refinement after device testing
-- mobile dashboard/profile parity against the web app
+- mobile dashboard/profile parity against the web app — lifestyle pillar closed (mobile dashboard now has all four segments); mobile nav moved from a 3-tab bottom bar to a chat-first drawer shell (hamburger opens Dashboard/Workouts/Profile); mobile onboarding moved from a single scrolling form to a paginated step flow; push notifications scaffolded (Expo push token registration + best-effort dispatch from the notification cron job) but need an EAS project id before device tokens can be issued
 - deeper AI-native migration beyond the first orchestration layer
 - lightweight AI observability, evals, and traceability around the new model-backed flow
 - open-vocabulary activity understanding so Frankie does not depend on a narrow built-in activity list

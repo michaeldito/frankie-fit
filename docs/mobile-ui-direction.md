@@ -32,6 +32,16 @@ Design and UX decisions from device testing:
 - make mobile network errors more actionable because chat depends on both the native app bundle and the trusted web/API backend
 - keep HealthKit UI guarded so Expo Go remains usable while development builds can use Apple Health
 
+## Current Status - September 5, 2026
+
+Mobile moved from a 3-tab bottom bar to a chat-first shell: Chat is the only screen shown by default, and a hamburger button opens a slide-in drawer for Dashboard, Workouts (placeholder), Profile, and sign-out. This supersedes the "Bottom Tabs" direction below — the bottom tab bar section is kept for historical context but no longer reflects the shipped nav.
+
+Other changes from this pass:
+
+- Dashboard gained a fourth `Lifestyle` segment, matching web's four-pillar parity (Exercise, Diet, Lifestyle, Wellness)
+- Onboarding moved from one long scrolling form to a paginated, left-to-right step flow (6 steps) with a step-dot progress indicator (ported from the admin eval-replay `StepBullet` pattern) and a `Continue`/`Back` footer instead of one long scroll-to-submit form
+- Push notifications are scaffolded (Expo push token registration, a `push_tokens` table, and best-effort dispatch from the existing notification cron job) but need an EAS project id (`eas init`) before device tokens can actually be issued
+
 Current product direction:
 
 - focus near-term mobile refinement on chat reliability, profile/dashboard parity, and production API behavior
@@ -190,19 +200,26 @@ Avoid:
 
 ## Navigation Direction
 
-## Bottom Tabs
+## Chat-First Drawer (current)
 
-The bottom tab bar should be simple:
+Chat is the only screen shown by default — there is no persistent tab bar. A small hamburger button in the header opens a slide-in drawer listing the other destinations:
 
 - Chat
 - Dashboard
+- Workouts (placeholder for now)
 - Profile
+- Sign out
 
 ### Design Principles
 
+- the drawer is the only way to reach non-chat screens, so its items must be unambiguous at a glance (icon + label)
 - labels should stay short
-- icons can help, but should not dominate
-- the active tab should feel clearly selected without being loud
+- the active destination should feel clearly selected without being loud
+- dismiss by tapping outside or swiping, matching the platform-native drawer gesture
+
+## Bottom Tabs (superseded)
+
+The original direction used a 3-item bottom tab bar (Chat, Dashboard, Profile). This has been replaced by the chat-first drawer above; kept here only for historical context.
 
 ## Header Behavior
 
@@ -259,7 +276,7 @@ Desired feel:
 ### Visual Priorities
 
 - one strong summary card at the top
-- segmented control for pillar switching
+- segmented control for pillar switching across all four pillars (Exercise, Diet, Lifestyle, Wellness)
 - 2 to 4 meaningful blocks per pillar
 - plenty of spacing between sections
 

@@ -3,10 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  InputAccessoryView,
   Keyboard,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,20 +13,47 @@ import {
   View,
 } from 'react-native';
 
+import { LoggedEntryCard } from '@/components/logged-entry-card';
 import { Screen, ScreenTitle, ScrollCard } from '@/components/frankie-ui';
 import { colors } from '@/constants/frankie-theme';
 import { frankieApiFetch } from '@/lib/api';
 // TODO(Phase 3 / shared-types extraction): reaches into apps/web by relative path — see
 // packages/dashboard-core/dashboard.ts for the same known IOU and its rationale.
 import type { Database } from '../../../../apps/web/types/database';
+// TODO(Phase 3 / shared-types extraction): reaches into apps/web by relative path — see above.
+import {
+  formatActivityDetail,
+  formatActivityTitle,
+  formatDietDetail,
+  formatDietTitle,
+  formatLifestyleDetail,
+  formatLifestyleTitle,
+  formatWellnessDetail,
+  formatWellnessTitle,
+  type LoggedActivity,
+  type LoggedDietEntry,
+  type LoggedLifestyleEntry,
+  type LoggedWellnessCheckin,
+} from '../../../../apps/web/components/chat/logged-entry-format';
+// TODO(Phase 3 / shared-types extraction): reaches into apps/web by relative path — see above.
+import { QUICK_START_OPTIONS } from '../../../../apps/web/components/chat/quick-start';
 
 type ChatMessageRow = Database['public']['Tables']['conversation_messages']['Row'];
+
+type LogConfirmationPayload = {
+  activitiesLogged?: LoggedActivity[];
+  dietLogged?: LoggedDietEntry[];
+  lifestyleLogged?: LoggedLifestyleEntry[];
+  wellnessLogged?: LoggedWellnessCheckin | null;
+};
 
 type ChatBubble = {
   content: string;
   id: string;
+  messageType: ChatMessageRow['message_type'];
   pending?: boolean;
   role: ChatMessageRow['role'];
+  structuredPayload: ChatMessageRow['structured_payload'];
 };
 
 type MobileChatResponse = {
@@ -38,14 +63,22 @@ type MobileChatResponse = {
   userMessageId?: string;
 };
 
-const chatInputAccessoryId = 'frankie-chat-input-accessory';
-
 function toBubbles(messages: ChatMessageRow[]): ChatBubble[] {
   return messages.map((message) => ({
     content: message.content,
     id: message.id,
+    messageType: message.message_type,
     role: message.role,
+    structuredPayload: message.structured_payload,
   }));
+}
+
+function getLogConfirmationPayload(message: ChatBubble): LogConfirmationPayload | null {
+  if (message.messageType !== 'log_confirmation') {
+    return null;
+  }
+
+  return (message.structuredPayload as LogConfirmationPayload | null) ?? null;
 }
 
 function AnimatedStatusText({
@@ -138,8 +171,10 @@ export default function ChatScreen() {
     const optimisticUserMessage: ChatBubble = {
       content,
       id: pendingMessageId,
+      messageType: 'chat',
       pending: true,
       role: 'user',
+      structuredPayload: {},
     };
 
     setDraft('');
@@ -184,9 +219,7 @@ export default function ChatScreen() {
 
   return (
     <Screen padded={false}>
-      <KeyboardAvoidingView
-        behavior={Platform.select({ ios: 'padding', default: undefined })}
-        style={styles.keyboard}>
+      <KeyboardAvoidingView behavior="padding" style={styles.keyboard}>
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={styles.content}
@@ -194,14 +227,6 @@ export default function ChatScreen() {
           keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
           <ScreenTitle title="Chat" subtitle="Log movement, meals, recovery, or ask Frankie for the next step." />
-
-          <ScrollCard style={styles.contextCard}>
-            <Text style={styles.contextLabel}>Live chat</Text>
-            <Text style={styles.contextTitle}>Thread memory active</Text>
-            <Text style={styles.contextBody}>
-              Frankie reads the same profile context and saves structured logs for the dashboard.
-            </Text>
-          </ScrollCard>
 
           {error ? (
             <ScrollCard style={styles.errorCard}>
@@ -221,13 +246,43 @@ export default function ChatScreen() {
           <View style={styles.messages}>
             {messages.map((message) => {
               const isUser = message.role === 'user';
+              const logConfirmation = getLogConfirmationPayload(message);
 
               return (
-                <View
-                  key={message.id}
-                  style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-                  <Text style={isUser ? styles.userText : styles.assistantText}>{message.content}</Text>
-                  {message.pending ? <AnimatedStatusText inverted label="Sending" /> : null}
+                <View key={message.id} style={styles.messageGroup}>
+                  <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+                    <Text style={isUser ? styles.userText : styles.assistantText}>{message.content}</Text>
+                    {message.pending ? <AnimatedStatusText inverted label="Sending" /> : null}
+                  </View>
+
+                  {logConfirmation ? (
+                    <>
+                      <LoggedEntryCard
+                        entries={logConfirmation.activitiesLogged ?? []}
+                        formatDetail={formatActivityDetail}
+                        formatTitle={formatActivityTitle}
+                        kicker="Activity"
+                      />
+                      <LoggedEntryCard
+                        entries={logConfirmation.dietLogged ?? []}
+                        formatDetail={formatDietDetail}
+                        formatTitle={formatDietTitle}
+                        kicker="Meal"
+                      />
+                      <LoggedEntryCard
+                        entries={logConfirmation.lifestyleLogged ?? []}
+                        formatDetail={formatLifestyleDetail}
+                        formatTitle={formatLifestyleTitle}
+                        kicker="Lifestyle"
+                      />
+                      <LoggedEntryCard
+                        entries={logConfirmation.wellnessLogged ? [logConfirmation.wellnessLogged] : []}
+                        formatDetail={formatWellnessDetail}
+                        formatTitle={formatWellnessTitle}
+                        kicker="Wellness check-in"
+                      />
+                    </>
+                  ) : null}
                 </View>
               );
             })}
@@ -240,9 +295,23 @@ export default function ChatScreen() {
           </View>
         </ScrollView>
 
+        {!draft ? (
+          <View style={styles.quickStartRow}>
+            <ScrollView horizontal contentContainerStyle={styles.quickStartContent} showsHorizontalScrollIndicator={false}>
+              {QUICK_START_OPTIONS.map((option) => (
+                <Pressable
+                  key={option.label}
+                  onPress={() => setDraft(option.template)}
+                  style={styles.quickStartChip}>
+                  <Text style={styles.quickStartChipText}>{option.label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
+
         <View style={styles.composerWrap}>
           <TextInput
-            inputAccessoryViewID={Platform.OS === 'ios' ? chatInputAccessoryId : undefined}
             multiline
             onChangeText={setDraft}
             onSubmitEditing={Keyboard.dismiss}
@@ -266,16 +335,6 @@ export default function ChatScreen() {
             )}
           </Pressable>
         </View>
-
-        {Platform.OS === 'ios' ? (
-          <InputAccessoryView nativeID={chatInputAccessoryId}>
-            <View style={styles.keyboardToolbar}>
-              <Pressable onPress={Keyboard.dismiss} style={styles.keyboardDoneButton}>
-                <Text style={styles.keyboardDoneText}>Close</Text>
-              </Pressable>
-            </View>
-          </InputAccessoryView>
-        ) : null}
       </KeyboardAvoidingView>
     </Screen>
   );
@@ -289,26 +348,6 @@ const styles = StyleSheet.create({
     gap: 18,
     paddingBottom: 20,
     paddingHorizontal: 20,
-  },
-  contextCard: {
-    backgroundColor: colors.panelStrong,
-  },
-  contextLabel: {
-    color: colors.accentStrong,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0,
-    textTransform: 'uppercase',
-  },
-  contextTitle: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  contextBody: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
   },
   errorCard: {
     borderColor: colors.danger,
@@ -337,6 +376,9 @@ const styles = StyleSheet.create({
   },
   messages: {
     gap: 12,
+  },
+  messageGroup: {
+    gap: 8,
   },
   bubble: {
     maxWidth: '86%',
@@ -376,6 +418,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 22,
   },
+  quickStartRow: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  quickStartContent: {
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  quickStartChip: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 999,
+    backgroundColor: colors.backgroundSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  quickStartChipText: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '700',
+  },
   composerWrap: {
     flexDirection: 'row',
     gap: 10,
@@ -413,27 +478,6 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   sendText: {
-    color: colors.background,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  keyboardToolbar: {
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    backgroundColor: colors.backgroundSoft,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  keyboardDoneButton: {
-    alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: colors.accentStrong,
-    minWidth: 120,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  keyboardDoneText: {
     color: colors.background,
     fontSize: 15,
     fontWeight: '800',

@@ -79,27 +79,27 @@ The v1 mobile app should use three main tabs:
 ### App Entry Rules
 
 - After login, users land on `Chat`.
-- If onboarding is incomplete, users are routed into onboarding before the main tabs.
+- If onboarding is incomplete, users are routed into onboarding before the main app.
 - Admin should remain web-only in phase 1.
 
 ## Route Groups
 
-A practical mobile route model would be:
+**Update (September 5, 2026):** mobile moved from a 3-tab bottom bar to a chat-first drawer shell — Chat is the default screen, and Dashboard/Workouts/Profile are reached via a hamburger-triggered slide-in drawer instead of persistent tabs. The route model is now:
 
 ```text
 app/
   (auth)/
     login
     signup
-  onboarding/
-    ...
-  (tabs)/
+  onboarding
+  (drawer)/
     chat
-    progress
+    dashboard
+    workouts
     profile
 ```
 
-Note: the current implementation may keep the internal file route named `progress`, while the user-facing tab label is `Dashboard`.
+The internal file route is now named `dashboard` (renamed from `progress`); the user-facing label stays `Dashboard`. `workouts` is a new placeholder screen — full program browsing/enrollment on mobile is a later pass.
 
 ## Screen 1: Welcome / Auth
 
@@ -159,6 +159,8 @@ Recommendation:
 - one question or grouped mini-step at a time
 - progress indicator at the top
 - back and continue controls
+
+**Status (September 5, 2026):** implemented, grouped into 6 steps (Goals, Baseline, Movement, Schedule, Food + Wellness, Safety + Style) rather than one step per question — each existing field group became one page. Advancing pages slides left-to-right; a step-dot progress indicator (ported from the admin eval-replay `StepBullet` pattern) sits above the form; `Continue` is disabled until that page's required fields are filled, and `Back` returns to the previous page without losing entered data. The same screen still doubles as the profile-edit flow post-onboarding.
 
 ### Core Onboarding Steps
 
@@ -263,8 +265,8 @@ It should help users understand how the week is going without feeling like a den
 
 Current recommendation:
 
-- use `Dashboard` as the user-facing tab label to stay in parity with the web app
-- keep the internal `progress` route name only if renaming it would add avoidable churn
+- use `Dashboard` as the user-facing label to stay in parity with the web app
+- the internal route file is now named `dashboard` (renamed from `progress`)
 
 ### Primary User Questions
 
@@ -275,10 +277,11 @@ Current recommendation:
 
 ### Structure
 
-Use a segmented control or top tabs inside the screen for:
+Use a segmented control inside the screen for all four pillars, matching web:
 
 - Exercise
 - Diet
+- Lifestyle
 - Wellness
 
 ### Shared Screen Components
@@ -347,6 +350,23 @@ Use a segmented control or top tabs inside the screen for:
 - clinical assessments
 - deep journaling experiences
 - therapy-style flows
+
+## 4D. Lifestyle Tab
+
+### Key Components
+
+- lifestyle logs this week and days with logs
+- pattern breakdown of what shows up most (social, family, entertainment, travel, etc.)
+- recent lifestyle logs
+- one Frankie lifestyle insight
+
+### Core Actions
+
+- jump back to chat to log something outside a workout or meal
+
+### Out Of Scope
+
+- category-specific dashboards (e.g. a dedicated travel or social tracker)
 
 ## Mobile Dashboard Design Notes
 
@@ -434,7 +454,7 @@ That is enough for the first real iPhone Frankie Fit experience.
 
 ## Nice-To-Have Later
 
-- push reminders
+- push reminders — scaffolded September 5, 2026 (Expo push token registration, `push_tokens` table, best-effort dispatch from the notification cron job); needs an EAS project id (`eas init`) before real device tokens can be issued
 - Apple Health permission and workout preview flow
 - Apple Watch workout import confirmation
 - richer log detail views
