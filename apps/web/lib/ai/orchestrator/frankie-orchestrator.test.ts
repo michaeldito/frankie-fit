@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Database } from "@/types/database";
+import type { AppProfile } from "@/lib/profile";
 
 const { hasOpenAiApiKey, createStructuredOpenAiResponse, createTextOpenAiResponse } = vi.hoisted(() => ({
   hasOpenAiApiKey: vi.fn(),
@@ -56,6 +57,7 @@ function activity(overrides: Record<string, unknown> = {}) {
     confidence: 0.9,
     missingFields: [],
     ambiguityFlags: [],
+    structuredExercises: [],
     ...overrides
   };
 }
@@ -817,5 +819,237 @@ describe("orchestrateFrankieReply sanitization and dedup", () => {
 
     expect(result.parsedActivities).toHaveLength(2);
     expect(result.parsedActivities.map((a) => a.durationMinutes)).toEqual([30, 30]);
+  });
+});
+
+describe("orchestrateFrankieReply strict workout logging", () => {
+  const strictProfile = { strict_workout_logging: true } as unknown as AppProfile;
+  const structuredExercise = {
+    exerciseName: "Bench Press",
+    sets: [{ reps: 8, weightValue: 135, durationSeconds: 0 }]
+  };
+
+  it("drafts a workout instead of persisting when strict mode is on and the model extracted set detail", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({
+            activityType: "weight lifting",
+            activityCategory: "strength",
+            description: "bench press",
+            structuredExercises: [structuredExercise]
+          })
+        ]
+      })
+    );
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: strictProfile,
+      message: "bench press 3 sets of 8 at 135",
+      recentMessages,
+      skipCoachResponse: true
+    });
+
+    expect(result.assistantMessageType).toBe("workout_draft");
+    expect(result.workoutDraft?.exercises).toEqual([
+      { exerciseName: "Bench Press", sets: [{ reps: 8, weight: 135, durationSeconds: null }] }
+    ]);
+    expect(result.parsedActivities).toHaveLength(0);
+    expect(result.persistPlan.activities).toBe(false);
+    expect(createTextOpenAiResponse).not.toHaveBeenCalled();
+  });
+
+  it("routes the workout-draft reply through the coach model so it speaks in the user's chosen persona", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({
+            activityType: "weight lifting",
+            activityCategory: "strength",
+            description: "bench press",
+            structuredExercises: [structuredExercise]
+          })
+        ]
+      })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Bench day, mate! I've drafted it — check the numbers before I lock it in.");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: strictProfile,
+      message: "bench press 3 sets of 8 at 135",
+      recentMessages
+    });
+
+    expect(result.assistantMessageType).toBe("workout_draft");
+    expect(result.reply).toBe(
+      "Bench day, mate! I've drafted it — check the numbers before I lock it in."
+    );
+    expect(createTextOpenAiResponse).toHaveBeenCalledTimes(1);
+    const userPrompt = createTextOpenAiResponse.mock.calls[0][0].userPrompt as string;
+    expect(userPrompt).toContain("Structured workout draft (not yet saved):");
+    expect(userPrompt).toContain("- Bench Press");
+  });
+
+  it("falls back to the template draft sentence when the coach model call returns nothing", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({
+            activityType: "weight lifting",
+            activityCategory: "strength",
+            description: "bench press",
+            structuredExercises: [structuredExercise]
+          })
+        ]
+      })
+    );
+    createTextOpenAiResponse.mockResolvedValue("");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: strictProfile,
+      message: "bench press 3 sets of 8 at 135",
+      recentMessages
+    });
+
+    expect(result.reply).toBe(
+      "I drafted Bench Press from what you described — review the sets, reps, and weight before I save it."
+    );
+  });
+
+  it("keeps every exercise's set detail when the model splits one session into multiple same-session activities that get consolidated", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({
+            activityType: "bench press",
+            description: "bench press",
+            activityCategory: "strength",
+            durationMinutes: 30,
+            intensity: "Hard",
+            timeReferenceText: "today",
+            structuredExercises: [
+              { exerciseName: "bench press", sets: [{ reps: 6, weightValue: 135, durationSeconds: 0 }] }
+            ]
+          }),
+          activity({
+            activityType: "push press",
+            description: "push press",
+            activityCategory: "strength",
+            durationMinutes: 30,
+            intensity: "Hard",
+            timeReferenceText: "today",
+            structuredExercises: [
+              { exerciseName: "push press", sets: [{ reps: 2, weightValue: 100, durationSeconds: 0 }] }
+            ]
+          })
+        ]
+      })
+    );
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: strictProfile,
+      message: "weight lifting - bench press 6x6 135 lb, push press 2x2 100 lb",
+      recentMessages,
+      skipCoachResponse: true
+    });
+
+    expect(result.assistantMessageType).toBe("workout_draft");
+    expect(result.workoutDraft?.exercises.map((exercise) => exercise.exerciseName)).toEqual([
+      "bench press",
+      "push press"
+    ]);
+  });
+
+  it("passes the strict flag into the extraction prompt only when the profile has it enabled", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(baseExtraction());
+    createTextOpenAiResponse.mockResolvedValue("Got it.");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    await orchestrateFrankieReply({
+      profile: strictProfile,
+      message: "hi",
+      recentMessages
+    });
+
+    const systemPrompt = createStructuredOpenAiResponse.mock.calls[0][0].systemPrompt as string;
+    expect(systemPrompt).toContain("This user has strict workout logging on.");
+  });
+
+  it("stays on the casual path when strict mode is on but no set detail was extracted", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({ activityType: "weight lifting", activityCategory: "strength", description: "lifted weights" })
+        ]
+      })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Nice lift.");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: strictProfile,
+      message: "lifted weights today",
+      recentMessages
+    });
+
+    expect(result.assistantMessageType).toBe("log_confirmation");
+    expect(result.workoutDraft).toBeNull();
+    expect(result.persistPlan.activities).toBe(true);
+  });
+
+  it("stays on the casual path for cardio even when strict mode is on", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({ activities: [activity({ activityType: "run", activityCategory: "cardio" })] })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Nice run.");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: strictProfile,
+      message: "ran 3 miles this morning",
+      recentMessages
+    });
+
+    expect(result.assistantMessageType).toBe("log_confirmation");
+    expect(result.workoutDraft).toBeNull();
+  });
+
+  it("stays on the casual path when strict mode is off, even with structured set detail", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(
+      baseExtraction({
+        activities: [
+          activity({
+            activityType: "weight lifting",
+            activityCategory: "strength",
+            description: "bench press",
+            structuredExercises: [structuredExercise]
+          })
+        ]
+      })
+    );
+    createTextOpenAiResponse.mockResolvedValue("Nice lift.");
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    const result = await orchestrateFrankieReply({
+      profile: null,
+      message: "bench press 3 sets of 8 at 135",
+      recentMessages
+    });
+
+    expect(result.assistantMessageType).toBe("log_confirmation");
+    expect(result.workoutDraft).toBeNull();
+    expect(result.persistPlan.activities).toBe(true);
   });
 });

@@ -56,6 +56,7 @@ function wellnessCheckin(overrides: Partial<LoggedWellnessCheckin> = {}): Logged
     motivationScore: 4,
     sorenessScore: 2,
     stressScore: 2,
+    notes: null,
     loggedForDate: "2026-09-03",
     ...overrides
   };

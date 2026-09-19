@@ -40,6 +40,7 @@ function buildReply(overrides: Partial<FrankieOrchestrationResult> = {}): Franki
     parsedDietEntries: [],
     parsedLifestyleEntries: [],
     parsedWellnessCheckin: null,
+    workoutDraft: null,
     reply: "Nice work!",
     orchestrationMode: "model",
     shouldPersistStructuredData: false,
@@ -147,6 +148,7 @@ describe("runFrankieTurn", () => {
             confidence: 0.9,
             missingFields: [],
             ambiguityFlags: [],
+            structuredExercises: [],
             detectedKeyword: "ran"
           }
         ]
@@ -161,6 +163,36 @@ describe("runFrankieTurn", () => {
     expect(result.assistantMessage?.id).toBe("assistant-msg-1");
     const payload = result.structuredPayload as { activitiesLogged: Array<{ id: string }> };
     expect(payload.activitiesLogged[0].id).toBe("activity-log-1");
+  });
+
+  it("stores the workout draft in the structured payload without persisting an activity log", async () => {
+    const workoutDraft = {
+      title: null,
+      loggedForDate: "2026-05-04",
+      notes: null,
+      exercises: [{ exerciseName: "Bench Press", sets: [{ reps: 8, weight: 135, durationSeconds: null }] }]
+    };
+
+    orchestrateFrankieReply.mockResolvedValue(
+      buildReply({
+        assistantMessageType: "workout_draft",
+        workoutDraft,
+        shouldPersistStructuredData: false,
+        persistPlan: {
+          activities: false,
+          dietEntries: false,
+          lifestyleEntries: false,
+          wellnessCheckin: false
+        }
+      })
+    );
+
+    const supabase = fakeSupabase({});
+    const result = await runFrankieTurn({ ...baseInput, supabase });
+
+    expect(result.runStatus).toBe("completed");
+    expect(logActivityEntries).not.toHaveBeenCalled();
+    expect(result.structuredPayload).toEqual({ workoutDraft, orchestration: expect.any(Object) });
   });
 
   it("classifies an unavailable orchestration mode as runStatus 'unavailable'", async () => {
@@ -242,6 +274,7 @@ describe("runFrankieTurn", () => {
             confidence: 0.9,
             missingFields: [],
             ambiguityFlags: [],
+            structuredExercises: [],
             detectedKeyword: "ran"
           }
         ]

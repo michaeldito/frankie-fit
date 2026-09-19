@@ -45,6 +45,10 @@ export function buildAssistantStructuredPayload(input: {
     return { pendingClarification: reply.metadata.pendingClarification };
   }
 
+  if (reply.assistantMessageType === "workout_draft" && reply.workoutDraft) {
+    return { workoutDraft: reply.workoutDraft, orchestration: reply.metadata };
+  }
+
   if (
     !reply.shouldPersistStructuredData ||
     (reply.parsedActivities.length === 0 &&
@@ -104,7 +108,8 @@ export function buildAssistantStructuredPayload(input: {
             moodScore: reply.parsedWellnessCheckin.moodScore,
             motivationScore: reply.parsedWellnessCheckin.motivationScore,
             sorenessScore: reply.parsedWellnessCheckin.sorenessScore,
-            stressScore: reply.parsedWellnessCheckin.stressScore
+            stressScore: reply.parsedWellnessCheckin.stressScore,
+            notes: reply.parsedWellnessCheckin.notes
           }
         : null
   };

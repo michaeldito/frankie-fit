@@ -12,9 +12,10 @@ import {
   resolveLoggedForDateFromTimeReference
 } from "@/lib/chat";
 import { getPacificDateKey } from "@frankie-fit/dashboard-core";
+import { intensityOptions, mealTypeOptions, lifestyleCategoryOptions } from "./log-field-options";
 
-const intensityOptions = ["unknown", "Light", "Moderate", "Hard"] as const;
-const mealTypeOptions = ["unknown", "breakfast", "lunch", "dinner", "snack"] as const;
+export { intensityOptions, mealTypeOptions, lifestyleCategoryOptions } from "./log-field-options";
+
 const activityTimePrecisionOptions = [
   "implicit_today",
   "relative_day",
@@ -34,16 +35,16 @@ const intentOptions = [
   "mixed_update",
   "unclear"
 ] as const;
-const lifestyleCategoryOptions = [
-  "unknown",
-  "social",
-  "family",
-  "entertainment",
-  "travel",
-  "substance_alcohol",
-  "substance_cannabis",
-  "other"
-] as const;
+const structuredWorkoutSetSchema = z.object({
+  reps: z.number().int().min(0),
+  weightValue: z.number().min(0),
+  durationSeconds: z.number().int().min(0)
+});
+
+const structuredWorkoutExerciseSchema = z.object({
+  exerciseName: z.string(),
+  sets: z.array(structuredWorkoutSetSchema)
+});
 
 const extractedActivitySchema = z.object({
   activityType: z.string().min(1),
@@ -57,7 +58,8 @@ const extractedActivitySchema = z.object({
   timePrecision: z.enum(acceptedActivityTimePrecisionOptions),
   confidence: z.number().min(0).max(1),
   missingFields: z.array(z.string()),
-  ambiguityFlags: z.array(z.string())
+  ambiguityFlags: z.array(z.string()),
+  structuredExercises: z.array(structuredWorkoutExerciseSchema)
 });
 
 const extractedDietEntrySchema = z.object({
@@ -134,6 +136,30 @@ export const extractedUserUpdateJsonSchema = {
           ambiguityFlags: {
             type: "array",
             items: { type: "string" }
+          },
+          structuredExercises: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                exerciseName: { type: "string" },
+                sets: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      reps: { type: "integer", minimum: 0 },
+                      weightValue: { type: "number", minimum: 0 },
+                      durationSeconds: { type: "integer", minimum: 0 }
+                    },
+                    required: ["reps", "weightValue", "durationSeconds"]
+                  }
+                }
+              },
+              required: ["exerciseName", "sets"]
+            }
           }
         },
         required: [
@@ -148,7 +174,8 @@ export const extractedUserUpdateJsonSchema = {
           "timePrecision",
           "confidence",
           "missingFields",
-          "ambiguityFlags"
+          "ambiguityFlags",
+          "structuredExercises"
         ]
       }
     },
@@ -527,6 +554,25 @@ function isPlaceholderActivity(activity: ExtractedUserUpdate["activities"][numbe
   return normalizedType === "" || normalizedType === "unknown";
 }
 
+function mapExtractedStructuredExercises(
+  extracted: ExtractedUserUpdate["activities"][number]["structuredExercises"]
+) {
+  return extracted
+    .map((exercise) => {
+      const exerciseName = exercise.exerciseName.trim();
+      const sets = exercise.sets
+        .filter((set) => set.reps > 0 || set.weightValue > 0 || set.durationSeconds > 0)
+        .map((set) => ({
+          reps: mapZeroToNull(set.reps),
+          weight: mapZeroToNull(set.weightValue),
+          durationSeconds: mapZeroToNull(set.durationSeconds)
+        }));
+
+      return { exerciseName, sets };
+    })
+    .filter((exercise) => exercise.exerciseName.length > 0 && exercise.sets.length > 0);
+}
+
 export function mapExtractedActivities(
   extracted: ExtractedUserUpdate["activities"]
 ): ParsedActivity[] {
@@ -571,7 +617,8 @@ export function mapExtractedActivities(
       }),
       confidence: activity.confidence > 0 ? activity.confidence : 0.7,
       missingFields: activity.missingFields.map((field) => field.trim()).filter(Boolean),
-      ambiguityFlags: activity.ambiguityFlags.map((flag) => flag.trim()).filter(Boolean)
+      ambiguityFlags: activity.ambiguityFlags.map((flag) => flag.trim()).filter(Boolean),
+      structuredExercises: mapExtractedStructuredExercises(activity.structuredExercises)
     };
   });
 }

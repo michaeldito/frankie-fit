@@ -28,6 +28,7 @@ const profileSelect = `
   stress_baseline,
   wellness_support_focus,
   wellness_checkin_opt_in,
+  strict_workout_logging,
   injuries_limitations,
   health_considerations,
   avoidances,
@@ -62,6 +63,7 @@ export type AppProfile = {
   stress_baseline: string | null;
   wellness_support_focus: string[];
   wellness_checkin_opt_in: boolean;
+  strict_workout_logging: boolean;
   injuries_limitations: string[];
   health_considerations: string[];
   avoidances: string[];

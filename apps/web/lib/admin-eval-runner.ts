@@ -45,6 +45,7 @@ function toAppProfile(row: ProfileRow | null): AppProfile | null {
     stress_baseline: row.stress_baseline,
     wellness_support_focus: row.wellness_support_focus,
     wellness_checkin_opt_in: row.wellness_checkin_opt_in,
+    strict_workout_logging: row.strict_workout_logging,
     injuries_limitations: row.injuries_limitations,
     health_considerations: row.health_considerations,
     avoidances: row.avoidances,

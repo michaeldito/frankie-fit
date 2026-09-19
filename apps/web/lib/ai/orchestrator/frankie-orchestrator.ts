@@ -63,12 +63,27 @@ export type PendingClarification = {
   clarificationQuestion: string;
 };
 
+export type WorkoutDraftPayload = {
+  title: string | null;
+  loggedForDate: string;
+  notes: string | null;
+  exercises: Array<{
+    exerciseName: string;
+    sets: Array<{
+      reps: number | null;
+      weight: number | null;
+      durationSeconds: number | null;
+    }>;
+  }>;
+};
+
 export type FrankieOrchestrationResult = {
-  assistantMessageType: "chat" | "log_confirmation" | "clarification_request";
+  assistantMessageType: "chat" | "log_confirmation" | "clarification_request" | "workout_draft";
   parsedActivities: ParsedActivity[];
   parsedDietEntries: ParsedDietEntry[];
   parsedLifestyleEntries: ParsedLifestyleEntry[];
   parsedWellnessCheckin: ParsedWellnessCheckin | null;
+  workoutDraft: WorkoutDraftPayload | null;
   reply: string;
   orchestrationMode: "model" | "unavailable";
   shouldPersistStructuredData: boolean;
@@ -99,6 +114,7 @@ function buildUnavailableReply(fallbackReason: string): FrankieOrchestrationResu
     parsedDietEntries: [],
     parsedLifestyleEntries: [],
     parsedWellnessCheckin: null,
+    workoutDraft: null,
     reply: FRANKIE_UNAVAILABLE_REPLY,
     orchestrationMode: "unavailable",
     shouldPersistStructuredData: false,
@@ -295,6 +311,32 @@ function isStrengthActivity(activity: ParsedActivity) {
       activity.activityType
     )
   );
+}
+
+function buildWorkoutDraftPayload(activity: ParsedActivity): WorkoutDraftPayload {
+  return {
+    title: null,
+    loggedForDate: activity.loggedForDate,
+    notes: null,
+    exercises: activity.structuredExercises.map((exercise) => ({
+      exerciseName: exercise.exerciseName,
+      sets: exercise.sets.map((set) => ({
+        reps: set.reps,
+        weight: set.weight,
+        durationSeconds: set.durationSeconds
+      }))
+    }))
+  };
+}
+
+function buildWorkoutDraftReply(
+  structuredFallback: { reply: string } | null,
+  workoutDraft: WorkoutDraftPayload
+) {
+  const exerciseSummary = workoutDraft.exercises.map((exercise) => exercise.exerciseName).join(", ");
+  const draftSentence = `I drafted ${exerciseSummary || "a workout"} from what you described — review the sets, reps, and weight before I save it.`;
+
+  return structuredFallback ? `${structuredFallback.reply} ${draftSentence}` : draftSentence;
 }
 
 function hasStrengthFocusEvidence(value: string) {
@@ -694,7 +736,8 @@ function mergeActivity(existing: ParsedActivity, incoming: ParsedActivity): Pars
     loggedForDate: existing.loggedForDate || incoming.loggedForDate,
     confidence: Math.max(existing.confidence ?? 0.7, incoming.confidence ?? 0.7),
     missingFields: Array.from(new Set([...existing.missingFields, ...incoming.missingFields])),
-    ambiguityFlags: Array.from(new Set([...existing.ambiguityFlags, ...incoming.ambiguityFlags]))
+    ambiguityFlags: Array.from(new Set([...existing.ambiguityFlags, ...incoming.ambiguityFlags])),
+    structuredExercises: [...existing.structuredExercises, ...incoming.structuredExercises]
   };
 }
 
@@ -789,7 +832,8 @@ function mergeMixedCategorySessionGroup(group: ParsedActivity[]): ParsedActivity
     sessionCount: Math.max(...group.map((activity) => activity.sessionCount ?? 1)),
     confidence: Math.max(...group.map((activity) => activity.confidence ?? 0.7)),
     missingFields: Array.from(new Set(group.flatMap((activity) => activity.missingFields))),
-    ambiguityFlags: Array.from(new Set(group.flatMap((activity) => activity.ambiguityFlags)))
+    ambiguityFlags: Array.from(new Set(group.flatMap((activity) => activity.ambiguityFlags))),
+    structuredExercises: group.flatMap((activity) => activity.structuredExercises)
   };
 }
 
@@ -833,7 +877,8 @@ function mergeSameSessionActivityGroup(group: ParsedActivity[]): ParsedActivity 
     sessionCount: Math.max(...group.map((activity) => activity.sessionCount ?? 1)),
     confidence: Math.max(...group.map((activity) => activity.confidence ?? 0.7)),
     missingFields: Array.from(new Set(group.flatMap((activity) => activity.missingFields))),
-    ambiguityFlags: Array.from(new Set(group.flatMap((activity) => activity.ambiguityFlags)))
+    ambiguityFlags: Array.from(new Set(group.flatMap((activity) => activity.ambiguityFlags))),
+    structuredExercises: group.flatMap((activity) => activity.structuredExercises)
   };
 }
 
@@ -1220,7 +1265,8 @@ export async function orchestrateFrankieReply(input: {
     });
     const extractedUnknown = await createStructuredOpenAiResponse({
       systemPrompt: buildExtractUserUpdatePrompt({
-        isAnsweringClarification: Boolean(input.pendingClarification)
+        isAnsweringClarification: Boolean(input.pendingClarification),
+        strictWorkoutLoggingEnabled: Boolean(input.profile?.strict_workout_logging)
       }),
       userPrompt: buildExtractionUserPrompt({
         message: input.message,
@@ -1244,13 +1290,6 @@ export async function orchestrateFrankieReply(input: {
     const parsedWellnessCheckin = sanitizeWellnessCheckin(
       mapExtractedWellnessCheckin(extracted.wellness),
       input.message
-    );
-    const structuredFallback = buildStructuredLogConfirmation(
-      input.profile,
-      parsedActivities,
-      parsedDietEntries,
-      parsedWellnessCheckin,
-      parsedLifestyleEntries
     );
     const blockingActivityIssue = hasBlockingActivityIssue(parsedActivities);
     const usableData = hasPersistableData({
@@ -1279,6 +1318,7 @@ export async function orchestrateFrankieReply(input: {
         parsedDietEntries,
         parsedLifestyleEntries,
         parsedWellnessCheckin,
+        workoutDraft: null,
         reply,
         orchestrationMode: "model",
         shouldPersistStructuredData:
@@ -1307,6 +1347,7 @@ export async function orchestrateFrankieReply(input: {
         parsedDietEntries,
         parsedLifestyleEntries,
         parsedWellnessCheckin,
+        workoutDraft: null,
         reply,
         orchestrationMode: "model",
         shouldPersistStructuredData: false,
@@ -1330,6 +1371,25 @@ export async function orchestrateFrankieReply(input: {
       };
     }
 
+    const strictWorkoutLoggingEnabled = Boolean(input.profile?.strict_workout_logging);
+    const isDraftCandidate = (activity: ParsedActivity) =>
+      strictWorkoutLoggingEnabled &&
+      isStrengthActivity(activity) &&
+      activity.structuredExercises.length > 0;
+    const draftActivities = parsedActivities.filter(isDraftCandidate);
+    // v1 supports one drafted workout per turn. Any additional draft candidates fall through to
+    // the casual path below rather than being silently dropped.
+    const draftActivity = draftActivities[0] ?? null;
+    const workoutDraft = draftActivity ? buildWorkoutDraftPayload(draftActivity) : null;
+    const casualActivities = parsedActivities.filter((activity) => activity !== draftActivity);
+    const structuredFallback = buildStructuredLogConfirmation(
+      input.profile,
+      casualActivities,
+      parsedDietEntries,
+      parsedWellnessCheckin,
+      parsedLifestyleEntries
+    );
+
     const reply = input.skipCoachResponse
       ? null
       : await createTextOpenAiResponse({
@@ -1339,24 +1399,29 @@ export async function orchestrateFrankieReply(input: {
             userMessage: input.message,
             recentConversation: context.recentConversation,
             coachingMemory: input.latestCoachSummary?.summaryText ?? null,
-            activities: parsedActivities,
+            activities: casualActivities,
             dietEntries: parsedDietEntries,
             lifestyleEntries: parsedLifestyleEntries,
-            wellnessCheckin: parsedWellnessCheckin
+            wellnessCheckin: parsedWellnessCheckin,
+            workoutDraft
           })
         });
 
     return {
-      assistantMessageType: structuredFallback ? "log_confirmation" : "chat",
-      parsedActivities,
+      assistantMessageType: workoutDraft ? "workout_draft" : structuredFallback ? "log_confirmation" : "chat",
+      parsedActivities: casualActivities,
       parsedDietEntries,
       parsedLifestyleEntries,
       parsedWellnessCheckin,
-      reply: reply || structuredFallback?.reply || FRANKIE_UNAVAILABLE_REPLY,
+      workoutDraft,
+      reply:
+        reply ||
+        (workoutDraft ? buildWorkoutDraftReply(structuredFallback, workoutDraft) : structuredFallback?.reply) ||
+        FRANKIE_UNAVAILABLE_REPLY,
       orchestrationMode: "model",
-      shouldPersistStructuredData: usableData,
+      shouldPersistStructuredData: Boolean(workoutDraft) || usableData,
       persistPlan: {
-        activities: parsedActivities.length > 0,
+        activities: casualActivities.length > 0,
         dietEntries: parsedDietEntries.length > 0,
         lifestyleEntries: parsedLifestyleEntries.length > 0,
         wellnessCheckin: Boolean(parsedWellnessCheckin)

@@ -1,4 +1,7 @@
-export function buildExtractUserUpdatePrompt(input?: { isAnsweringClarification?: boolean }) {
+export function buildExtractUserUpdatePrompt(input?: {
+  isAnsweringClarification?: boolean;
+  strictWorkoutLoggingEnabled?: boolean;
+}) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Los_Angeles",
     year: "numeric",
@@ -40,6 +43,13 @@ export function buildExtractUserUpdatePrompt(input?: { isAnsweringClarification?
     "- If one total count spans multiple dates and the split is unclear, include sessionSplit in missingFields and grouped_session_count_without_distribution in ambiguityFlags.",
     "- Do not create activity entries for food-only or drink-only statements. Food and drink items (eggs, coffee, a sandwich, a shake) belong only in dietEntries, never in activities, even in the same message as a real activity.",
     "- Example: \"ran 5k this morning, had eggs after\" has exactly one activity (running) and one diet entry (eggs). Do not also add eggs, or any other food or drink word, as a second activity.",
+    ...(input?.strictWorkoutLoggingEnabled
+      ? [
+          "- This user has strict workout logging on. When an activity clearly describes strength/lifting training (named exercises, sets, reps, and/or weights, such as bench press, squat, deadlift, rows, or curls), populate that activity's structuredExercises with your best-effort read of each named exercise and its sets (reps, weight, duration). Use 0 for any of reps/weightValue/durationSeconds that are not stated for a given set.",
+          "- Never populate structuredExercises for cardio, mobility, yoga, sport, or other non-strength activities, even for this user.",
+          "- If you cannot identify at least one named exercise with at least one set detail, leave structuredExercises empty for that activity. Do not guess exercises that were not mentioned."
+        ]
+      : []),
     "",
     "Diet:",
     "- The food or drink is the core fact. Meal type, timing, portion size, calories, and macros are useful but optional.",
