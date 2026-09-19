@@ -16,8 +16,11 @@ import {
   type LoggedLifestyleEntry,
   type LoggedWellnessCheckin
 } from "@/components/chat/logged-entry-format";
+import { WorkoutDraftModal, type SavedWorkoutSummary } from "@/components/chat/workout-draft-modal";
+import type { WorkoutDraftPayload } from "@/lib/ai/orchestrator/frankie-orchestrator";
+import type { LoggedEntryKind } from "@/components/chat/logged-entry-format";
 
-export type LoggedEntryKind = "activity" | "diet" | "lifestyle" | "wellness";
+export type { LoggedEntryKind } from "@/components/chat/logged-entry-format";
 
 type ChatTranscriptMessage = {
   id: string;
@@ -38,6 +41,12 @@ type ChatTranscriptProps = {
     kind: LoggedEntryKind,
     entryId: string
   ) => Promise<void>;
+  onEditLoggedEntry?: (
+    messageId: string,
+    kind: LoggedEntryKind,
+    updatedEntry: LoggedActivity | LoggedDietEntry | LoggedLifestyleEntry | LoggedWellnessCheckin
+  ) => void;
+  onWorkoutDraftSaved?: (messageId: string, savedWorkout: SavedWorkoutSummary) => void;
   pendingMessage?: string | null;
   userCardClass: string;
 };
@@ -53,6 +62,92 @@ function getStructuredPayload(message: ChatTranscriptMessage) {
     lifestyleLogged?: LoggedLifestyleEntry[];
     wellnessLogged?: LoggedWellnessCheckin | null;
   } | null;
+}
+
+function getWorkoutDraftPayload(message: ChatTranscriptMessage) {
+  if (message.message_type !== "workout_draft") {
+    return null;
+  }
+
+  return (
+    (message.structured_payload as { workoutDraft?: WorkoutDraftPayload & { savedWorkout?: SavedWorkoutSummary } } | null)
+      ?.workoutDraft ?? null
+  );
+}
+
+function formatSetSummary(set: SavedWorkoutSummary["exercises"][number]["sets"][number]) {
+  const parts: string[] = [];
+
+  if (set.reps !== null) {
+    parts.push(`${set.reps} reps`);
+  }
+
+  if (set.weight !== null) {
+    parts.push(`${set.weight} lb`);
+  }
+
+  if (set.durationSeconds !== null) {
+    parts.push(`${set.durationSeconds}s`);
+  }
+
+  return parts.join(" @ ") || "logged";
+}
+
+function WorkoutDraftCard({
+  messageId,
+  onSaved,
+  workoutDraft
+}: {
+  messageId: string;
+  onSaved?: (messageId: string, savedWorkout: SavedWorkoutSummary) => void;
+  workoutDraft: WorkoutDraftPayload & { savedWorkout?: SavedWorkoutSummary };
+}) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const exerciseSummary = workoutDraft.exercises.map((exercise) => exercise.exerciseName).join(", ");
+
+  if (workoutDraft.savedWorkout) {
+    return (
+      <div className="ff-card-soft mt-3 space-y-2 p-4">
+        <p className="ff-kicker">Workout logged</p>
+        {workoutDraft.savedWorkout.exercises.map((exercise, index) => (
+          <div key={`${exercise.exerciseName}-${index}`}>
+            <p className="text-sm font-medium">{exercise.exerciseName}</p>
+            <p className="text-sm text-[var(--muted)]">
+              {exercise.sets.map((set) => formatSetSummary(set)).join(", ")}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="ff-card-soft mt-3 space-y-2 p-4">
+      <p className="ff-kicker">Workout draft</p>
+      <p className="text-sm leading-6">
+        I drafted {exerciseSummary || "a workout"} from what you described — review the sets, reps,
+        and weight before I save it.
+      </p>
+      <button
+        className="ff-button-secondary cursor-pointer px-3 py-1.5 text-xs"
+        onClick={() => setModalOpen(true)}
+        type="button"
+      >
+        Review &amp; save workout
+      </button>
+      {modalOpen ? (
+        <WorkoutDraftModal
+          draft={workoutDraft}
+          messageId={messageId}
+          onClose={() => setModalOpen(false)}
+          onSaved={(savedWorkout) => {
+            setModalOpen(false);
+            onSaved?.(messageId, savedWorkout);
+          }}
+        />
+      ) : null}
+    </div>
+  );
 }
 
 function AnimatedStatusText({
@@ -87,6 +182,8 @@ export function ChatTranscript({
   isThinking = false,
   messages,
   onRemoveLoggedEntry,
+  onEditLoggedEntry,
+  onWorkoutDraftSaved,
   pendingMessage = null,
   userCardClass
 }: ChatTranscriptProps) {
@@ -124,6 +221,7 @@ export function ChatTranscript({
               const loggedWellnessCheckin = payload?.wellnessLogged
                 ? [payload.wellnessLogged]
                 : [];
+              const workoutDraft = getWorkoutDraftPayload(message);
 
               return (
                 <article className={isUser ? userCardClass : assistantCardClass} key={message.id}>
@@ -144,6 +242,12 @@ export function ChatTranscript({
                         formatDetail={formatActivityDetail}
                         formatTitle={formatActivityTitle}
                         kicker="Activity"
+                        kind="activity"
+                        onEdit={
+                          onEditLoggedEntry
+                            ? (entry) => onEditLoggedEntry(message.id, "activity", entry)
+                            : undefined
+                        }
                         onRemove={(entryId) => onRemoveLoggedEntry(message.id, "activity", entryId)}
                       />
                       <LoggedEntryCard
@@ -151,6 +255,12 @@ export function ChatTranscript({
                         formatDetail={formatDietDetail}
                         formatTitle={formatDietTitle}
                         kicker="Meal"
+                        kind="diet"
+                        onEdit={
+                          onEditLoggedEntry
+                            ? (entry) => onEditLoggedEntry(message.id, "diet", entry)
+                            : undefined
+                        }
                         onRemove={(entryId) => onRemoveLoggedEntry(message.id, "diet", entryId)}
                       />
                       <LoggedEntryCard
@@ -158,6 +268,12 @@ export function ChatTranscript({
                         formatDetail={formatLifestyleDetail}
                         formatTitle={formatLifestyleTitle}
                         kicker="Lifestyle"
+                        kind="lifestyle"
+                        onEdit={
+                          onEditLoggedEntry
+                            ? (entry) => onEditLoggedEntry(message.id, "lifestyle", entry)
+                            : undefined
+                        }
                         onRemove={(entryId) => onRemoveLoggedEntry(message.id, "lifestyle", entryId)}
                       />
                       <LoggedEntryCard
@@ -165,9 +281,18 @@ export function ChatTranscript({
                         formatDetail={formatWellnessDetail}
                         formatTitle={formatWellnessTitle}
                         kicker="Wellness check-in"
+                        kind="wellness"
+                        onEdit={
+                          onEditLoggedEntry
+                            ? (entry) => onEditLoggedEntry(message.id, "wellness", entry)
+                            : undefined
+                        }
                         onRemove={(entryId) => onRemoveLoggedEntry(message.id, "wellness", entryId)}
                       />
                     </>
+                  ) : null}
+                  {workoutDraft ? (
+                    <WorkoutDraftCard messageId={message.id} onSaved={onWorkoutDraftSaved} workoutDraft={workoutDraft} />
                   ) : null}
                 </article>
               );

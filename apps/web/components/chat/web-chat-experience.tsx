@@ -4,6 +4,9 @@ import type { FormEvent, KeyboardEvent } from "react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChatTranscript, type LoggedEntryKind } from "@/components/chat/chat-transcript";
+import type { EditableEntry } from "@/components/chat/edit-logged-entry-modal";
+import { loggedEntryRoutes } from "@/components/chat/logged-entry-format";
+import type { SavedWorkoutSummary } from "@/components/chat/workout-draft-modal";
 import {
   QUICK_START_OPTIONS,
   findBracketBlanks,
@@ -218,12 +221,6 @@ export function WebChatExperience({
     setIsThinking(false);
   }
 
-  const loggedEntryRoutes: Record<LoggedEntryKind, string> = {
-    activity: "/api/logs/activity",
-    diet: "/api/logs/diet",
-    lifestyle: "/api/logs/lifestyle",
-    wellness: "/api/logs/wellness"
-  };
   const loggedEntryPayloadKeys: Record<LoggedEntryKind, string> = {
     activity: "activitiesLogged",
     diet: "dietLogged",
@@ -274,6 +271,62 @@ export function WebChatExperience({
           structured_payload: {
             ...payload,
             [payloadKey]: updatedValue
+          } as ChatMessage["structured_payload"]
+        };
+      })
+    );
+  }
+
+  function handleEditLoggedEntry(messageId: string, kind: LoggedEntryKind, updatedEntry: EditableEntry) {
+    setMessages((currentMessages) =>
+      currentMessages.map((currentMessage) => {
+        if (currentMessage.id !== messageId) {
+          return currentMessage;
+        }
+
+        const payloadKey = loggedEntryPayloadKeys[kind];
+        const payload = currentMessage.structured_payload as Record<string, unknown> | null;
+
+        if (!payload || !(payloadKey in payload)) {
+          return currentMessage;
+        }
+
+        const updatedValue =
+          kind === "wellness"
+            ? updatedEntry
+            : (payload[payloadKey] as Array<{ id: string | null }>).map((entry) =>
+                entry.id === updatedEntry.id ? updatedEntry : entry
+              );
+
+        return {
+          ...currentMessage,
+          structured_payload: {
+            ...payload,
+            [payloadKey]: updatedValue
+          } as ChatMessage["structured_payload"]
+        };
+      })
+    );
+  }
+
+  function handleWorkoutDraftSaved(messageId: string, savedWorkout: SavedWorkoutSummary) {
+    setMessages((currentMessages) =>
+      currentMessages.map((currentMessage) => {
+        if (currentMessage.id !== messageId) {
+          return currentMessage;
+        }
+
+        const payload =
+          (currentMessage.structured_payload as { workoutDraft?: Record<string, unknown> } | null) ?? {};
+
+        return {
+          ...currentMessage,
+          structured_payload: {
+            ...payload,
+            workoutDraft: {
+              ...(payload.workoutDraft ?? {}),
+              savedWorkout
+            }
           } as ChatMessage["structured_payload"]
         };
       })
@@ -370,6 +423,8 @@ export function WebChatExperience({
         isThinking={isThinking}
         messages={messages}
         onRemoveLoggedEntry={handleRemoveLoggedEntry}
+        onEditLoggedEntry={handleEditLoggedEntry}
+        onWorkoutDraftSaved={handleWorkoutDraftSaved}
         pendingMessage={pendingMessage}
         userCardClass={userCardClass}
       />

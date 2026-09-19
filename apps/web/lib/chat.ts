@@ -25,6 +25,17 @@ export type ActivityTimePrecision =
   | "week_summary"
   | "unknown";
 
+export type ParsedStructuredExerciseSet = {
+  reps: number | null;
+  weight: number | null;
+  durationSeconds: number | null;
+};
+
+export type ParsedStructuredExercise = {
+  exerciseName: string;
+  sets: ParsedStructuredExerciseSet[];
+};
+
 export type ParsedActivity = {
   activityType: string;
   activityCategory: string | null;
@@ -39,6 +50,7 @@ export type ParsedActivity = {
   confidence: number | null;
   missingFields: string[];
   ambiguityFlags: string[];
+  structuredExercises: ParsedStructuredExercise[];
 };
 
 export type ParsedDietEntry = {
@@ -716,7 +728,8 @@ export function parseActivityMessage(message: string): ParsedActivity[] {
         getDurationMinutes(clause),
         getIntensity(clause)
       ),
-      ambiguityFlags: []
+      ambiguityFlags: [],
+      structuredExercises: []
     });
   });
 

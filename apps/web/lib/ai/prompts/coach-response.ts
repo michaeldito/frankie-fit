@@ -50,6 +50,14 @@ function formatLifestyleEntries(entries: ParsedLifestyleEntry[]) {
     .join("\n");
 }
 
+function formatWorkoutDraft(draft: { exercises: Array<{ exerciseName: string }> } | null) {
+  if (!draft || draft.exercises.length === 0) {
+    return "None.";
+  }
+
+  return draft.exercises.map((exercise) => `- ${exercise.exerciseName}`).join("\n");
+}
+
 function formatWellness(checkin: ParsedWellnessCheckin | null) {
   if (!checkin) {
     return "None.";
@@ -108,6 +116,7 @@ export function buildCoachResponseUserPrompt(input: {
   dietEntries: ParsedDietEntry[];
   lifestyleEntries: ParsedLifestyleEntry[];
   wellnessCheckin: ParsedWellnessCheckin | null;
+  workoutDraft?: { exercises: Array<{ exerciseName: string }> } | null;
 }) {
   const goalText = input.profile?.primary_goal ?? "Not set";
   const styleText = input.profile?.coaching_style ?? "Balanced mix";
@@ -126,8 +135,11 @@ export function buildCoachResponseUserPrompt(input: {
     formatLifestyleEntries(input.lifestyleEntries),
     "Structured wellness update:",
     formatWellness(input.wellnessCheckin),
+    "Structured workout draft (not yet saved):",
+    formatWorkoutDraft(input.workoutDraft ?? null),
     "Important response rules:",
     "- Treat the structured activity, diet, lifestyle, and wellness sections as the source of truth for this turn.",
+    "- If a workout draft is present, acknowledge that you drafted it and it's awaiting the user's review before saving — never say or imply it has already been logged.",
     "- If a structured activity has no duration or no intensity, do not mention a duration or intensity for it.",
     "- If a structured diet entry is vague, acknowledge it generally without adding foods or quantities that are not listed.",
     "- Do not pull a duration, intensity, or other concrete detail forward from the recent conversation unless it is also present in the structured updates for this turn.",

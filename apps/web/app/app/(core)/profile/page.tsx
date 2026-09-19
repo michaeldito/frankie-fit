@@ -431,6 +431,20 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               placeholder="Weekdays are easier, mornings are rough, weekends are flexible..."
             />
           </label>
+
+          <label className="ff-card-soft flex cursor-pointer items-start gap-3 px-4 py-4 text-sm leading-6">
+            <input
+              className="mt-1 h-4 w-4 cursor-pointer accent-[var(--brand)]"
+              defaultChecked={context.profile?.strict_workout_logging ?? false}
+              name="strictWorkoutLogging"
+              type="checkbox"
+            />
+            <span>
+              For strength workouts, have Frankie draft the full exercise, set, rep, and weight
+              breakdown for you to review before it&apos;s saved. Cardio and other activities
+              stay logged instantly either way.
+            </span>
+          </label>
         </Section>
 
         <Section

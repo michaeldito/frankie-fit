@@ -41,6 +41,7 @@ function activity(overrides: Partial<ParsedActivity> = {}): ParsedActivity {
     confidence: 0.9,
     missingFields: [],
     ambiguityFlags: [],
+    structuredExercises: [],
     ...overrides
   };
 }
