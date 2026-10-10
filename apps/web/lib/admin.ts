@@ -148,7 +148,8 @@ export async function getAdminOverviewData(
   }
 
   const supabase = await createSupabaseServerClient();
-  const [metricsResult, promptThemesResult, frictionSummaryResult, productSuggestionsResult, testAccountsResult] =
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const [metricsResult, promptThemesResult, frictionSummaryResult, productSuggestionsResult, testAccountsResult, qualityChecksResult] =
     await Promise.all([
       supabase.rpc("admin_overview_metrics"),
       supabase.rpc("admin_prompt_theme_counts"),
@@ -163,7 +164,11 @@ export async function getAdminOverviewData(
         .select("id, full_name, account_type, onboarding_completed, primary_goal")
         .in("account_type", ["internal_test", "synthetic_demo"])
         .order("account_type", { ascending: true })
-        .limit(12)
+        .limit(12),
+      supabase
+        .from("ai_trace_quality_checks")
+        .select("check_result")
+        .gte("created_at", sevenDaysAgo)
     ]);
 
   const firstError =
@@ -219,7 +224,21 @@ export async function getAdminOverviewData(
         label: "Conversation volume (7d)",
         value: `${metrics.conversationVolume7d}`,
         detail: "User messages sent to Frankie across all tracked accounts"
-      }
+      },
+      ...((): Array<{ label: string; value: string; detail: string }> => {
+        const checks = (qualityChecksResult.data ?? []).filter(c => c.check_result !== "skip");
+        if (checks.length === 0) return [];
+        const total = checks.length;
+        const pass = checks.filter(c => c.check_result === "pass").length;
+        const warn = checks.filter(c => c.check_result === "warn").length;
+        const fail = checks.filter(c => c.check_result === "fail").length;
+        const passRate = Math.round((pass / total) * 100);
+        return [{
+          label: "Trace quality (7d)",
+          value: `${passRate}% pass`,
+          detail: `${total} checks: ${pass} pass, ${warn} warn, ${fail} fail`
+        }];
+      })()
     ],
     pillarUsageCards: [
       { label: "Exercise", value: `${metrics.pillarUsage30d.activity}` },

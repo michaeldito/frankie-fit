@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database";
 
 type AiTraceRunRow = Database["public"]["Tables"]["ai_trace_runs"]["Row"];
+type QualityCheckRow = Database["public"]["Tables"]["ai_trace_quality_checks"]["Row"];
 
 export type AdminDebugData = {
   ready: boolean;
@@ -10,6 +11,7 @@ export type AdminDebugData = {
   traces: AiTraceRunRow[];
   selectedTrace: AiTraceRunRow | null;
   threadTimeline: AiTraceRunRow[];
+  qualityChecks: QualityCheckRow[];
 };
 
 function isMissingTraceTable(message: string | null | undefined) {
@@ -26,7 +28,8 @@ function buildEmptyDebugData(error: string | null): AdminDebugData {
     error,
     traces: [],
     selectedTrace: null,
-    threadTimeline: []
+    threadTimeline: [],
+    qualityChecks: []
   };
 }
 
@@ -102,12 +105,20 @@ export async function getAdminDebugData(input: {
         .slice(-20)
     : [];
 
+  const { data: qualityChecks } = selectedTrace
+    ? await supabase
+        .from("ai_trace_quality_checks")
+        .select("*")
+        .eq("trace_run_id", selectedTrace.id)
+    : { data: [] };
+
   return {
     ready: true,
     error: error?.message ?? null,
     traces: filteredTraces,
     selectedTrace,
-    threadTimeline
+    threadTimeline,
+    qualityChecks: qualityChecks ?? []
   };
 }
 
