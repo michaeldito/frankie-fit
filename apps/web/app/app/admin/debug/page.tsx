@@ -34,6 +34,18 @@ function StatusPill({
   );
 }
 
+function QualityDot({ summary }: { summary: Record<string, unknown> | null }) {
+  if (!summary || typeof summary.worst !== "string") return null;
+  const color =
+    summary.worst === "fail"
+      ? "bg-red-400"
+      : summary.worst === "warn"
+        ? "bg-amber-400"
+        : "bg-emerald-400";
+  const title = `Quality: ${summary.pass ?? 0} pass, ${summary.warn ?? 0} warn, ${summary.fail ?? 0} fail${summary.skip ? `, ${summary.skip} skipped` : ""}`;
+  return <span className={`inline-block h-2 w-2 rounded-full ${color}`} title={title} />;
+}
+
 function TraceLink({
   trace,
   active,
@@ -60,7 +72,8 @@ function TraceLink({
         <p className="text-sm font-medium tracking-[-0.01em]">
           {trace.user_display_name ?? trace.user_email ?? "Unknown user"}
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <QualityDot summary={trace.quality_summary as Record<string, unknown> | null} />
           <StatusPill
             active={trace.orchestration_mode === "model"}
             label={trace.orchestration_mode === "model" ? "model" : "fallback"}
@@ -186,6 +199,7 @@ export default async function AdminDebugPage({
         <DebugTraceInspector
           analysis={getTraceAnalysis(selectedTrace)}
           selectedTrace={selectedTrace}
+          qualityChecks={debugData.qualityChecks}
           threadTimeline={debugData.threadTimeline}
         />
       </section>

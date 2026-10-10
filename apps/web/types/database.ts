@@ -239,6 +239,7 @@ export type Database = {
           error_stage: string | null;
           error_message: string | null;
           latency_ms: number | null;
+          quality_summary: Json | null;
           created_at: string;
         };
         Insert: {
@@ -270,6 +271,7 @@ export type Database = {
           error_stage?: string | null;
           error_message?: string | null;
           latency_ms?: number | null;
+          quality_summary?: Json | null;
           created_at?: string;
         };
         Update: {
@@ -301,9 +303,45 @@ export type Database = {
           error_stage?: string | null;
           error_message?: string | null;
           latency_ms?: number | null;
+          quality_summary?: Json | null;
           created_at?: string;
         };
         Relationships: [];
+      };
+      ai_trace_quality_checks: {
+        Row: {
+          id: string;
+          trace_run_id: string;
+          check_name: string;
+          check_result: string;
+          detail: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          trace_run_id: string;
+          check_name: string;
+          check_result: string;
+          detail?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          trace_run_id?: string;
+          check_name?: string;
+          check_result?: string;
+          detail?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_trace_quality_checks_trace_run_id_fkey";
+            columns: ["trace_run_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_trace_runs";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       eval_runs: {
         Row: {
