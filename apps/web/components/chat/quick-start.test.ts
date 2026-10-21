@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   QUICK_START_OPTIONS,
   composeQuickStart,
+  defaultQuickStartValues,
+  mealForHour,
   findBracketBlanks,
   findNextBlank,
   findPreviousBlank,
@@ -125,5 +127,22 @@ describe("composeQuickStart", () => {
   it("returns null while any blank is empty", () => {
     expect(composeQuickStart(segments, { 0: "lunch" })).toBeNull();
     expect(composeQuickStart(segments, { 0: "lunch", 1: "   " })).toBeNull();
+  });
+});
+
+describe("defaultQuickStartValues", () => {
+  it.each([
+    [8, "breakfast"],
+    [12, "lunch"],
+    [16, "snack"],
+    [19, "dinner"],
+    [23, "snack"]
+  ])("pre-picks the meal at hour %i", (hour, meal) => {
+    expect(mealForHour(hour)).toBe(meal);
+    expect(defaultQuickStartValues(parseQuickStartTemplate(QUICK_START_OPTIONS[1].template), hour)).toEqual({ 0: meal });
+  });
+
+  it("leaves non-meal choices like intensity empty", () => {
+    expect(defaultQuickStartValues(parseQuickStartTemplate(QUICK_START_OPTIONS[0].template), 12)).toEqual({});
   });
 });

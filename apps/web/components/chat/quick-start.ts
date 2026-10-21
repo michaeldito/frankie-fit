@@ -123,3 +123,24 @@ export function composeQuickStart(segments: QuickStartSegment[], values: Record<
 
   return message;
 }
+
+export function mealForHour(hourPacific: number): "breakfast" | "lunch" | "dinner" | "snack" {
+  if (hourPacific >= 5 && hourPacific < 11) return "breakfast";
+  if (hourPacific >= 11 && hourPacific < 15) return "lunch";
+  if (hourPacific >= 17 && hourPacific < 21) return "dinner";
+  return "snack";
+}
+
+/** Pre-picks the likely meal from the time of day; every other blank starts empty. */
+export function defaultQuickStartValues(segments: QuickStartSegment[], hourPacific: number): Record<number, string> {
+  const meal = mealForHour(hourPacific);
+  const values: Record<number, string> = {};
+
+  for (const segment of segments) {
+    if (segment.kind === "choice" && segment.options.includes(meal)) {
+      values[segment.id] = meal;
+    }
+  }
+
+  return values;
+}
