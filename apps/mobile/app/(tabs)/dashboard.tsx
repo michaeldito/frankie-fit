@@ -1,3 +1,12 @@
+import {
+  EMPTY_STATE_LINES,
+  dailyLine,
+  frankieMoodFor,
+  greetingFor,
+  type FrankieMood,
+  type Pillar,
+} from '@frankie-fit/brand-core';
+import { getPacificDateKey, getPacificHour } from '@frankie-fit/dashboard-core';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -10,8 +19,9 @@ import {
   View,
 } from 'react-native';
 
+import { FrankieAvatar, FrankieEmptyState, FrankieSays } from '@/components/frankie';
 import { Screen, ScreenTitle, ScrollCard } from '@/components/frankie-ui';
-import { colors } from '@/constants/frankie-theme';
+import { createThemedStyles, useTheme } from '@/lib/theme';
 import {
   DashboardRecentItem,
   DashboardTrendPoint,
@@ -43,6 +53,7 @@ function SegmentedTabs({
   activeTab: DashboardTabId;
   onChange: (tab: DashboardTabId) => void;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.segmented}>
       {dashboardTabs.map((tab) => {
@@ -67,6 +78,7 @@ function SegmentedTabs({
 }
 
 function MetricGrid({ metrics }: { metrics: { label: string; value: string }[] }) {
+  const styles = useStyles();
   return (
     <View style={styles.metricGrid}>
       {metrics.map((metric) => (
@@ -80,21 +92,32 @@ function MetricGrid({ metrics }: { metrics: { label: string; value: string }[] }
 }
 
 function InsightCard({ body }: { body: string }) {
+  const styles = useStyles();
   return (
     <ScrollCard style={styles.highlightCard}>
       <Text style={styles.kicker}>{"Frankie's read"}</Text>
       <Text style={styles.cardTitle}>What stands out right now</Text>
-      <Text style={styles.bodyText}>{body}</Text>
+      <View style={styles.insightRow}>
+        <FrankieAvatar mood="focused" size={36} />
+        <Text style={[styles.bodyText, styles.insightText]}>{body}</Text>
+      </View>
     </ScrollCard>
   );
 }
 
-function EmptyCard({ body, title }: { body: string; title: string }) {
+const EMPTY_STATE_MOODS: Record<Pillar, FrankieMood> = {
+  exercise: 'waiting',
+  diet: 'hungry',
+  wellness: 'snuggle',
+  lifestyle: 'stretching',
+};
+
+function EmptyCard({ body, pillar, title }: { body: string; pillar: Pillar; title: string }) {
+  const styles = useStyles();
   return (
     <ScrollCard>
-      <Text style={styles.kicker}>Getting started</Text>
-      <Text style={styles.cardTitle}>{title}</Text>
-      <Text style={styles.bodyText}>{body}</Text>
+      <Text style={styles.kicker}>{title}</Text>
+      <FrankieEmptyState body={body} line={EMPTY_STATE_LINES[pillar]} mood={EMPTY_STATE_MOODS[pillar]} />
       <Pressable onPress={() => router.push('/chat')} style={styles.inlineButton}>
         <Text style={styles.inlineButtonText}>Open chat</Text>
       </Pressable>
@@ -111,6 +134,7 @@ function RecentList({
   items: DashboardRecentItem[];
   title: string;
 }) {
+  const styles = useStyles();
   return (
     <ScrollCard>
       <Text style={styles.kicker}>Recent logs</Text>
@@ -143,6 +167,7 @@ function BreakdownList({
   items: { label: string; value: number }[];
   title: string;
 }) {
+  const styles = useStyles();
   return (
     <ScrollCard>
       <Text style={styles.kicker}>Pattern summary</Text>
@@ -164,6 +189,7 @@ function BreakdownList({
 }
 
 function ActivityTrend({ trend }: { trend: DashboardTrendPoint[] }) {
+  const styles = useStyles();
   const maxValue = Math.max(...trend.map((point) => point.value), 1);
 
   return (
@@ -191,6 +217,7 @@ function ActivityTrend({ trend }: { trend: DashboardTrendPoint[] }) {
 }
 
 function WellnessTrend({ trend }: { trend: WellnessTrendPoint[] }) {
+  const styles = useStyles();
   return (
     <ScrollCard>
       <Text style={styles.kicker}>7-day trend</Text>
@@ -213,8 +240,9 @@ function WellnessTrend({ trend }: { trend: WellnessTrendPoint[] }) {
 }
 
 function ExerciseTab({ data }: { data: ExerciseDashboardData }) {
+  const styles = useStyles();
   if (data.empty) {
-    return <EmptyCard body={data.insight} title="No exercise data yet" />;
+    return <EmptyCard body={data.insight} pillar="exercise" title="No exercise data yet" />;
   }
 
   return (
@@ -229,8 +257,9 @@ function ExerciseTab({ data }: { data: ExerciseDashboardData }) {
 }
 
 function DietTab({ data }: { data: DietDashboardData }) {
+  const styles = useStyles();
   if (data.empty) {
-    return <EmptyCard body={data.insight} title="No diet data yet" />;
+    return <EmptyCard body={data.insight} pillar="diet" title="No diet data yet" />;
   }
 
   return (
@@ -244,8 +273,9 @@ function DietTab({ data }: { data: DietDashboardData }) {
 }
 
 function LifestyleTab({ data }: { data: LifestyleDashboardData }) {
+  const styles = useStyles();
   if (data.empty) {
-    return <EmptyCard body={data.insight} title="No lifestyle data yet" />;
+    return <EmptyCard body={data.insight} pillar="lifestyle" title="No lifestyle data yet" />;
   }
 
   return (
@@ -259,8 +289,9 @@ function LifestyleTab({ data }: { data: LifestyleDashboardData }) {
 }
 
 function WellnessTab({ data }: { data: WellnessDashboardData }) {
+  const styles = useStyles();
   if (data.empty) {
-    return <EmptyCard body={data.insight} title="No wellness data yet" />;
+    return <EmptyCard body={data.insight} pillar="wellness" title="No wellness data yet" />;
   }
 
   return (
@@ -274,6 +305,9 @@ function WellnessTab({ data }: { data: WellnessDashboardData }) {
 }
 
 export default function DashboardScreen() {
+  const { colors } = useTheme();
+  const hour = getPacificHour();
+  const styles = useStyles();
   const { session } = useAuth();
   const [activeTab, setActiveTab] = useState<DashboardTabId>('exercise');
   const [dashboard, setDashboard] = useState<DashboardState | null>(null);
@@ -337,8 +371,9 @@ export default function DashboardScreen() {
     <Screen padded={false}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefreshing} tintColor={colors.accentStrong} onRefresh={handleRefresh} />}>
-        <ScreenTitle title="Dashboard" subtitle="Exercise, diet, lifestyle, and wellness from the same logs Frankie uses on web." />
+        refreshControl={<RefreshControl refreshing={isRefreshing} tintColor={colors.brand} onRefresh={handleRefresh} />}>
+        <ScreenTitle title={`${greetingFor(hour)} 🐾`} />
+        <FrankieSays line={dailyLine(getPacificDateKey())} mood={frankieMoodFor({ hourPacific: hour })} />
 
         {error ? (
           <ScrollCard style={styles.errorCard}>
@@ -350,7 +385,7 @@ export default function DashboardScreen() {
 
         {isLoading && !dashboard ? (
           <View style={styles.loading}>
-            <ActivityIndicator color={colors.accentStrong} />
+            <ActivityIndicator color={colors.brand} />
           </View>
         ) : null}
 
@@ -370,7 +405,15 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => ({
+  insightRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  insightText: {
+    flex: 1,
+  },
   content: {
     gap: 18,
     paddingBottom: 28,
@@ -381,7 +424,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 16,
-    backgroundColor: colors.backgroundSoft,
+    backgroundColor: colors.surfaceStrong,
     padding: 4,
   },
   segment: {
@@ -392,7 +435,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   segmentSelected: {
-    backgroundColor: colors.accentStrong,
+    backgroundColor: colors.brand,
   },
   segmentText: {
     color: colors.muted,
@@ -400,23 +443,23 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   segmentTextSelected: {
-    color: colors.background,
+    color: colors.brandForeground,
   },
   highlightCard: {
-    backgroundColor: colors.panelStrong,
+    backgroundColor: colors.surfaceElevated,
   },
   errorCard: {
     borderColor: colors.danger,
   },
   kicker: {
-    color: colors.accentStrong,
+    color: colors.accent,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0,
     textTransform: 'uppercase',
   },
   cardTitle: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 19,
     fontWeight: '800',
   },
@@ -428,12 +471,12 @@ const styles = StyleSheet.create({
   inlineButton: {
     alignSelf: 'flex-start',
     borderRadius: 14,
-    backgroundColor: colors.accentStrong,
+    backgroundColor: colors.brand,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   inlineButtonText: {
-    color: colors.background,
+    color: colors.brandForeground,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -453,7 +496,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   metricValue: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 24,
     fontWeight: '900',
   },
@@ -463,7 +506,7 @@ const styles = StyleSheet.create({
   softRow: {
     gap: 8,
     borderRadius: 14,
-    backgroundColor: colors.backgroundSoft,
+    backgroundColor: colors.surfaceStrong,
     padding: 14,
   },
   rowHeader: {
@@ -474,12 +517,12 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     flex: 1,
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 15,
     fontWeight: '800',
   },
   rowDate: {
-    color: colors.subtle,
+    color: colors.muted,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -499,7 +542,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   breakdownValue: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -517,7 +560,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   barValue: {
-    color: colors.subtle,
+    color: colors.muted,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -525,10 +568,10 @@ const styles = StyleSheet.create({
     width: '100%',
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
-    backgroundColor: colors.accentStrong,
+    backgroundColor: colors.brand,
   },
   barLabel: {
-    color: colors.subtle,
+    color: colors.muted,
     fontSize: 11,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -538,4 +581,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 120,
   },
-});
+}));

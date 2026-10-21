@@ -713,6 +713,6 @@ Investigate a product insight or review test account behavior.
 
 ## Open Design Questions
 
-- Should the left nav include Frankie's face or avatar persistently, or should that stay more subtle?
+- Should the left nav include Frankie's face or avatar persistently, or should that stay more subtle? **Decided Oct 2026:** yes. The sidebar shows Frankie's wordmark and a portrait card with his daily line.
 - Should the dashboard tabs live near the top of the page or beneath the summary block?
 - How much of the landing page should feel playful versus calm and premium?

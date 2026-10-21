@@ -33,7 +33,6 @@ export default defineConfig({
       include: [
         "apps/web/components/admin/coaching-memory-grid.tsx",
         "apps/web/components/chat/logged-entry-format.ts",
-        "apps/web/components/chat/message-mood.ts",
         "apps/web/components/chat/quick-start.ts",
         "apps/web/lib/admin-eval-runner.ts",
         "apps/web/lib/admin-evals-data.ts",
@@ -63,6 +62,7 @@ export default defineConfig({
         "packages/brand-core/contrast.ts",
         "packages/brand-core/css.ts",
         "packages/brand-core/lines.ts",
+        "packages/brand-core/message-mood.ts",
         "packages/brand-core/moods.ts",
         "packages/brand-core/themes.ts",
         "packages/dashboard-core/dashboard.ts",

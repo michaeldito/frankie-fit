@@ -201,6 +201,19 @@ Rationale:
 - this gives a practical picture of engagement, product value, and user friction
 - it supports early product iteration without requiring a heavy analytics platform
 
+## Frankie in the UI (October 2026)
+
+Frankie is the user's dog, and the UI now shows him as one. The coach prompt's voice above is unchanged: dog personality lives in **UI copy only** (greetings, daily lines, empty states, thinking lines in `packages/brand-core/lines.ts`). That way coaching replies and eval results don't shift.
+
+Rules for UI copy in Frankie's voice:
+
+- short and handwritten-length (one line)
+- light dog humor is welcome ("so polite", "naps count", "sniffing that out"), but at most one dog-ism per line
+- the same no-guilt rule as above: never shame missed logs, never comment on how much someone ate
+- personas (Arnold, etc.) don't get the dog art or dog copy
+
+See [design-system.md](design-system.md) for moods and where Frankie appears.
+
 ## Implementation Implications
 
 These decisions should guide future work in several ways:

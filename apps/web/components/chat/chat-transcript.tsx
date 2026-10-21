@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { FrankieMood } from "@frankie-fit/brand-core";
+import { moodForMessage, type FrankieMood } from "@frankie-fit/brand-core";
 import { LoggedEntryCard } from "@/components/chat/logged-entry-card";
-import { moodForMessage } from "@/components/chat/message-mood";
 import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
 import { FrankieThinking } from "@/components/frankie/frankie-thinking";
 import {

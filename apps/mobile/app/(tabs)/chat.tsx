@@ -1,3 +1,5 @@
+import { moodForMessage, pillarColor, type Pillar } from '@frankie-fit/brand-core';
+import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -13,9 +15,10 @@ import {
   View,
 } from 'react-native';
 
+import { FrankieAvatar, FrankieThinking } from '@/components/frankie';
 import { LoggedEntryCard } from '@/components/logged-entry-card';
-import { Screen, ScreenTitle, ScrollCard } from '@/components/frankie-ui';
-import { colors } from '@/constants/frankie-theme';
+import { Screen, ScrollCard } from '@/components/frankie-ui';
+import { createThemedStyles, useTheme } from '@/lib/theme';
 import { frankieApiFetch } from '@/lib/api';
 // TODO(Phase 3 / shared-types extraction): reaches into apps/web by relative path — see
 // packages/dashboard-core/dashboard.ts for the same known IOU and its rationale.
@@ -88,6 +91,7 @@ function AnimatedStatusText({
   inverted?: boolean;
   label: string;
 }) {
+  const styles = useStyles();
   const [dotCount, setDotCount] = useState(1);
 
   useEffect(() => {
@@ -107,6 +111,8 @@ function AnimatedStatusText({
 }
 
 export default function ChatScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const scrollRef = useRef<ScrollView>(null);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -204,8 +210,13 @@ export default function ChatScreen() {
         }),
         method: 'POST',
       });
-      setMessages(toBubbles(replyResponse.messages));
+      const replyBubbles = toBubbles(replyResponse.messages);
+      setMessages(replyBubbles);
       setError(replyResponse.error);
+
+      if (replyBubbles.at(-1)?.messageType === 'log_confirmation') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
     } catch (sendError) {
       const message = sendError instanceof Error ? sendError.message : 'Frankie could not send that.';
       setError(message);
@@ -226,7 +237,6 @@ export default function ChatScreen() {
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
-          <ScreenTitle title="Chat" subtitle="Log movement, meals, recovery, or ask Frankie for the next step." />
 
           {error ? (
             <ScrollCard style={styles.errorCard}>
@@ -239,7 +249,7 @@ export default function ChatScreen() {
 
           {isLoading && messages.length === 0 ? (
             <View style={styles.loading}>
-              <ActivityIndicator color={colors.accentStrong} />
+              <ActivityIndicator color={colors.brand} />
             </View>
           ) : null}
 
@@ -248,12 +258,29 @@ export default function ChatScreen() {
               const isUser = message.role === 'user';
               const logConfirmation = getLogConfirmationPayload(message);
 
+              const bubble = (
+                <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+                  <Text style={isUser ? styles.userText : styles.assistantText}>{message.content}</Text>
+                  {message.pending ? <AnimatedStatusText inverted label="Sending" /> : null}
+                </View>
+              );
+
               return (
                 <View key={message.id} style={styles.messageGroup}>
-                  <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-                    <Text style={isUser ? styles.userText : styles.assistantText}>{message.content}</Text>
-                    {message.pending ? <AnimatedStatusText inverted label="Sending" /> : null}
-                  </View>
+                  {isUser ? (
+                    bubble
+                  ) : (
+                    <View style={styles.assistantRow}>
+                      <FrankieAvatar
+                        mood={moodForMessage({
+                          message_type: message.messageType,
+                          structured_payload: message.structuredPayload,
+                        })}
+                        size={34}
+                      />
+                      {bubble}
+                    </View>
+                  )}
 
                   {logConfirmation ? (
                     <>
@@ -262,24 +289,28 @@ export default function ChatScreen() {
                         formatDetail={formatActivityDetail}
                         formatTitle={formatActivityTitle}
                         kicker="Activity"
+                        pillar="exercise"
                       />
                       <LoggedEntryCard
                         entries={logConfirmation.dietLogged ?? []}
                         formatDetail={formatDietDetail}
                         formatTitle={formatDietTitle}
                         kicker="Meal"
+                        pillar="diet"
                       />
                       <LoggedEntryCard
                         entries={logConfirmation.lifestyleLogged ?? []}
                         formatDetail={formatLifestyleDetail}
                         formatTitle={formatLifestyleTitle}
                         kicker="Lifestyle"
+                        pillar="lifestyle"
                       />
                       <LoggedEntryCard
                         entries={logConfirmation.wellnessLogged ? [logConfirmation.wellnessLogged] : []}
                         formatDetail={formatWellnessDetail}
                         formatTitle={formatWellnessTitle}
                         kicker="Wellness check-in"
+                        pillar="wellness"
                       />
                     </>
                   ) : null}
@@ -287,11 +318,7 @@ export default function ChatScreen() {
               );
             })}
 
-            {isThinking ? (
-              <View style={[styles.bubble, styles.assistantBubble]}>
-                <AnimatedStatusText label="Frankie is thinking" />
-              </View>
-            ) : null}
+            {isThinking ? <FrankieThinking /> : null}
           </View>
         </ScrollView>
 
@@ -303,6 +330,12 @@ export default function ChatScreen() {
                   key={option.label}
                   onPress={() => setDraft(option.template)}
                   style={styles.quickStartChip}>
+                  <View
+                    style={[
+                      styles.quickStartDot,
+                      { backgroundColor: pillarColor(colors, option.label.toLowerCase() as Pillar) },
+                    ]}
+                  />
                   <Text style={styles.quickStartChipText}>{option.label}</Text>
                 </Pressable>
               ))}
@@ -316,7 +349,7 @@ export default function ChatScreen() {
             onChangeText={setDraft}
             onSubmitEditing={Keyboard.dismiss}
             placeholder="Message Frankie..."
-            placeholderTextColor={colors.subtle}
+            placeholderTextColor={colors.muted}
             returnKeyType="default"
             style={styles.composer}
             value={draft}
@@ -329,7 +362,7 @@ export default function ChatScreen() {
               (isSending || isThinking || !draft.trim()) && styles.sendButtonDisabled,
             ]}>
             {isSending || isThinking ? (
-              <ActivityIndicator color={colors.background} />
+              <ActivityIndicator color={colors.brandForeground} />
             ) : (
               <Text style={styles.sendText}>Send</Text>
             )}
@@ -340,7 +373,7 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => ({
   keyboard: {
     flex: 1,
   },
@@ -353,19 +386,19 @@ const styles = StyleSheet.create({
     borderColor: colors.danger,
   },
   errorText: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 14,
     lineHeight: 20,
   },
   retryButton: {
     alignSelf: 'flex-start',
     borderRadius: 12,
-    backgroundColor: colors.accentStrong,
+    backgroundColor: colors.brand,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   retryButtonText: {
-    color: colors.background,
+    color: colors.brandForeground,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -388,32 +421,42 @@ const styles = StyleSheet.create({
   },
   assistantBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.panel,
+    flexShrink: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderTopLeftRadius: 6,
+    backgroundColor: colors.surface,
   },
   userBubble: {
     alignSelf: 'flex-end',
+    borderBottomRightRadius: 6,
     backgroundColor: colors.accentStrong,
   },
+  assistantRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
   assistantText: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 15,
     lineHeight: 22,
   },
   userText: {
-    color: colors.background,
+    color: colors.accentForeground,
     fontSize: 15,
     fontWeight: '700',
     lineHeight: 22,
   },
   pendingText: {
-    color: colors.background,
+    color: colors.accentForeground,
     fontSize: 12,
     fontWeight: '700',
     opacity: 0.76,
     paddingTop: 4,
   },
   thinkingText: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 15,
     fontWeight: '700',
     lineHeight: 22,
@@ -429,12 +472,20 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   quickStartChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 999,
-    backgroundColor: colors.backgroundSoft,
+    backgroundColor: colors.surfaceStrong,
     paddingHorizontal: 14,
     paddingVertical: 8,
+  },
+  quickStartDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   quickStartChipText: {
     color: colors.muted,
@@ -458,8 +509,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 18,
-    backgroundColor: colors.backgroundSoft,
-    color: colors.text,
+    backgroundColor: colors.surfaceStrong,
+    color: colors.foreground,
     fontSize: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -471,15 +522,15 @@ const styles = StyleSheet.create({
     minWidth: 64,
     minHeight: 48,
     borderRadius: 16,
-    backgroundColor: colors.accentStrong,
+    backgroundColor: colors.brand,
     paddingHorizontal: 16,
   },
   sendButtonDisabled: {
     opacity: 0.55,
   },
   sendText: {
-    color: colors.background,
+    color: colors.brandForeground,
     fontSize: 15,
     fontWeight: '800',
   },
-});
+}));

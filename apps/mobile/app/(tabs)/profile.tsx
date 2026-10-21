@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 
 import { PrimaryButton, Screen, ScreenTitle, ScrollCard } from '@/components/frankie-ui';
-import { colors } from '@/constants/frankie-theme';
+import { ThemePicker } from '@/components/theme-picker';
+import { createThemedStyles, useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth-context';
 import {
   AppProfile,
@@ -31,6 +32,7 @@ function yesNo(value: boolean | null | undefined) {
 }
 
 function SummaryPill({ children }: { children: React.ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={styles.pill}>
       <Text style={styles.pillText}>{children}</Text>
@@ -39,6 +41,7 @@ function SummaryPill({ children }: { children: React.ReactNode }) {
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.detailRow}>
       <Text style={styles.detailLabel}>{label}</Text>
@@ -56,6 +59,7 @@ function ProfileSection({
   eyebrow: string;
   title: string;
 }) {
+  const styles = useStyles();
   return (
     <ScrollCard>
       <Text style={styles.kicker}>{eyebrow}</Text>
@@ -66,6 +70,8 @@ function ProfileSection({
 }
 
 export default function ProfileScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { refreshProfile, session, signOut } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -140,12 +146,12 @@ export default function ProfileScreen() {
     <Screen padded={false}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefreshing} tintColor={colors.accentStrong} onRefresh={handleRefresh} />}>
+        refreshControl={<RefreshControl refreshing={isRefreshing} tintColor={colors.brand} onRefresh={handleRefresh} />}>
         <ScreenTitle title="Profile" subtitle="The context Frankie uses to coach you across chat and dashboard." />
 
         {isLoading && !profile ? (
           <View style={styles.loading}>
-            <ActivityIndicator color={colors.accentStrong} />
+            <ActivityIndicator color={colors.brand} />
           </View>
         ) : null}
 
@@ -219,6 +225,12 @@ export default function ProfileScreen() {
           <DetailRow label="Check-in style" value={profile?.preferred_checkin_style ?? 'Not set yet'} />
         </ProfileSection>
 
+        <ScrollCard>
+          <Text style={styles.kicker}>Appearance</Text>
+          <Text style={styles.bodyText}>Cream by day, Midnight by night, or follow your phone.</Text>
+          <ThemePicker />
+        </ScrollCard>
+
         <ScrollCard style={styles.healthCard}>
           <Text style={styles.kicker}>Apple Health</Text>
           <Text style={styles.sectionTitle}>Read-only workout import</Text>
@@ -243,7 +255,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => ({
   content: {
     gap: 18,
     paddingBottom: 28,
@@ -255,28 +267,28 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   summaryCard: {
-    backgroundColor: colors.panelStrong,
+    backgroundColor: colors.surfaceElevated,
   },
   errorCard: {
     borderColor: colors.danger,
   },
   healthCard: {
-    backgroundColor: colors.panelStrong,
+    backgroundColor: colors.surfaceElevated,
   },
   kicker: {
-    color: colors.accentStrong,
+    color: colors.accent,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0,
     textTransform: 'uppercase',
   },
   displayName: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 26,
     fontWeight: '900',
   },
   sectionTitle: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 20,
     fontWeight: '800',
   },
@@ -294,12 +306,12 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 999,
-    backgroundColor: colors.backgroundSoft,
+    backgroundColor: colors.surfaceStrong,
     paddingHorizontal: 11,
     paddingVertical: 7,
   },
   pillText: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 13,
     fontWeight: '800',
   },
@@ -313,13 +325,13 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   detailLabel: {
-    color: colors.subtle,
+    color: colors.muted,
     fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   detailValue: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 15,
     fontWeight: '700',
     lineHeight: 21,
@@ -329,14 +341,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 52,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.accentStrong,
+    borderColor: colors.brand,
     borderRadius: 14,
-    backgroundColor: colors.backgroundSoft,
+    backgroundColor: colors.surfaceStrong,
     paddingHorizontal: 16,
   },
   editButtonText: {
-    color: colors.accentStrong,
+    color: colors.accent,
     fontSize: 16,
     fontWeight: '800',
   },
-});
+}));

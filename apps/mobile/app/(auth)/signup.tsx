@@ -5,16 +5,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
 
 import { Field, PrimaryButton, Screen, ScreenTitle } from '@/components/frankie-ui';
-import { colors } from '@/constants/frankie-theme';
+import { createThemedStyles } from '@/lib/theme';
 import { hasMobileSupabaseEnv, supabase } from '@/lib/supabase';
 
 export default function SignupScreen() {
+  const styles = useStyles();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -125,7 +125,7 @@ export default function SignupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => ({
   keyboard: {
     flex: 1,
   },
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   wordmark: {
-    color: colors.accentStrong,
+    color: colors.accent,
     fontSize: 17,
     fontWeight: '800',
     letterSpacing: 0,
@@ -155,10 +155,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   link: {
-    color: colors.accentStrong,
+    color: colors.accent,
     fontSize: 15,
     fontWeight: '700',
     paddingTop: 6,
     textAlign: 'center',
   },
-});
+}));

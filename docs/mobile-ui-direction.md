@@ -47,6 +47,14 @@ Current product direction:
 - focus near-term mobile refinement on chat reliability, profile/dashboard parity, and production API behavior
 - pause Apple Health polish and Apple Watch exploration until Frankie intelligence and deployment are stronger
 
+## Current Status - October 20, 2026
+
+The app adopted a shared design system with Frankie, the user's dog, as a visible coach. See [design-system.md](design-system.md). It supersedes these sections below:
+
+- **Color, typography, and theme:** both apps now use `@frankie-fit/brand-core` tokens: Cream (light) and Midnight (dark), following the OS setting with a manual override. The "dark blue only" and "avoid gym green" guidance is retired. Sage green is now the primary action color, and each pillar has its own color.
+- **Navigation:** mobile moved from the chat-first drawer back to bottom tabs (Frankie / Progress / Workouts / Profile), with Frankie's avatar as the chat tab. Web got an always-Midnight sidebar plus a bottom tab bar below `lg`.
+- **Frankie presence:** reversed. Frankie now appears on purpose, once per screen: an avatar on chat replies with a mood that reacts to what was logged, a daily "Frankie says" card, and illustrated empty states. The "no mascot overload" instinct survives as the once-per-screen rule.
+
 ## Core Direction
 
 Frankie Fit mobile should feel like:
@@ -200,7 +208,7 @@ Avoid:
 
 ## Navigation Direction
 
-## Chat-First Drawer (current)
+## Chat-First Drawer (superseded October 2026 — see Current Status)
 
 Chat is the only screen shown by default — there is no persistent tab bar. A small hamburger button in the header opens a slide-in drawer listing the other destinations:
 
@@ -375,6 +383,8 @@ Avoid:
 - too much animation around logging
 
 ## Frankie Presence In UI
+
+> Superseded October 2026: Frankie is now a visible mascot-coach. See [design-system.md](design-system.md#experience-principles). Kept for historical context.
 
 Frankie should be felt more through:
 

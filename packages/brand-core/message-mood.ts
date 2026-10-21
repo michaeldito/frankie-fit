@@ -1,4 +1,5 @@
-import { frankieMoodFor, type FrankieMood, type Pillar } from "@frankie-fit/brand-core";
+import { frankieMoodFor, type FrankieMood } from "./moods";
+import type { Pillar } from "./themes";
 
 type MoodSourceMessage = {
   message_type?: string;

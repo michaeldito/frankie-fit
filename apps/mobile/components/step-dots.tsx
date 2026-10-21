@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
-import { colors } from '@/constants/frankie-theme';
+import { createThemedStyles } from '@/lib/theme';
 
 function StepDot({ currentStep, index }: { currentStep: number; index: number }) {
+  const styles = useStyles();
   const isDone = index < currentStep;
   const isActive = index === currentStep;
   const pulse = useRef(new Animated.Value(0.9)).current;
@@ -34,6 +35,7 @@ function StepDot({ currentStep, index }: { currentStep: number; index: number })
 }
 
 export function StepDots({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) {
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       {Array.from({ length: totalSteps }, (_value, index) => (
@@ -43,7 +45,7 @@ export function StepDots({ currentStep, totalSteps }: { currentStep: number; tot
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -71,11 +73,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   dotDone: {
-    borderColor: colors.accentStrong,
-    backgroundColor: colors.accentStrong,
+    borderColor: colors.brand,
+    backgroundColor: colors.brand,
   },
   dotActive: {
-    borderColor: colors.accentStrong,
+    borderColor: colors.brand,
     backgroundColor: colors.accent,
   },
-});
+}));
