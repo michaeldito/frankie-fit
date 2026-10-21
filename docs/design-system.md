@@ -101,7 +101,7 @@ Dropping files in with the same names updates both apps. The mobile app icon and
 
 ## Frankie's Day (biscuits)
 
-Logging real life earns 🦴 biscuits, and biscuits are spent on time with Frankie. The game logic lives in `packages/companion-core` and is shared by web and mobile. The database enforces it in `supabase/migrations/20261021090000_frankie_biscuits.sql`.
+Logging real life earns 🦴 biscuits, and biscuits are spent on time with Frankie. The game logic lives in `packages/companion-core` and is shared by web and mobile. The database enforces it in `supabase/migrations/20261021072622_frankie_biscuits.sql`.
 
 **Earning** (`award_biscuits`, safe to call repeatedly):
 

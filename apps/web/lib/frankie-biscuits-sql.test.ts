@@ -4,7 +4,7 @@ import { BISCUIT_EARN_RULES, FRANKIE_ACTIONS, FRANKIE_NEEDS } from "@frankie-fit
 
 // companion-core's rules are enforced by SQL in the biscuits migration; keep the two in sync.
 const migration = readFileSync(
-  new URL("../../../supabase/migrations/20261021090000_frankie_biscuits.sql", import.meta.url),
+  new URL("../../../supabase/migrations/20261021072622_frankie_biscuits.sql", import.meta.url),
   "utf8"
 );
 

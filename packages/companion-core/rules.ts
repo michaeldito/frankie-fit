@@ -1,6 +1,6 @@
 import type { FrankieMood } from "@frankie-fit/brand-core";
 
-// The numbers here are mirrored in supabase/migrations/20261021090000_frankie_biscuits.sql
+// The numbers here are mirrored in supabase/migrations/20261021072622_frankie_biscuits.sql
 // (award_biscuits / redeem_frankie_action); apps/web/lib/frankie-biscuits-sql.test.ts keeps them in sync.
 export const BISCUIT_EARN_RULES = {
   perPillarPerDay: 1,
