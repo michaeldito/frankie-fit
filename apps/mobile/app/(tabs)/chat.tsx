@@ -242,7 +242,7 @@ export default function ChatScreen() {
   }
 
   return (
-    <Screen padded={false}>
+    <Screen inTabs padded={false}>
       <FrankieDayBar />
       <KeyboardAvoidingView behavior="padding" style={styles.keyboard}>
         <ScrollView

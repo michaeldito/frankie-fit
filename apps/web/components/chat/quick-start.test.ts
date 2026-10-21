@@ -7,7 +7,8 @@ import {
   findBracketBlanks,
   findNextBlank,
   findPreviousBlank,
-  parseQuickStartTemplate
+  parseQuickStartTemplate,
+  toRatingRows
 } from "./quick-start";
 
 describe("findBracketBlanks", () => {
@@ -144,5 +145,23 @@ describe("defaultQuickStartValues", () => {
 
   it("leaves non-meal choices like intensity empty", () => {
     expect(defaultQuickStartValues(parseQuickStartTemplate(QUICK_START_OPTIONS[0].template), 12)).toEqual({});
+  });
+});
+
+describe("toRatingRows", () => {
+  it("lays the wellness check-in out as labeled 1-5 rows", () => {
+    expect(toRatingRows(parseQuickStartTemplate(QUICK_START_OPTIONS[2].template))).toEqual({
+      rows: ["Energy", "Stress", "Soreness", "Mood", "Motivation"].map((label, id) => ({
+        id,
+        label,
+        options: ["1", "2", "3", "4", "5"]
+      }))
+    });
+  });
+
+  it("leaves sentence-style templates alone", () => {
+    expect(toRatingRows(parseQuickStartTemplate(QUICK_START_OPTIONS[0].template))).toBeNull();
+    expect(toRatingRows(parseQuickStartTemplate("For [breakfast/lunch]"))).toBeNull();
+    expect(toRatingRows(parseQuickStartTemplate("No blanks"))).toBeNull();
   });
 });

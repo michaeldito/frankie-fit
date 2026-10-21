@@ -144,3 +144,28 @@ export function defaultQuickStartValues(segments: QuickStartSegment[], hourPacif
 
   return values;
 }
+
+export type QuickStartRatingRow = { id: number; label: string; options: string[] };
+
+/**
+ * Templates that are only "label: [choice]" pairs (the wellness check-in) read better as a list of
+ * labeled rows than as a wrapped sentence. Returns null for any template with free-text blanks.
+ */
+export function toRatingRows(segments: QuickStartSegment[]): { rows: QuickStartRatingRow[] } | null {
+  if (segments.some((segment) => segment.kind === "input")) return null;
+
+  const rows: QuickStartRatingRow[] = [];
+
+  for (const [index, segment] of segments.entries()) {
+    if (segment.kind !== "choice") continue;
+
+    const before = segments[index - 1];
+    const match = before?.kind === "text" ? /(?:^|[,—-])\s*([^,—:-]+?)\s*:\s*$/.exec(before.text) : null;
+    if (!match) return null;
+
+    const label = match[1].trim();
+    rows.push({ id: segment.id, label: label.charAt(0).toUpperCase() + label.slice(1), options: segment.options });
+  }
+
+  return rows.length > 0 ? { rows } : null;
+}

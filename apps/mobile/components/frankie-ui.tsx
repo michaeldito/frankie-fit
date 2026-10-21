@@ -15,11 +15,19 @@ import { createThemedStyles, spacing, useTheme } from '@/lib/theme';
 
 type ScreenProps = PropsWithChildren<{
   padded?: boolean;
+  // Tab screens sit between the navigator's header and tab bar, which already handle the insets.
+  inTabs?: boolean;
 }>;
 
-export function Screen({ children, padded = true }: ScreenProps) {
+export function Screen({ children, padded = true, inTabs = false }: ScreenProps) {
   const styles = useStyles();
-  return <SafeAreaView style={[styles.screen, padded && styles.screenPadded]}>{children}</SafeAreaView>;
+  return (
+    <SafeAreaView
+      edges={inTabs ? ['left', 'right'] : undefined}
+      style={[styles.screen, padded && styles.screenPadded]}>
+      {children}
+    </SafeAreaView>
+  );
 }
 
 export function ScrollCard({ children, style }: PropsWithChildren<ViewProps>) {
