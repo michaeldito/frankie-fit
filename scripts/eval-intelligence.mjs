@@ -7,6 +7,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, "..");
+// The web app (and its "@/" alias root) moved into apps/web in the monorepo restructure.
+const webRoot = path.join(projectRoot, "apps", "web");
 
 function loadEnvFile(fileName) {
   const filePath = path.join(projectRoot, fileName);
@@ -88,7 +90,7 @@ function registerAliasHook() {
       }
 
       if (specifier.startsWith("@/")) {
-        const resolvedAlias = resolveExistingPath(path.join(projectRoot, specifier.slice(2)));
+        const resolvedAlias = resolveExistingPath(path.join(webRoot, specifier.slice(2)));
 
         if (resolvedAlias) {
           return {
@@ -369,25 +371,28 @@ async function main() {
   }
 
   const { FRANKIE_PROMPT_VERSION, orchestrateFrankieReply } = await import(
-    "../lib/ai/orchestrator/frankie-orchestrator.ts"
+    "../apps/web/lib/ai/orchestrator/frankie-orchestrator.ts"
   );
   const { CARDIO_HAPPY_PATH_INTELLIGENCE_CASES } = await import(
-    "../lib/evals/intelligence/cardio-happy-path.ts"
+    "../apps/web/lib/evals/intelligence/cardio-happy-path.ts"
   );
   const { LIFTING_MIXED_PATH_INTELLIGENCE_CASES } = await import(
-    "../lib/evals/intelligence/lifting-mixed-path.ts"
+    "../apps/web/lib/evals/intelligence/lifting-mixed-path.ts"
   );
   const { DIFFICULT_MIXED_PATH_INTELLIGENCE_CASES } = await import(
-    "../lib/evals/intelligence/difficult-mixed-path.ts"
+    "../apps/web/lib/evals/intelligence/difficult-mixed-path.ts"
   );
   const { MESSY_INPUT_PATH_INTELLIGENCE_CASES } = await import(
-    "../lib/evals/intelligence/messy-input-path.ts"
+    "../apps/web/lib/evals/intelligence/messy-input-path.ts"
   );
   const { CLARIFICATION_FOLLOWTHROUGH_PATH_INTELLIGENCE_CASES } = await import(
-    "../lib/evals/intelligence/clarification-followthrough-path.ts"
+    "../apps/web/lib/evals/intelligence/clarification-followthrough-path.ts"
+  );
+  const { ALREADY_LOGGED_PATH_INTELLIGENCE_CASES } = await import(
+    "../apps/web/lib/evals/intelligence/already-logged-path.ts"
   );
   const { buildActualSnapshot, compareIntelligenceCase, summarizeFixAreas } = await import(
-    "../lib/evals/intelligence/compare.ts"
+    "../apps/web/lib/evals/intelligence/compare.ts"
   );
   const intelligenceScenarios = [
     {
@@ -418,6 +423,12 @@ async function main() {
       cases: CLARIFICATION_FOLLOWTHROUGH_PATH_INTELLIGENCE_CASES,
       id: "clarification-followthrough-path",
       label: "Clarification follow-through path",
+      profile: createMessyInputBenchmarkProfile()
+    },
+    {
+      cases: ALREADY_LOGGED_PATH_INTELLIGENCE_CASES,
+      id: "already-logged-path",
+      label: "Already-logged references",
       profile: createMessyInputBenchmarkProfile()
     }
   ];
@@ -474,7 +485,8 @@ async function main() {
         profile: scenario.profile,
         recentMessages: [],
         skipCoachResponse: true,
-        pendingClarification
+        pendingClarification,
+        alreadyLogged: testCase.alreadyLogged
       });
       const actual = buildActualSnapshot(orchestrationResult);
       const diffs = compareIntelligenceCase({

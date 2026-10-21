@@ -18,6 +18,8 @@ import {
   buildCoachResponseUserPrompt
 } from "@/lib/ai/prompts/coach-response";
 import { buildExtractUserUpdatePrompt } from "@/lib/ai/prompts/extract-user-update";
+import { getPacificDateKey } from "@frankie-fit/dashboard-core";
+import { formatAlreadyLoggedEntries, type AlreadyLoggedEntry } from "@/lib/ai/context/already-logged";
 import { getPersona } from "@/lib/ai/prompts/personas";
 import type { LatestCoachSummary } from "@/lib/ai/summaries/frankie-summaries";
 import {
@@ -1231,18 +1233,30 @@ function hasPersistableData(input: {
 // When `pendingClarification` is set, only these two labeled lines are combined for
 // extraction — deliberately not the wider conversation history, per the extraction prompt's
 // "stay grounded in the current message" rule (see buildExtractUserUpdatePrompt).
-function buildExtractionUserPrompt(input: {
+export function buildExtractionUserPrompt(input: {
   message: string;
   pendingClarification?: PendingClarification;
+  alreadyLogged?: AlreadyLoggedEntry[];
+  todayKey?: string;
 }) {
-  if (!input.pendingClarification) {
-    return input.message;
+  const update = input.pendingClarification
+    ? [
+        `Previous message: "${input.pendingClarification.originalMessage}"`,
+        `Frankie asked: "${input.pendingClarification.clarificationQuestion}"`,
+        `User's answer: "${input.message}"`
+      ].join("\n")
+    : input.message;
+
+  if (!input.alreadyLogged?.length) {
+    return update;
   }
 
   return [
-    `Previous message: "${input.pendingClarification.originalMessage}"`,
-    `Frankie asked: "${input.pendingClarification.clarificationQuestion}"`,
-    `User's answer: "${input.message}"`
+    "Already logged (context only, never extract from this list):",
+    formatAlreadyLoggedEntries(input.alreadyLogged, input.todayKey ?? getPacificDateKey()),
+    "",
+    "Current message:",
+    update
   ].join("\n");
 }
 
@@ -1253,6 +1267,7 @@ export async function orchestrateFrankieReply(input: {
   skipCoachResponse?: boolean;
   pendingClarification?: PendingClarification;
   latestCoachSummary?: LatestCoachSummary | null;
+  alreadyLogged?: AlreadyLoggedEntry[];
 }): Promise<FrankieOrchestrationResult> {
   if (!hasOpenAiApiKey()) {
     return buildUnavailableReply("OPENAI_API_KEY is not configured.");
@@ -1266,11 +1281,13 @@ export async function orchestrateFrankieReply(input: {
     const extractedUnknown = await createStructuredOpenAiResponse({
       systemPrompt: buildExtractUserUpdatePrompt({
         isAnsweringClarification: Boolean(input.pendingClarification),
-        strictWorkoutLoggingEnabled: Boolean(input.profile?.strict_workout_logging)
+        strictWorkoutLoggingEnabled: Boolean(input.profile?.strict_workout_logging),
+        hasAlreadyLoggedContext: Boolean(input.alreadyLogged?.length)
       }),
       userPrompt: buildExtractionUserPrompt({
         message: input.message,
-        pendingClarification: input.pendingClarification
+        pendingClarification: input.pendingClarification,
+        alreadyLogged: input.alreadyLogged
       }),
       schemaName: "frankie_user_update",
       schema: extractedUserUpdateJsonSchema
