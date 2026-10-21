@@ -222,27 +222,89 @@ function FrankieInsight({ body }: { body: string }) {
   );
 }
 
+const WELLNESS_METRICS: Array<{
+  key: Exclude<keyof WellnessTrendPoint, "label">;
+  label: string;
+  higherIsStrain: boolean;
+}> = [
+  { key: "energy", label: "Energy", higherIsStrain: false },
+  { key: "mood", label: "Mood", higherIsStrain: false },
+  { key: "motivation", label: "Motivation", higherIsStrain: false },
+  { key: "stress", label: "Stress", higherIsStrain: true },
+  { key: "soreness", label: "Soreness", higherIsStrain: true }
+];
+
+// Shade scales with the 1-5 score; stress and soreness use the danger hue because a high
+// score there means more strain, not more of a good thing.
+function scoreCellStyle(score: number | null, higherIsStrain: boolean): React.CSSProperties | undefined {
+  if (score === null) return undefined;
+  const tint = higherIsStrain ? "var(--danger)" : "var(--pillar-wellness)";
+  return { background: `color-mix(in srgb, ${tint} ${Math.round(score * 16)}%, transparent)` };
+}
+
 function WellnessTrend({ trend }: { trend: WellnessTrendPoint[] }) {
+  const checkInDays = trend.filter((point) => WELLNESS_METRICS.some(({ key }) => point[key] !== null)).length;
+
   return (
     <SectionCard title="Energy, stress, and recovery, last 7 days">
-      <div className="space-y-3">
-        {trend.map((point) => (
-          <div
-            className="ff-card-soft p-4"
-            key={point.label}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium">{point.label}</p>
-              <div className="flex flex-wrap gap-2 text-xs text-[var(--muted)]">
-                <span>Energy {point.energy ? point.energy.toFixed(1) : "-"}</span>
-                <span>Stress {point.stress ? point.stress.toFixed(1) : "-"}</span>
-                <span>Soreness {point.soreness ? point.soreness.toFixed(1) : "-"}</span>
-                <span>Mood {point.mood ? point.mood.toFixed(1) : "-"}</span>
-                <span>Motivation {point.motivation ? point.motivation.toFixed(1) : "-"}</span>
-              </div>
-            </div>
-          </div>
-        ))}
+      <div className="ff-scroll overflow-x-auto">
+        <table className="w-full min-w-[30rem] border-separate border-spacing-1.5 text-sm">
+          <thead>
+            <tr>
+              <th className="w-28" scope="col">
+                <span className="sr-only">Metric</span>
+              </th>
+              {trend.map((point, index) => (
+                <th
+                  className={`text-center text-xs font-medium uppercase tracking-[0.12em] ${
+                    index === trend.length - 1 ? "text-foreground" : "text-muted"
+                  }`}
+                  key={point.label}
+                  scope="col"
+                >
+                  {index === trend.length - 1 ? "Today" : point.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {WELLNESS_METRICS.map(({ key, label, higherIsStrain }) => (
+              <tr key={key}>
+                <th className="pr-2 text-left font-medium" scope="row">
+                  {label}
+                </th>
+                {trend.map((point) => {
+                  const score = point[key];
+                  return (
+                    <td
+                      className={`h-10 rounded-lg text-center tabular-nums ${
+                        score === null ? "bg-surface-strong text-muted" : "font-semibold text-foreground"
+                      }`}
+                      key={point.label}
+                      style={scoreCellStyle(score, higherIsStrain)}
+                      title={score === null ? `${label}: no check-in` : `${label}: ${score.toFixed(1)} / 5`}
+                    >
+                      {score === null ? "·" : Number.isInteger(score) ? score : score.toFixed(1)}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+        <span>
+          {checkInDays} of 7 days checked in · scores 1–5, darker is higher
+        </span>
+        <span className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded bg-pillar-wellness" /> more is better
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded bg-danger" /> more is strain
+          </span>
+        </span>
       </div>
     </SectionCard>
   );
