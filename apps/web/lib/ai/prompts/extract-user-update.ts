@@ -43,6 +43,8 @@ export function buildExtractUserUpdatePrompt(input?: {
     "- If one total count spans multiple dates and the split is unclear, include sessionSplit in missingFields and grouped_session_count_without_distribution in ambiguityFlags.",
     "- Do not create activity entries for food-only or drink-only statements. Food and drink items (eggs, coffee, a sandwich, a shake) belong only in dietEntries, never in activities, even in the same message as a real activity.",
     "- Example: \"ran 5k this morning, had eggs after\" has exactly one activity (running) and one diet entry (eggs). Do not also add eggs, or any other food or drink word, as a second activity.",
+    "- Do not create activity entries for substance use (smoking, vaping, drinking alcohol, edibles, etc.). Substance use belongs only in lifestyleEntries, never in activities, even in the same message as a real activity.",
+    "- Example: \"smoked a joint and went on a bike ride\" has exactly one activity (biking) and one lifestyle entry (substance_cannabis). Do not also add smoking as a second activity.",
     ...(input?.strictWorkoutLoggingEnabled
       ? [
           "- This user has strict workout logging on. When an activity clearly describes strength/lifting training (named exercises, sets, reps, and/or weights, such as bench press, squat, deadlift, rows, or curls), populate that activity's structuredExercises with your best-effort read of each named exercise and its sets (reps, weight, duration). Use 0 for any of reps/weightValue/durationSeconds that are not stated for a given set.",
