@@ -51,10 +51,11 @@ Completed in the repo:
 
 Now in progress (audited October 20, 2026; `[x]` = shipped, `[ ]` = still open):
 
+- [ ] **Frankie Plan** (next up, P0): time-boxed (1- or 4-week) exercise, diet, and lifestyle plans built in chat, approved by the user, and followed in an in-app Today/Week planner on web and mobile. Spec in #46
 - [x] strict workout logging with a draft review flow (#40, in production since October 21)
 - [x] family beta readiness: production deploy, real-user account tagging, trace capture, and the admin debug view are all live. Real usage is still low (5 chat turns from 1 account in the last 30 days)
-- [ ] push notifications: Expo token registration and cron dispatch are scaffolded, but `apps/mobile` still has no EAS project id, so devices can't get tokens yet
-- [ ] shared-types extraction: `apps/mobile` (6 places) and `packages/dashboard-core` (1) still import `apps/web/types` by relative path (`TODO(Phase 3 / shared-types extraction)`)
+- [ ] push notifications: Expo token registration and cron dispatch are scaffolded, but `apps/mobile` still has no EAS project id, so devices can't get tokens yet (#51)
+- [ ] shared-types extraction: `apps/mobile` (6 places) and `packages/dashboard-core` (1) still import `apps/web/types` by relative path (`TODO(Phase 3 / shared-types extraction)`) (#50)
 - [ ] Frankie intelligence refinement: mixed-domain and messy-input eval scenarios exist (`difficult-mixed-path`, `messy-input-path`), but the work is ongoing; see Future Refinement Notes
 - [ ] open-vocabulary activity understanding (`docs/open-vocabulary-activity-plan.md`): phases 1–2 are done (extraction carries category, missing-field, and ambiguity metadata, and clarification reads it). Phases 3–4 are partial: the regex fallback path is gone, but `frankie-orchestrator.ts` still calls `parseActivityMessage`, `isLikelyDietClause`, and `buildStructuredLogConfirmation`
 - [ ] mobile UI/UX refinement after device testing (ongoing)
@@ -110,8 +111,8 @@ These are not blockers for the current MVP, but they are important follow-up are
 - [ ] improve mixed-domain parsing when one message includes activity, diet, and wellness together (covered by the `difficult-mixed-path` eval; still imperfect)
 - [x] improve time-aware logging for phrases like `yesterday`, `last night`, and `this morning` (`extractTimeReferenceText` / `resolveLoggedForDateFromTimeReference`); no intelligence eval case exercises it yet
 - [ ] improve interpretation of typos, shorthand, run-on sentences, and grammatically messy input (covered by the `messy-input-path` eval; ongoing)
-- [ ] add stronger handling for alcohol, hydration, and recovery-adjacent context: alcohol and substances are handled by the lifestyle pillar, but hydration has no handling yet
-- [ ] add cautious cross-signal reasoning so Frankie can suggest possible causes without overstating certainty (no prompt rule or eval exists for it yet)
+- [ ] add stronger handling for alcohol, hydration, and recovery-adjacent context: alcohol and substances are handled by the lifestyle pillar, but hydration has no handling yet (#53)
+- [ ] add cautious cross-signal reasoning so Frankie can suggest possible causes without overstating certainty (no prompt rule or eval exists for it yet) (#54)
 - [ ] consider moving dashboard summaries to precomputed aggregates only after raw-log rendering becomes a performance or complexity problem (not needed yet)
 - [x] redesign activity extraction and clarification so Frankie reasons from activity metadata like category, missing fields, and ambiguity flags instead of a short list of hard-coded activity names
 - [x] move to model-based structured extraction with deterministic tool writes
@@ -410,7 +411,7 @@ Provide the smallest useful admin product-health surface.
 - [ ] add KPI cards for:
   - [x] active users
   - [x] onboarding completion
-  - [ ] retention snapshot (not implemented; the admin overview has active users, onboarding, pillar usage, common requests, friction, and suggestions, but no retention metric)
+  - [ ] retention snapshot (not implemented; the admin overview has active users, onboarding, pillar usage, common requests, friction, and suggestions, but no retention metric) (#48)
   - [x] usage by pillar
 - [x] add common request summary
 - [x] add friction summary
@@ -441,11 +442,11 @@ Make the MVP more reliable, safer, and cleaner to demo.
 - [x] improve error handling in chat flows
 - [x] improve loading and empty states
 - [x] add audit-friendly admin safeguards
-- [ ] review RLS and permissions again after app integration (Supabase security advisor, October 20: 8 `SECURITY DEFINER` functions, including the `admin_*` RPCs and `is_admin`, are executable by `anon` and `authenticated`; 2 functions have a mutable `search_path`; leaked-password protection is off)
-- [ ] add minimal analytics instrumentation (no analytics library or event tracking in the app)
+- [ ] review RLS and permissions again after app integration (Supabase security advisor, October 20: 8 `SECURITY DEFINER` functions, including the `admin_*` RPCs and `is_admin`, are executable by `anon` and `authenticated`; 2 functions have a mutable `search_path`; leaked-password protection is off) (#47)
+- [ ] add minimal analytics instrumentation (no analytics library or event tracking in the app) (#49)
 - [x] add seed/test users for QA
-- [ ] add a second seed pack for sparse, messy, or edge-case accounts after the base demo pack is in use (`scripts/seed-data` still only has the happy-path pack)
-- [ ] improve recommendation freshness behavior (no code addresses this yet)
+- [ ] add a second seed pack for sparse, messy, or edge-case accounts after the base demo pack is in use (`scripts/seed-data` still only has the happy-path pack) (#52)
+- [ ] improve recommendation freshness behavior (no code addresses this yet) (#55)
 - [ ] tighten prompt and tool reliability (ongoing)
 
 ### Deliverables
@@ -539,4 +540,4 @@ Native mobile is now active in the repo, but the scope should stay tight:
 
 ## Recommended Next Build Artifact
 
-This section described pre-scaffold starting choices (a task board, the app scaffold, Frankie's tool contracts) when the backlog was first written; all of that now exists. The live "next" lists are the unchecked items in "Now in progress", Future Refinement Notes, and Milestone 9. New work and bugs are tracked as GitHub issues.
+This section described pre-scaffold starting choices (a task board, the app scaffold, Frankie's tool contracts) when the backlog was first written; all of that now exists. The live "next" lists are the unchecked items in "Now in progress", Future Refinement Notes, and Milestone 9. New work and bugs are tracked as GitHub issues, prioritized with `priority:P0`–`P3` labels.
