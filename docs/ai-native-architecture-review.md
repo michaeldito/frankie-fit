@@ -194,6 +194,8 @@ Useful context for Frankie includes:
 
 This layer is currently very thin.
 
+Update (2026-10-21): extraction now receives a short list of the user's activity, meal, and lifestyle logs from today and yesterday (`lib/ai/context/already-logged.ts`). It's used only to tell a reference back to something already logged ("I lifted earlier, remember?") from a new log, and never as a source of new entries. Otherwise extraction still reads only the current message. Covered by the `already-logged-path` eval scenario.
+
 ### 5. Evaluation And Guardrails Layer
 
 This is what separates a toy AI feature from a reliable product capability.

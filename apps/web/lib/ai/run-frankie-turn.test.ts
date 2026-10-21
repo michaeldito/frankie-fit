@@ -8,7 +8,11 @@ const logDietEntries = vi.fn();
 const logLifestyleEntries = vi.fn();
 const logWellnessCheckin = vi.fn();
 const getLatestCoachSummary = vi.fn();
+const loadAlreadyLoggedEntries = vi.fn();
 
+vi.mock("@/lib/ai/context/already-logged", () => ({
+  loadAlreadyLoggedEntries: (...args: unknown[]) => loadAlreadyLoggedEntries(...args)
+}));
 vi.mock("@/lib/ai/orchestrator/frankie-orchestrator", () => ({
   orchestrateFrankieReply: (...args: unknown[]) => orchestrateFrankieReply(...args)
 }));
@@ -121,6 +125,7 @@ describe("runFrankieTurn", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getLatestCoachSummary.mockResolvedValue(null);
+    loadAlreadyLoggedEntries.mockResolvedValue([]);
     recordAiTraceRun.mockResolvedValue("trace-1");
   });
 
@@ -161,6 +166,8 @@ describe("runFrankieTurn", () => {
 
     expect(result.runStatus).toBe("completed");
     expect(result.assistantMessage?.id).toBe("assistant-msg-1");
+    expect(loadAlreadyLoggedEntries).toHaveBeenCalledWith({ supabase, userId: baseInput.userId });
+    expect(orchestrateFrankieReply).toHaveBeenCalledWith(expect.objectContaining({ alreadyLogged: [] }));
     const payload = result.structuredPayload as { activitiesLogged: Array<{ id: string }> };
     expect(payload.activitiesLogged[0].id).toBe("activity-log-1");
   });
