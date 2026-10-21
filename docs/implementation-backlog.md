@@ -49,15 +49,15 @@ Completed in the repo:
 - mobile chat-first drawer shell (hamburger opens Dashboard/Workouts/Profile) and paginated onboarding step flow
 - read-only Apple Health development-build spike validated on a connected iPhone for workout and heart-rate preview capability
 
-Now in progress:
+Now in progress (audited October 20, 2026; `[x]` = shipped, `[ ]` = still open):
 
-- strict workout logging with a draft review flow (PR #40)
-- push notifications: Expo token registration and cron dispatch are scaffolded, but device tokens need an EAS project id
-- shared-types extraction so `apps/mobile` and `packages/dashboard-core` stop importing `apps/web/types` by relative path
-- Frankie intelligence refinement: mixed-domain parsing, time-aware phrasing (`yesterday`, `last night`), and messy/typo-heavy input handling
-- family beta deployment and admin-side debug readiness
-- mobile UI/UX refinement after device testing
-- open-vocabulary activity understanding so Frankie does not depend on a narrow built-in activity list
+- [x] strict workout logging with a draft review flow (#40, in production since October 21)
+- [x] family beta readiness: production deploy, real-user account tagging, trace capture, and the admin debug view are all live. Real usage is still low (5 chat turns from 1 account in the last 30 days)
+- [ ] push notifications: Expo token registration and cron dispatch are scaffolded, but `apps/mobile` still has no EAS project id, so devices can't get tokens yet
+- [ ] shared-types extraction: `apps/mobile` (6 places) and `packages/dashboard-core` (1) still import `apps/web/types` by relative path (`TODO(Phase 3 / shared-types extraction)`)
+- [ ] Frankie intelligence refinement: mixed-domain and messy-input eval scenarios exist (`difficult-mixed-path`, `messy-input-path`), but the work is ongoing; see Future Refinement Notes
+- [ ] open-vocabulary activity understanding (`docs/open-vocabulary-activity-plan.md`): phases 1–2 are done (extraction carries category, missing-field, and ambiguity metadata, and clarification reads it). Phases 3–4 are partial: the regex fallback path is gone, but `frankie-orchestrator.ts` still calls `parseActivityMessage`, `isLikelyDietClause`, and `buildStructuredLogConfirmation`
+- [ ] mobile UI/UX refinement after device testing (ongoing)
 
 Paused intentionally:
 
@@ -105,17 +105,18 @@ These are worth keeping in mind as we keep building.
 
 ## Future Refinement Notes
 
-These are not blockers for the current MVP, but they are important follow-up areas.
+These are not blockers for the current MVP, but they are important follow-up areas. Status as of October 20, 2026:
 
-- improve mixed-domain parsing when one message includes activity, diet, and wellness together
-- improve time-aware logging for phrases like `yesterday`, `last night`, and `this morning`
-- improve interpretation of typos, shorthand, run-on sentences, and grammatically messy input
-- add stronger handling for alcohol, hydration, and recovery-adjacent context
-- add cautious cross-signal reasoning so Frankie can suggest possible causes without overstating certainty
-- consider moving dashboard summaries to precomputed aggregates only after raw-log rendering becomes a performance or complexity problem
-- redesign activity extraction and clarification so Frankie reasons from activity metadata like category, missing fields, and ambiguity flags instead of a short list of hard-coded activity names
-
-Done since this list was written: the move to model-based structured extraction with deterministic tool writes, traceability/eval fixtures/prompt-version control (see `docs/frankie-eval-loop-design.md`), and expanded context loading.
+- [ ] improve mixed-domain parsing when one message includes activity, diet, and wellness together (covered by the `difficult-mixed-path` eval; still imperfect)
+- [x] improve time-aware logging for phrases like `yesterday`, `last night`, and `this morning` (`extractTimeReferenceText` / `resolveLoggedForDateFromTimeReference`); no intelligence eval case exercises it yet
+- [ ] improve interpretation of typos, shorthand, run-on sentences, and grammatically messy input (covered by the `messy-input-path` eval; ongoing)
+- [ ] add stronger handling for alcohol, hydration, and recovery-adjacent context: alcohol and substances are handled by the lifestyle pillar, but hydration has no handling yet
+- [ ] add cautious cross-signal reasoning so Frankie can suggest possible causes without overstating certainty (no prompt rule or eval exists for it yet)
+- [ ] consider moving dashboard summaries to precomputed aggregates only after raw-log rendering becomes a performance or complexity problem (not needed yet)
+- [x] redesign activity extraction and clarification so Frankie reasons from activity metadata like category, missing fields, and ambiguity flags instead of a short list of hard-coded activity names
+- [x] move to model-based structured extraction with deterministic tool writes
+- [x] traceability, eval fixtures, and prompt-version control (see `docs/frankie-eval-loop-design.md`), plus rule-based trace quality checks
+- [x] expanded context loading
 
 ## Working Principle
 
@@ -142,25 +143,27 @@ That means:
 
 ## Milestone 0: Project Scaffold and Infrastructure
 
+Status: complete.
+
 ### Goal
 
 Create the base application and developer workflow.
 
 ### Tasks
 
-- initialize Next.js app with App Router and TypeScript
-- add Tailwind CSS
-- add a lightweight UI layer such as shadcn/ui
-- add environment variable loading and validation
-- add Supabase client setup for browser and server usage
-- create base folder structure:
-  - `app/`
-  - `components/`
-  - `lib/`
-  - `types/`
-  - `supabase/`
-- add linting and formatting setup
-- add a basic README development section
+- [x] initialize Next.js app with App Router and TypeScript
+- [x] add Tailwind CSS
+- [x] add a lightweight UI layer such as shadcn/ui (custom components instead of shadcn/ui)
+- [x] add environment variable loading and validation
+- [x] add Supabase client setup for browser and server usage
+- [x] create base folder structure:
+  - [x] `app/`
+  - [x] `components/`
+  - [x] `lib/`
+  - [x] `types/`
+  - [x] `supabase/`
+- [x] add linting and formatting setup
+- [x] add a basic README development section
 
 ### Deliverables
 
@@ -176,24 +179,26 @@ Create the base application and developer workflow.
 
 ## Milestone 1: Auth and App Shell
 
+Status: complete.
+
 ### Goal
 
 Users can sign up, log in, and land in a protected app shell.
 
 ### Tasks
 
-- integrate Supabase Auth
-- add signup page
-- add login page
-- add logout flow
-- add protected route handling for `/app/*`
-- add base authenticated shell with:
-  - left nav
-  - Chat nav item
-  - Dashboard nav item
-  - Profile nav item
-- add placeholder admin route protection
-- load and display basic profile context in the shell
+- [x] integrate Supabase Auth
+- [x] add signup page
+- [x] add login page
+- [x] add logout flow
+- [x] add protected route handling for `/app/*`
+- [x] add base authenticated shell with:
+  - [x] left nav (superseded by the stacked shell with top-right user controls; mobile uses a chat-first drawer)
+  - [x] Chat nav item
+  - [x] Dashboard nav item
+  - [x] Profile nav item
+- [x] add placeholder admin route protection
+- [x] load and display basic profile context in the shell
 
 ### Deliverables
 
@@ -209,19 +214,21 @@ Users can sign up, log in, and land in a protected app shell.
 
 ## Milestone 2: Onboarding
 
+Status: complete.
+
 ### Goal
 
 New users complete the Frankie onboarding flow and produce a usable profile.
 
 ### Tasks
 
-- build onboarding route and UI
-- implement Frankie-style onboarding prompts
-- persist onboarding fields into `profiles`
-- store onboarding completion state
-- generate and save onboarding summary
-- redirect completed users to Chat
-- prevent partially onboarded users from bypassing onboarding
+- [x] build onboarding route and UI
+- [x] implement Frankie-style onboarding prompts
+- [x] persist onboarding fields into `profiles`
+- [x] store onboarding completion state
+- [x] generate and save onboarding summary
+- [x] redirect completed users to Chat
+- [x] prevent partially onboarded users from bypassing onboarding
 
 ### Deliverables
 
@@ -237,21 +244,23 @@ New users complete the Frankie onboarding flow and produce a usable profile.
 
 ## Milestone 3: Chat Plus Activity Logging
 
+Status: complete.
+
 ### Goal
 
 Users can talk to Frankie, persist conversations, and log activity through chat.
 
 ### Tasks
 
-- build Chat screen layout
-- create conversation thread creation/loading logic
-- create message persistence
-- wire chat request to OpenAI-backed Frankie response flow
-- implement minimal tool routing for `log_activity`
-- extract structured activity logs from user messages
-- save activity logs and assistant confirmations
-- show quick actions in Chat
-- show current goal and compact next-step context
+- [x] build Chat screen layout
+- [x] create conversation thread creation/loading logic
+- [x] create message persistence
+- [x] wire chat request to OpenAI-backed Frankie response flow
+- [x] implement minimal tool routing for `log_activity`
+- [x] extract structured activity logs from user messages
+- [x] save activity logs and assistant confirmations
+- [x] show quick actions in Chat
+- [x] show current goal and compact next-step context
 
 ### Deliverables
 
@@ -268,18 +277,20 @@ Users can talk to Frankie, persist conversations, and log activity through chat.
 
 ## Milestone 4: Diet Logging
 
+Status: complete.
+
 ### Goal
 
 Users can log food in natural language and get lightweight diet guidance.
 
 ### Tasks
 
-- implement `log_diet` backend tool path
-- extract diet entries from chat
-- save structured diet logs
-- add meal logging quick action
-- add diet-aware Frankie confirmation copy
-- support simple recent diet context in chat replies
+- [x] implement `log_diet` backend tool path
+- [x] extract diet entries from chat
+- [x] save structured diet logs
+- [x] add meal logging quick action
+- [x] add diet-aware Frankie confirmation copy
+- [x] support simple recent diet context in chat replies
 
 ### Deliverables
 
@@ -295,18 +306,20 @@ Users can log food in natural language and get lightweight diet guidance.
 
 ## Milestone 5: Wellness Check-Ins
 
+Status: complete.
+
 ### Goal
 
 Users can log wellness signals and Frankie can respond with supportive, non-clinical guidance.
 
 ### Tasks
 
-- implement `log_wellness_checkin` backend tool path
-- support wellness quick action
-- capture scores and notes
-- persist structured wellness check-ins
-- add lightweight daily check-in UI entry point
-- support simple follow-up guidance from Frankie
+- [x] implement `log_wellness_checkin` backend tool path
+- [x] support wellness quick action
+- [x] capture scores and notes
+- [x] persist structured wellness check-ins
+- [x] add lightweight daily check-in UI entry point
+- [x] support simple follow-up guidance from Frankie
 
 ### Deliverables
 
@@ -322,22 +335,24 @@ Users can log wellness signals and Frankie can respond with supportive, non-clin
 
 ## Milestone 6: Dashboard Summaries
 
+Status: complete.
+
 ### Goal
 
 Users can view the shared dashboard shell and the three pillar tabs.
 
 ### Tasks
 
-- build Dashboard shell
-- implement Exercise tab layout
-- implement Diet tab layout
-- implement Wellness tab layout
-- query structured records for each tab
-- compute summary metrics server-side
-- generate simple Frankie insights
-- build compact `Next best step` component
-- support low-data empty states
-- keep the first dashboard implementation simple by computing summaries from raw logs rather than introducing aggregate tables too early
+- [x] build Dashboard shell
+- [x] implement Exercise tab layout
+- [x] implement Diet tab layout
+- [x] implement Wellness tab layout
+- [x] query structured records for each tab
+- [x] compute summary metrics server-side
+- [x] generate simple Frankie insights
+- [x] build compact `Next best step` component
+- [x] support low-data empty states
+- [x] keep the first dashboard implementation simple by computing summaries from raw logs rather than introducing aggregate tables too early
 
 ### Deliverables
 
@@ -356,17 +371,19 @@ Users can view the shared dashboard shell and the three pillar tabs.
 
 ## Milestone 7: Profile
 
+Status: complete.
+
 ### Goal
 
 Users can review and update the context Frankie uses.
 
 ### Tasks
 
-- build Profile screen
-- display saved onboarding and coaching data
-- allow editing of goals, preferences, and check-in settings
-- persist profile updates
-- make updated profile context available to Frankie
+- [x] build Profile screen
+- [x] display saved onboarding and coaching data
+- [x] allow editing of goals, preferences, and check-in settings
+- [x] persist profile updates
+- [x] make updated profile context available to Frankie
 
 ### Deliverables
 
@@ -380,23 +397,25 @@ Users can review and update the context Frankie uses.
 
 ## Milestone 8: Admin Overview
 
+Status: complete except the retention snapshot.
+
 ### Goal
 
 Provide the smallest useful admin product-health surface.
 
 ### Tasks
 
-- implement admin route protection
-- build admin overview page
-- add KPI cards for:
-  - active users
-  - onboarding completion
-  - retention snapshot
-  - usage by pillar
-- add common request summary
-- add friction summary
-- add test account access view
-- add simple product suggestions view
+- [x] implement admin route protection
+- [x] build admin overview page
+- [ ] add KPI cards for:
+  - [x] active users
+  - [x] onboarding completion
+  - [ ] retention snapshot (not implemented; the admin overview has active users, onboarding, pillar usage, common requests, friction, and suggestions, but no retention metric)
+  - [x] usage by pillar
+- [x] add common request summary
+- [x] add friction summary
+- [x] add test account access view
+- [x] add simple product suggestions view
 
 ### Deliverables
 
@@ -411,21 +430,23 @@ Provide the smallest useful admin product-health surface.
 
 ## Milestone 9: Hardening and Polish
 
+Status: partially complete. See the open tasks below.
+
 ### Goal
 
 Make the MVP more reliable, safer, and cleaner to demo.
 
 ### Tasks
 
-- improve error handling in chat flows
-- improve loading and empty states
-- add audit-friendly admin safeguards
-- review RLS and permissions again after app integration
-- add minimal analytics instrumentation
-- add seed/test users for QA
-- add a second seed pack for sparse, messy, or edge-case accounts after the base demo pack is in use
-- improve recommendation freshness behavior
-- tighten prompt and tool reliability
+- [x] improve error handling in chat flows
+- [x] improve loading and empty states
+- [x] add audit-friendly admin safeguards
+- [ ] review RLS and permissions again after app integration (Supabase security advisor, October 20: 8 `SECURITY DEFINER` functions, including the `admin_*` RPCs and `is_admin`, are executable by `anon` and `authenticated`; 2 functions have a mutable `search_path`; leaked-password protection is off)
+- [ ] add minimal analytics instrumentation (no analytics library or event tracking in the app)
+- [x] add seed/test users for QA
+- [ ] add a second seed pack for sparse, messy, or edge-case accounts after the base demo pack is in use (`scripts/seed-data` still only has the happy-path pack)
+- [ ] improve recommendation freshness behavior (no code addresses this yet)
+- [ ] tighten prompt and tool reliability (ongoing)
 
 ### Deliverables
 
@@ -445,26 +466,26 @@ These do not belong to only one slice, but should be handled throughout.
 
 ### AI and Prompting
 
-- define Frankie system prompt
-- define tool-selection prompt strategy
-- define structured output formats
-- define summary-generation prompts
-- improve Frankie message interpretation for typos, run-on sentences, mixed-domain updates, and grammatically messy user input
-- improve time-aware understanding for phrases like `yesterday`, `last night`, and `this morning`
-- add better domain-specific recognition for items like alcohol, hydration, and recovery-related context
-- add cautious cross-signal reasoning so Frankie can suggest possible connections like sleep, stress, alcohol, or recovery affecting energy and motivation without overstating certainty
+- [x] define Frankie system prompt
+- [x] define tool-selection prompt strategy
+- [x] define structured output formats
+- [x] define summary-generation prompts
+- [ ] improve Frankie message interpretation for typos, run-on sentences, mixed-domain updates, and grammatically messy user input (ongoing; see Future Refinement Notes)
+- [x] improve time-aware understanding for phrases like `yesterday`, `last night`, and `this morning`
+- [ ] add better domain-specific recognition for items like alcohol, hydration, and recovery-related context (alcohol is done via the lifestyle pillar; hydration is still open)
+- [ ] add cautious cross-signal reasoning so Frankie can suggest possible connections like sleep, stress, alcohol, or recovery affecting energy and motivation without overstating certainty
 
 ### Data Utilities
 
-- add shared TypeScript types for core entities
-- add mapping helpers between DB rows and UI models
-- add server-side query helpers by domain
+- [ ] add shared TypeScript types for core entities (`apps/web/types/database.ts` exists; extracting it into a shared package for mobile is still open)
+- [x] add mapping helpers between DB rows and UI models
+- [x] add server-side query helpers by domain
 
 ### Permissions
 
-- centralize admin checks
-- centralize profile-completion checks
-- make test-account review rules explicit in code
+- [x] centralize admin checks
+- [x] centralize profile-completion checks
+- [x] make test-account review rules explicit in code
 
 ### UX Consistency
 
@@ -476,23 +497,23 @@ These do not belong to only one slice, but should be handled throughout.
 
 This should improve over time, not block the MVP. The goal is to make Frankie steadily better at understanding how real people actually type.
 
-- support messages that blend multiple domains in one sentence
-- handle messy phrasing, shorthand, typos, and run-on updates more gracefully
-- improve clarification behavior when user intent is ambiguous
-- get better at reflective coaching responses after logging, not just confirmation
-- keep inference language careful when Frankie is connecting patterns across days
+- [ ] support messages that blend multiple domains in one sentence
+- [ ] handle messy phrasing, shorthand, typos, and run-on updates more gracefully
+- [x] improve clarification behavior when user intent is ambiguous
+- [x] get better at reflective coaching responses after logging, not just confirmation
+- [ ] keep inference language careful when Frankie is connecting patterns across days (no prompt rule or eval yet)
 
 ## Suggested Immediate Ticket List
 
-If we want the next truly actionable set of tasks, I would start here:
+The original starter tickets, all done:
 
-1. Scaffold Next.js app with TypeScript, Tailwind, and base folders
-2. Add Supabase project wiring and environment config
-3. Create auth pages and protected app shell
-4. Apply the initial Supabase migration
-5. Build onboarding route and profile persistence
-6. Build chat page with thread and message persistence
-7. Add first `log_activity` tool flow
+1. [x] Scaffold Next.js app with TypeScript, Tailwind, and base folders
+2. [x] Add Supabase project wiring and environment config
+3. [x] Create auth pages and protected app shell
+4. [x] Apply the initial Supabase migration
+5. [x] Build onboarding route and profile persistence
+6. [x] Build chat page with thread and message persistence
+7. [x] Add first `log_activity` tool flow
 
 ## Scope Guardrails
 
@@ -518,4 +539,4 @@ Native mobile is now active in the repo, but the scope should stay tight:
 
 ## Recommended Next Build Artifact
 
-This section described pre-scaffold starting choices (a task board, the app scaffold, Frankie's tool contracts) when the backlog was first written; all of that now exists. The live "next" list is the "Now in progress" section under the Current Progress Snapshot above — currently led by test coverage/hardening and closing the mobile lifestyle-tab parity gap.
+This section described pre-scaffold starting choices (a task board, the app scaffold, Frankie's tool contracts) when the backlog was first written; all of that now exists. The live "next" lists are the unchecked items in "Now in progress", Future Refinement Notes, and Milestone 9. New work and bugs are tracked as GitHub issues.
