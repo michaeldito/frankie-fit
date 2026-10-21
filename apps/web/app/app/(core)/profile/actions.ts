@@ -75,6 +75,7 @@ export async function saveProfile(formData: FormData) {
     stress_baseline: getStringValue(formData, "stressBaseline") || null,
     wellness_support_focus: getMultiValue(formData, "wellnessSupportFocus"),
     wellness_checkin_opt_in: getCheckboxValue(formData, "wellnessCheckinOptIn"),
+    strict_workout_logging: getCheckboxValue(formData, "strictWorkoutLogging"),
     injuries_limitations: parseTextList(getStringValue(formData, "injuriesLimitations")),
     health_considerations: parseTextList(getStringValue(formData, "healthConsiderations")),
     avoidances: parseTextList(getStringValue(formData, "avoidances")),

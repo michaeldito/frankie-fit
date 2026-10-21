@@ -46,6 +46,13 @@
       ],
       "expo-sqlite",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#8bd0ff"
+        }
+      ],
+      [
         "@kingstinct/react-native-healthkit",
         {
           "NSHealthShareUsageDescription": "Frankie Fit reads Apple Health workouts, heart rate, energy, and distance to help summarize training and recovery context.",

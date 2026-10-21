@@ -48,6 +48,7 @@ export default defineConfig({
         "apps/web/lib/ai/prompts/extract-user-update.ts",
         "apps/web/lib/ai/prompts/personas.ts",
         "apps/web/lib/ai/run-frankie-turn.ts",
+        "apps/web/lib/ai/tracing/quality-checks.ts",
         "apps/web/lib/ai/schemas/extracted-user-update.ts",
         "apps/web/lib/ai/tools/log-activity.ts",
         "apps/web/lib/ai/tools/log-diet.ts",

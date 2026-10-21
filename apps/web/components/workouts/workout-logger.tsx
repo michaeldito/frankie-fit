@@ -6,23 +6,21 @@ import { getPacificDateKey } from "@frankie-fit/dashboard-core";
 import {
   exerciseCatalog,
   findProgramWorkout,
-  parseTimeInput,
   programWorkoutTemplates,
   wodTemplates,
   type ProgramWorkoutTemplate,
   type WeightUnit,
   type WodTemplate,
   type WodTemplateExercise,
-  type WorkoutExerciseInput,
   type WorkoutSessionInput,
-  type WorkoutSessionType,
-  type WorkoutSetInput
+  type WorkoutSessionType
 } from "@frankie-fit/workout-core";
 import { ExercisePicker, type SelectedExercise } from "./exercise-picker";
 import { ProgramWorkoutPicker } from "./program-workout-picker";
 import { SetRows, type EditableSet } from "./set-rows";
 import { Stopwatch } from "./stopwatch";
 import { WodPicker } from "./wod-picker";
+import { buildExercisesInput, parseOptionalDuration } from "./workout-input-helpers";
 
 type SimpleExerciseState = {
   name: string;
@@ -44,44 +42,6 @@ type CircuitSlotState = {
 type SaveState = "idle" | "saving" | "saved" | "failed";
 
 const emptySet: EditableSet = { reps: "", weight: "", durationSeconds: "" };
-
-function parseOptionalInt(value: string): number | null {
-  const trimmed = value.trim();
-
-  if (!trimmed) {
-    return null;
-  }
-
-  const parsed = Number.parseInt(trimmed, 10);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function parseOptionalFloat(value: string): number | null {
-  const trimmed = value.trim();
-
-  if (!trimmed) {
-    return null;
-  }
-
-  const parsed = Number.parseFloat(trimmed);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function parseOptionalDuration(value: string): number | null {
-  const trimmed = value.trim();
-  return trimmed ? parseTimeInput(trimmed) : null;
-}
-
-function buildSetInput(set: EditableSet, setNumber: number): WorkoutSetInput | null {
-  const reps = parseOptionalInt(set.reps);
-  const durationSeconds = parseOptionalDuration(set.durationSeconds);
-
-  if (reps === null && durationSeconds === null) {
-    return null;
-  }
-
-  return { setNumber, reps, weight: parseOptionalFloat(set.weight), durationSeconds };
-}
 
 function buildCircuitSlotsFromExercises(
   exercises: WodTemplateExercise[],
@@ -143,20 +103,6 @@ function getDeepLinkContext(searchParams: URLSearchParams): DeepLinkContext | nu
     programSlugParam && Number.isFinite(day) ? { programSlug: programSlugParam, day } : undefined;
 
   return { workout, dayContext };
-}
-
-function buildExercisesInput(
-  entries: Array<{ name: string; rows: EditableSet[]; slug: string }>
-): WorkoutExerciseInput[] {
-  return entries
-    .map((entry, position) => {
-      const sets = entry.rows
-        .map((row, index) => buildSetInput(row, index + 1))
-        .filter((set): set is WorkoutSetInput => set !== null);
-
-      return { exerciseSlug: entry.slug, exerciseName: entry.name, position, sets };
-    })
-    .filter((exercise) => exercise.sets.length > 0);
 }
 
 type CircuitSlotEntry = { slot: CircuitSlotState; index: number };

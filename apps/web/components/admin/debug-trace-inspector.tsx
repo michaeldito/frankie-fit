@@ -2,10 +2,12 @@
 
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { QUALITY_CHECK_DESCRIPTIONS } from "@/lib/ai/tracing/quality-checks";
 import type { Database, Json } from "@/types/database";
 
 type AiTraceRunRow = Database["public"]["Tables"]["ai_trace_runs"]["Row"];
-type InspectorTab = "overview" | "extraction" | "writes" | "context" | "raw";
+type QualityCheckRow = Database["public"]["Tables"]["ai_trace_quality_checks"]["Row"];
+type InspectorTab = "overview" | "extraction" | "writes" | "context" | "quality" | "raw";
 
 function formatJson(value: Json | null) {
   return JSON.stringify(value ?? {}, null, 2);
@@ -434,12 +436,100 @@ function TableLikeRows({
   );
 }
 
+const QUALITY_RESULT_ORDER = { fail: 0, warn: 1, pass: 2, skip: 3 } as const;
+
+function QualityTab({ summary, checks }: { summary: Json | null; checks: QualityCheckRow[] }) {
+  const qs = summary && typeof summary === "object" && !Array.isArray(summary)
+    ? (summary as Record<string, Json | undefined>)
+    : null;
+
+  if (!qs) {
+    return (
+      <div className="ff-card-soft p-4 text-sm text-[var(--muted)]">
+        No quality checks recorded for this trace.
+      </div>
+    );
+  }
+
+  const pass = typeof qs.pass === "number" ? qs.pass : 0;
+  const warn = typeof qs.warn === "number" ? qs.warn : 0;
+  const fail = typeof qs.fail === "number" ? qs.fail : 0;
+  const skip = typeof qs.skip === "number" ? qs.skip : 0;
+  const worst = typeof qs.worst === "string" ? qs.worst : "pass";
+  const worstColor =
+    worst === "fail"
+      ? "text-red-400"
+      : worst === "warn"
+        ? "text-amber-400"
+        : "text-emerald-400";
+
+  return (
+    <div className="space-y-4">
+      <div className="ff-card-soft p-4">
+        <p className="ff-kicker mb-2">Summary</p>
+        <p className={`text-lg font-semibold ${worstColor}`}>
+          {pass} pass, {warn} warn, {fail} fail
+        </p>
+        {skip > 0 ? (
+          <p className="mt-1 text-sm text-[var(--muted)]">{skip} skipped — not applicable to this message</p>
+        ) : null}
+      </div>
+      {checks.length > 0 ? (
+        <div className="ff-card-soft p-4">
+          <p className="ff-kicker mb-3">Checks</p>
+          <ul className="space-y-3">
+            {[...checks]
+              .sort(
+                (a, b) =>
+                  (QUALITY_RESULT_ORDER[a.check_result as keyof typeof QUALITY_RESULT_ORDER] ?? 4) -
+                  (QUALITY_RESULT_ORDER[b.check_result as keyof typeof QUALITY_RESULT_ORDER] ?? 4)
+              )
+              .map((check) => (
+                <li
+                  key={check.id}
+                  className={`flex items-start gap-3 ${check.check_result === "skip" ? "opacity-60" : ""}`}
+                >
+                  <span
+                    className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${
+                      check.check_result === "fail"
+                        ? "bg-red-400/15 text-red-400"
+                        : check.check_result === "warn"
+                          ? "bg-amber-400/15 text-amber-400"
+                          : check.check_result === "skip"
+                            ? "bg-white/5 text-[var(--muted)]"
+                            : "bg-emerald-400/15 text-emerald-400"
+                    }`}
+                  >
+                    {check.check_result}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-mono text-sm">{check.check_name}</p>
+                    <p className="text-sm text-[var(--muted)]">
+                      {QUALITY_CHECK_DESCRIPTIONS[check.check_name] ?? ""}
+                    </p>
+                    {check.detail ? <p className="mt-1 text-sm">{check.detail}</p> : null}
+                  </div>
+                </li>
+              ))}
+          </ul>
+        </div>
+      ) : null}
+      <div className="ff-card-soft p-4">
+        <p className="ff-kicker mb-2">Details</p>
+        <RawDetails label="Quality summary JSON" value={summary} />
+      </div>
+    </div>
+  );
+}
+
 export function DebugTraceInspector({
   selectedTrace,
   threadTimeline,
-  analysis
+  analysis,
+  qualityChecks
 }: {
   selectedTrace: AiTraceRunRow | null;
+  qualityChecks: QualityCheckRow[];
   threadTimeline: AiTraceRunRow[];
   analysis: string;
 }) {
@@ -504,6 +594,11 @@ export function DebugTraceInspector({
               active={activeTab === "context"}
               label="Context"
               onClick={() => setActiveTab("context")}
+            />
+            <TabButton
+              active={activeTab === "quality"}
+              label="Quality"
+              onClick={() => setActiveTab("quality")}
             />
             <TabButton
               active={activeTab === "raw"}
@@ -713,6 +808,10 @@ export function DebugTraceInspector({
               <RawDetails label="View raw context JSON" value={selectedTrace.recent_context_snapshot} />
               <RawDetails label="View raw profile snapshot JSON" value={selectedTrace.profile_snapshot} />
             </div>
+          ) : null}
+
+          {activeTab === "quality" ? (
+            <QualityTab summary={selectedTrace.quality_summary} checks={qualityChecks} />
           ) : null}
 
           {activeTab === "raw" ? (

@@ -125,6 +125,7 @@ function createProfilePayload(userId, account) {
     energy_baseline: profile.energyBaseline,
     stress_baseline: profile.stressBaseline,
     wellness_support_focus: profile.wellnessSupportFocus,
+    strict_workout_logging: false,
     wellness_checkin_opt_in: true,
     injuries_limitations: profile.injuriesLimitations,
     health_considerations: profile.healthConsiderations,

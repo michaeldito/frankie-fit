@@ -30,12 +30,14 @@ function buildReply(overrides: Partial<FrankieOrchestrationResult> = {}): Franki
         timePrecision: "explicit_day",
         confidence: 0.9,
         missingFields: [],
-        ambiguityFlags: []
+        ambiguityFlags: [],
+        structuredExercises: []
       }
     ],
     parsedDietEntries: [],
     parsedLifestyleEntries: [],
     parsedWellnessCheckin: null,
+    workoutDraft: null,
     reply: "Nice, logged your run.",
     orchestrationMode: "model",
     shouldPersistStructuredData: true,

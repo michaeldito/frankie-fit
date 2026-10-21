@@ -18,17 +18,19 @@ import {
   DietDashboardData,
   ExerciseDashboardData,
   getDashboardData,
+  LifestyleDashboardData,
   WellnessDashboardData,
   WellnessTrendPoint,
 } from '@/lib/dashboard-data';
 import { useAuth } from '@/lib/auth-context';
 import { loadProfile } from '@/lib/profile-data';
 
-type DashboardTabId = 'exercise' | 'diet' | 'wellness';
+type DashboardTabId = 'exercise' | 'diet' | 'lifestyle' | 'wellness';
 
 const dashboardTabs: { id: DashboardTabId; label: string }[] = [
   { id: 'exercise', label: 'Exercise' },
   { id: 'diet', label: 'Diet' },
+  { id: 'lifestyle', label: 'Lifestyle' },
   { id: 'wellness', label: 'Wellness' },
 ];
 
@@ -51,7 +53,12 @@ function SegmentedTabs({
             key={tab.id}
             onPress={() => onChange(tab.id)}
             style={[styles.segment, selected && styles.segmentSelected]}>
-            <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>{tab.label}</Text>
+            <Text
+              adjustsFontSizeToFit
+              numberOfLines={1}
+              style={[styles.segmentText, selected && styles.segmentTextSelected]}>
+              {tab.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -236,6 +243,21 @@ function DietTab({ data }: { data: DietDashboardData }) {
   );
 }
 
+function LifestyleTab({ data }: { data: LifestyleDashboardData }) {
+  if (data.empty) {
+    return <EmptyCard body={data.insight} title="No lifestyle data yet" />;
+  }
+
+  return (
+    <View style={styles.stack}>
+      <MetricGrid metrics={data.metrics} />
+      <InsightCard body={data.insight} />
+      <BreakdownList emptyCopy="As lifestyle updates get logged, Frankie will summarize your patterns here." items={data.patterns} title="What shows up most" />
+      <RecentList emptyCopy="Your latest lifestyle logs will show up here." items={data.recent} title="Latest lifestyle logs" />
+    </View>
+  );
+}
+
 function WellnessTab({ data }: { data: WellnessDashboardData }) {
   if (data.empty) {
     return <EmptyCard body={data.insight} title="No wellness data yet" />;
@@ -303,29 +325,24 @@ export default function DashboardScreen() {
   }
 
   const activeData =
-    activeTab === 'diet' ? dashboard?.diet : activeTab === 'wellness' ? dashboard?.wellness : dashboard?.exercise;
+    activeTab === 'diet'
+      ? dashboard?.diet
+      : activeTab === 'lifestyle'
+        ? dashboard?.lifestyle
+        : activeTab === 'wellness'
+          ? dashboard?.wellness
+          : dashboard?.exercise;
 
   return (
     <Screen padded={false}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={isRefreshing} tintColor={colors.accentStrong} onRefresh={handleRefresh} />}>
-        <ScreenTitle title="Dashboard" subtitle="Exercise, diet, and wellness from the same logs Frankie uses on web." />
+        <ScreenTitle title="Dashboard" subtitle="Exercise, diet, lifestyle, and wellness from the same logs Frankie uses on web." />
 
         {error ? (
           <ScrollCard style={styles.errorCard}>
             <Text style={styles.bodyText}>{error}</Text>
-          </ScrollCard>
-        ) : null}
-
-        {dashboard ? (
-          <ScrollCard style={styles.nextStepCard}>
-            <Text style={styles.kicker}>Next best step</Text>
-            <Text style={styles.nextStepTitle}>{dashboard.nextStep.title}</Text>
-            <Text style={styles.bodyText}>{dashboard.nextStep.description}</Text>
-            <Pressable onPress={() => router.push('/chat')} style={styles.inlineButton}>
-              <Text style={styles.inlineButtonText}>{dashboard.nextStep.ctaLabel}</Text>
-            </Pressable>
           </ScrollCard>
         ) : null}
 
@@ -340,6 +357,8 @@ export default function DashboardScreen() {
         {dashboard && activeData ? (
           activeTab === 'diet' ? (
             <DietTab data={dashboard.diet} />
+          ) : activeTab === 'lifestyle' ? (
+            <LifestyleTab data={dashboard.lifestyle} />
           ) : activeTab === 'wellness' ? (
             <WellnessTab data={dashboard.wellness} />
           ) : (
@@ -383,9 +402,6 @@ const styles = StyleSheet.create({
   segmentTextSelected: {
     color: colors.background,
   },
-  nextStepCard: {
-    backgroundColor: colors.panelStrong,
-  },
   highlightCard: {
     backgroundColor: colors.panelStrong,
   },
@@ -398,11 +414,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0,
     textTransform: 'uppercase',
-  },
-  nextStepTitle: {
-    color: colors.text,
-    fontSize: 23,
-    fontWeight: '800',
   },
   cardTitle: {
     color: colors.text,

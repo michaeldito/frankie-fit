@@ -17,3 +17,12 @@ export const spacing = {
   screenX: 20,
   radius: 18,
 };
+
+export const typography = {
+  title: { fontSize: 34, fontWeight: '800' as const },
+  sectionTitle: { fontSize: 20, fontWeight: '800' as const },
+  cardTitle: { fontSize: 19, fontWeight: '800' as const },
+  body: { fontSize: 16, fontWeight: '400' as const },
+  label: { fontSize: 13, fontWeight: '700' as const },
+  caption: { fontSize: 12, fontWeight: '800' as const },
+};

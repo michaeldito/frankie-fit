@@ -11,11 +11,15 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { SlideInLeft, SlideInRight, SlideOutLeft, SlideOutRight } from 'react-native-reanimated';
 
 import { LoadingScreen, PrimaryButton, Screen, ScreenTitle, ScrollCard } from '@/components/frankie-ui';
+import { StepDots } from '@/components/step-dots';
 import { colors } from '@/constants/frankie-theme';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
+
+const onboardingStepCount = 6;
 
 type SelectOption = {
   label: string;
@@ -478,6 +482,8 @@ export default function OnboardingScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProfileEdit, setIsProfileEdit] = useState(false);
   const [form, setForm] = useState<OnboardingFormState>(emptyOnboardingFormState);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [stepDirection, setStepDirection] = useState<'back' | 'forward'>('forward');
 
   function updateField<K extends keyof OnboardingFormState>(key: K, value: OnboardingFormState[K]) {
     setForm((previous) => ({ ...previous, [key]: value }));
@@ -573,8 +579,34 @@ export default function OnboardingScreen() {
     ]
   );
 
+  const canAdvanceFromStep: boolean[] = [
+    Boolean(form.primaryGoal),
+    Boolean(form.activityLevel && form.fitnessExperience),
+    Boolean(form.trainingEnvironment),
+    true,
+    true,
+    Boolean(form.coachingStyle && form.preferredCheckinStyle && form.safetyAcknowledged),
+  ];
+  const isLastStep = currentStep === onboardingStepCount - 1;
+  const canAdvance = canAdvanceFromStep[currentStep];
+
   if (!session) {
     return <Redirect href="/login" />;
+  }
+
+  function handleBack() {
+    setStepDirection('back');
+    setCurrentStep((step) => Math.max(step - 1, 0));
+  }
+
+  function handleContinue() {
+    if (isLastStep) {
+      handleFinishSetup();
+      return;
+    }
+
+    setStepDirection('forward');
+    setCurrentStep((step) => Math.min(step + 1, onboardingStepCount - 1));
   }
 
   async function handleFinishSetup() {
@@ -671,6 +703,18 @@ export default function OnboardingScreen() {
             }
           />
 
+          <View style={styles.stepHeader}>
+            <Text style={styles.stepLabel}>
+              Step {currentStep + 1} of {onboardingStepCount}
+            </Text>
+            <StepDots currentStep={currentStep} totalSteps={onboardingStepCount} />
+          </View>
+
+          <Animated.View
+            entering={stepDirection === 'forward' ? SlideInRight : SlideInLeft}
+            exiting={stepDirection === 'forward' ? SlideOutLeft : SlideOutRight}
+            key={currentStep}>
+          {currentStep === 0 ? (
           <Section
             eyebrow="Goals"
             subtitle="Enough context to make Frankie useful on day one."
@@ -694,7 +738,9 @@ export default function OnboardingScreen() {
               values={form.secondaryGoals}
             />
           </Section>
+          ) : null}
 
+          {currentStep === 1 ? (
           <Section
             eyebrow="Baseline"
             subtitle="A realistic read on your current activity level."
@@ -721,7 +767,9 @@ export default function OnboardingScreen() {
               value={form.currentActivities}
             />
           </Section>
+          ) : null}
 
+          {currentStep === 2 ? (
           <Section
             eyebrow="Movement"
             subtitle="The kinds of training Frankie should lean into."
@@ -746,7 +794,9 @@ export default function OnboardingScreen() {
               value={form.trainingEnvironment}
             />
           </Section>
+          ) : null}
 
+          {currentStep === 3 ? (
           <Section
             eyebrow="Schedule"
             subtitle="Frankie should plan around your real week."
@@ -771,7 +821,9 @@ export default function OnboardingScreen() {
               value={form.preferredScheduleNotes}
             />
           </Section>
+          ) : null}
 
+          {currentStep === 4 ? (
           <Section
             eyebrow="Food + Wellness"
             subtitle="Nutrition and recovery context without calorie accounting."
@@ -819,7 +871,9 @@ export default function OnboardingScreen() {
               value={form.wellnessCheckinOptIn}
             />
           </Section>
+          ) : null}
 
+          {currentStep === 5 ? (
           <Section
             eyebrow="Safety + Style"
             subtitle="The required safety context and the tone that helps most."
@@ -865,10 +919,21 @@ export default function OnboardingScreen() {
               value={form.safetyAcknowledged}
             />
           </Section>
+          ) : null}
+          </Animated.View>
 
-          <PrimaryButton disabled={!isReady} loading={isSubmitting} onPress={handleFinishSetup}>
-            {isProfileEdit ? 'Save profile changes' : 'Finish onboarding'}
-          </PrimaryButton>
+          <View style={styles.footerRow}>
+            {currentStep > 0 ? (
+              <Pressable onPress={handleBack} style={styles.backButton}>
+                <Text style={styles.backButtonText}>Back</Text>
+              </Pressable>
+            ) : null}
+            <View style={styles.continueWrap}>
+              <PrimaryButton disabled={!canAdvance} loading={isSubmitting} onPress={handleContinue}>
+                {isLastStep ? (isProfileEdit ? 'Save profile changes' : 'Finish onboarding') : 'Continue'}
+              </PrimaryButton>
+            </View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
@@ -991,5 +1056,39 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 14,
     lineHeight: 20,
+  },
+  stepHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 4,
+  },
+  stepLabel: {
+    color: colors.subtle,
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  backButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 20,
+  },
+  backButtonText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  continueWrap: {
+    flex: 1,
   },
 });

@@ -113,6 +113,7 @@ describe("getAdminOverviewData", () => {
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
       then: (onFulfilled: (value: { data: unknown[]; error: null }) => unknown) =>
         Promise.resolve({ data: [], error: null }).then(onFulfilled)
     });
@@ -154,6 +155,7 @@ describe("getAdminOverviewData", () => {
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
         then: (onFulfilled: (value: { data: unknown[]; error: null }) => unknown) =>
           Promise.resolve({ data: isTestAccountsCall ? testAccounts : productSuggestions, error: null }).then(
             onFulfilled
@@ -205,6 +207,7 @@ describe("getAdminOverviewData", () => {
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
         then: (onFulfilled: (value: { data: unknown[]; error: null }) => unknown) =>
           Promise.resolve({ data: isTestAccountsCall ? testAccounts : productSuggestions, error: null }).then(
             onFulfilled
@@ -250,6 +253,7 @@ describe("getAdminOverviewData", () => {
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
         then: (onFulfilled: (value: { data: unknown[]; error: null }) => unknown) =>
           Promise.resolve({ data: isTestAccountsCall ? testAccounts : [], error: null }).then(onFulfilled)
       };

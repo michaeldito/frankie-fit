@@ -6,6 +6,8 @@ import {
   type PendingClarification
 } from "@/lib/ai/orchestrator/frankie-orchestrator";
 import { recordAiTraceRun } from "@/lib/ai/tracing/ai-trace-runs";
+import { runQualityChecks, buildQualitySummary } from "@/lib/ai/tracing/quality-checks";
+import { persistQualityChecks } from "@/lib/ai/tracing/persist-quality-checks";
 import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
 import { logLifestyleEntries } from "@/lib/ai/tools/log-lifestyle";
@@ -43,6 +45,10 @@ export function buildAssistantStructuredPayload(input: {
 
   if (reply.metadata.pendingClarification) {
     return { pendingClarification: reply.metadata.pendingClarification };
+  }
+
+  if (reply.assistantMessageType === "workout_draft" && reply.workoutDraft) {
+    return { workoutDraft: reply.workoutDraft, orchestration: reply.metadata };
   }
 
   if (
@@ -104,7 +110,8 @@ export function buildAssistantStructuredPayload(input: {
             moodScore: reply.parsedWellnessCheckin.moodScore,
             motivationScore: reply.parsedWellnessCheckin.motivationScore,
             sorenessScore: reply.parsedWellnessCheckin.sorenessScore,
-            stressScore: reply.parsedWellnessCheckin.stressScore
+            stressScore: reply.parsedWellnessCheckin.stressScore,
+            notes: reply.parsedWellnessCheckin.notes
           }
         : null
   };
@@ -260,6 +267,11 @@ export async function runFrankieTurn(input: {
         latencyMs: Date.now() - startedAt
       });
 
+      if (traceId) {
+        const checks = runQualityChecks({ reply, userMessage: input.message, runStatus: "log_write_failed" });
+        await persistQualityChecks({ supabase: input.supabase, traceRunId: traceId, checks, summary: buildQualitySummary(checks) });
+      }
+
       return {
         assistantMessage: null,
         assistantReply: reply.reply,
@@ -311,6 +323,11 @@ export async function runFrankieTurn(input: {
       latencyMs: Date.now() - startedAt
     });
 
+    if (traceId) {
+      const checks = runQualityChecks({ reply, userMessage: input.message, runStatus: "assistant_message_failed" });
+      await persistQualityChecks({ supabase: input.supabase, traceRunId: traceId, checks, summary: buildQualitySummary(checks) });
+    }
+
     return {
       assistantMessage: null,
       assistantReply: reply.reply,
@@ -348,6 +365,11 @@ export async function runFrankieTurn(input: {
     runStatus,
     latencyMs: Date.now() - startedAt
   });
+
+  if (traceId) {
+    const checks = runQualityChecks({ reply, userMessage: input.message, runStatus });
+    await persistQualityChecks({ supabase: input.supabase, traceRunId: traceId, checks, summary: buildQualitySummary(checks) });
+  }
 
   return {
     assistantMessage,

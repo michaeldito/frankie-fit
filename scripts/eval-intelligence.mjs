@@ -186,6 +186,7 @@ function createCardioBenchmarkProfile() {
     target_training_days: 5,
     typical_session_length: 45,
     training_environment: "Outdoors",
+    strict_workout_logging: false,
     wellness_checkin_opt_in: true,
     wellness_support_focus: ["Stress", "Recovery", "Energy"]
   };
@@ -224,6 +225,7 @@ function createLiftingBenchmarkProfile() {
     target_training_days: 4,
     typical_session_length: 45,
     training_environment: "Gym",
+    strict_workout_logging: false,
     wellness_checkin_opt_in: true,
     wellness_support_focus: ["Soreness", "Energy", "Motivation"]
   };
@@ -262,6 +264,7 @@ function createDifficultMixedBenchmarkProfile() {
     target_training_days: 4,
     typical_session_length: 35,
     training_environment: "Mixed",
+    strict_workout_logging: false,
     wellness_checkin_opt_in: true,
     wellness_support_focus: ["Stress", "Motivation", "Energy"]
   };
@@ -300,6 +303,7 @@ function createMessyInputBenchmarkProfile() {
     target_training_days: 4,
     typical_session_length: 40,
     training_environment: "Mixed",
+    strict_workout_logging: false,
     wellness_checkin_opt_in: true,
     wellness_support_focus: ["Energy", "Consistency"]
   };
