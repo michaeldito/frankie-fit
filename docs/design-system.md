@@ -98,3 +98,37 @@ Today's art is placeholder: about 130px crops cut from the style board. Final as
 - `icon.png`: 1024×1024, opaque, no transparency (the iOS App Store requires it).
 
 Dropping files in with the same names updates both apps. The mobile app icon and splash (`apps/mobile/assets/images/`) need a native rebuild.
+
+## Frankie's Day (biscuits)
+
+Logging real life earns 🦴 biscuits, and biscuits are spent on time with Frankie. The game logic lives in `packages/companion-core` and is shared by web and mobile. The database enforces it in `supabase/migrations/20261021090000_frankie_biscuits.sql`.
+
+**Earning** (`award_biscuits`, safe to call repeatedly):
+
+- +1 for the first log in each pillar on a Pacific day.
+- +1 "full bowl" bonus when all four pillars are logged.
+- Only days within the last 7 can earn, so back-dated or future-dated logs can't farm biscuits.
+- Deleting a log never takes a biscuit back.
+
+**Spending** (`redeem_frankie_action`):
+
+- Feed, walk, play and snuggle cost 1 each, and each fills one of Frankie's needs for the day.
+- All four filled makes a **Good Boy Day**.
+- A belly rub is free.
+- Spends are serialized per user, so a double tap can't double-spend.
+
+**Integrity:** `biscuit_ledger` is read-only to clients. Every write goes through the two `security definer` functions.
+
+**Whines:** `pickNudge` decides when Frankie asks for something.
+
+- Each need has its own time window, with quiet hours before 8am and after 9pm PT and at most 2 nudges a day.
+- Users choose a nudge level: Off, Polite or Full whine mode.
+- `/api/cron/frankie-nudges` runs hourly from `.github/workflows/frankie-nudges.yml`, which needs the `FRANKIE_APP_URL` and `CRON_SECRET` repo secrets.
+- Users with nudges on get these instead of the generic check-in reminder.
+
+**Guardrails:**
+
+- Feed whines ask to *hear about* food, never to eat more or less.
+- Rest-day check-ins count like any other pillar.
+- Frankie never gets sick or sad, and never runs away.
+- Care streaks forgive one missed day per week.

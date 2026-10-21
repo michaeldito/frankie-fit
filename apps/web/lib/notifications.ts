@@ -1,14 +1,25 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Expo } from "expo-server-sdk";
+import type { Pillar } from "@frankie-fit/brand-core";
+import {
+  computeFrankieDay,
+  isFrankieNeed,
+  pickNudge,
+  type FrankieNeed,
+  type FrankieNudge,
+  type NudgeLevel
+} from "@frankie-fit/companion-core";
 import {
   addDays,
   getPacificDateKey,
   getPacificDayUtcRange,
+  getPacificHour,
   getPacificToday,
   getPacificYesterday,
   toDateKey
 } from "@frankie-fit/dashboard-core";
 import { loadProfile } from "@/lib/admin-eval-runner";
+import { summarizeLedger } from "@/lib/frankie-day";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 import { generateDailyCoachSummary, generateWeeklyCoachSummary } from "@/lib/ai/summaries/frankie-summaries";
 import type { Database } from "@/types/database";
@@ -152,34 +163,30 @@ export function shouldSendCheckinReminder(input: {
   return input.wellnessCheckinOptIn && !input.hasLoggedToday && !input.alreadyNudgedToday;
 }
 
-async function userHasLoggedToday(input: {
-  supabase: SupabaseServerClient;
-  today: string;
-  userId: string;
-}) {
-  const [activities, dietEntries, wellnessCheckins] = await Promise.all([
-    input.supabase
-      .from("activity_logs")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", input.userId)
-      .eq("logged_for_date", input.today),
-    input.supabase
-      .from("diet_logs")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", input.userId)
-      .eq("logged_for_date", input.today),
-    input.supabase
-      .from("wellness_checkins")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", input.userId)
-      .eq("logged_for_date", input.today)
-  ]);
+const PILLAR_LOG_TABLES = {
+  exercise: "activity_logs",
+  diet: "diet_logs",
+  wellness: "wellness_checkins",
+  lifestyle: "lifestyle_logs"
+} as const satisfies Record<Pillar, string>;
 
-  return (
-    (activities.count ?? 0) > 0 ||
-    (dietEntries.count ?? 0) > 0 ||
-    (wellnessCheckins.count ?? 0) > 0
+async function loggedPillarsOn(input: {
+  supabase: SupabaseServerClient;
+  dateKey: string;
+  userId: string;
+}): Promise<Pillar[]> {
+  const pillars = Object.keys(PILLAR_LOG_TABLES) as Pillar[];
+  const counts = await Promise.all(
+    pillars.map((pillar) =>
+      input.supabase
+        .from(PILLAR_LOG_TABLES[pillar])
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", input.userId)
+        .eq("logged_for_date", input.dateKey)
+    )
   );
+
+  return pillars.filter((_pillar, index) => (counts[index].count ?? 0) > 0);
 }
 
 async function userWasAlreadyNudgedToday(input: {
@@ -202,10 +209,12 @@ export async function evaluateCheckinNudges() {
   const today = getPacificDateKey();
   const todayStartUtcIso = new Date(`${today}T00:00:00.000Z`).toISOString();
 
+  // Users with Frankie's nudges on get those instead of this generic reminder.
   const { data: profiles, error } = await supabase
     .from("profiles")
     .select("id")
-    .eq("wellness_checkin_opt_in", true);
+    .eq("wellness_checkin_opt_in", true)
+    .eq("frankie_nudge_level", "off");
 
   if (error) {
     throw new Error(error.message);
@@ -215,7 +224,7 @@ export async function evaluateCheckinNudges() {
 
   for (const profile of profiles ?? []) {
     const [hasLoggedToday, alreadyNudgedToday] = await Promise.all([
-      userHasLoggedToday({ supabase, today, userId: profile.id }),
+      loggedPillarsOn({ supabase, dateKey: today, userId: profile.id }).then((pillars) => pillars.length > 0),
       userWasAlreadyNudgedToday({ supabase, todayStartUtcIso, userId: profile.id })
     ]);
 
@@ -422,6 +431,117 @@ export async function evaluateWeeklySummaryNotifications() {
     }
 
     await sendPushNotification({ actionUrl, body, supabase, title, userId: profile.id });
+
+    sentCount += 1;
+  }
+
+  return { evaluatedCount: profiles?.length ?? 0, sentCount };
+}
+
+type LedgerRow = { delta: number; reason: string; pillar: string | null; date_key: string };
+
+/**
+ * Decides whether Frankie should whine right now. Pillars logged today that haven't been credited
+ * yet still count toward the jar (they're credited the next time the user opens the app).
+ */
+export function planFrankieNudge(input: {
+  ledgerRows: LedgerRow[];
+  pillarsLoggedToday: Pillar[];
+  sentToday: { need: FrankieNeed | null }[];
+  level: NudgeLevel;
+  todayKey: string;
+  hourPacific: number;
+}): FrankieNudge | null {
+  const summary = summarizeLedger(input.ledgerRows, input.todayKey);
+  const creditedToday = new Set(
+    input.ledgerRows
+      .filter((row) => row.reason === "log_reward" && row.date_key === input.todayKey)
+      .map((row) => row.pillar)
+  );
+  const uncredited = input.pillarsLoggedToday.filter((pillar) => !creditedToday.has(pillar)).length;
+  const day = computeFrankieDay({
+    balance: summary.balance + uncredited,
+    needsFilledToday: summary.needsFilledToday,
+    hourPacific: input.hourPacific
+  });
+
+  return pickNudge({
+    day,
+    hourPacific: input.hourPacific,
+    level: input.level,
+    nudgesSentToday: input.sentToday.length,
+    needsNudgedToday: input.sentToday.flatMap((sent) => (sent.need ? [sent.need] : []))
+  });
+}
+
+export async function evaluateFrankieNudges(now: Date = new Date()) {
+  const supabase = createSupabaseServiceRoleClient();
+  const todayKey = getPacificDateKey(now);
+  const hourPacific = getPacificHour(now);
+  const { startUtcIso } = getPacificDayUtcRange(todayKey);
+
+  const { data: profiles, error } = await supabase
+    .from("profiles")
+    .select("id, frankie_nudge_level")
+    .neq("frankie_nudge_level", "off");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  let sentCount = 0;
+
+  for (const profile of profiles ?? []) {
+    const [ledger, pillarsLoggedToday, sent] = await Promise.all([
+      supabase.from("biscuit_ledger").select("delta, reason, pillar, date_key").eq("user_id", profile.id),
+      loggedPillarsOn({ supabase, dateKey: todayKey, userId: profile.id }),
+      supabase
+        .from("notifications")
+        .select("metadata_json")
+        .eq("user_id", profile.id)
+        .eq("type", "frankie_nudge")
+        .gte("created_at", startUtcIso)
+    ]);
+
+    if (ledger.error) throw new Error(ledger.error.message);
+    if (sent.error) throw new Error(sent.error.message);
+
+    const nudge = planFrankieNudge({
+      ledgerRows: ledger.data ?? [],
+      pillarsLoggedToday,
+      sentToday: (sent.data ?? []).map((row) => {
+        const need = (row.metadata_json as { need?: unknown } | null)?.need;
+        return { need: isFrankieNeed(need) ? need : null };
+      }),
+      level: profile.frankie_nudge_level,
+      todayKey,
+      hourPacific
+    });
+
+    if (!nudge) {
+      continue;
+    }
+
+    const { error: insertError } = await supabase.from("notifications").insert({
+      user_id: profile.id,
+      type: "frankie_nudge",
+      title: nudge.title,
+      body: nudge.body,
+      action_url: nudge.actionUrl,
+      metadata_json: { need: nudge.need }
+    });
+
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+
+    await sendPushNotification({
+      actionUrl: nudge.actionUrl,
+      body: nudge.body,
+      supabase,
+      title: nudge.title,
+      userId: profile.id
+    });
 
     sentCount += 1;
   }

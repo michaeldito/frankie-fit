@@ -22,14 +22,15 @@ import {
   UserRound,
   X
 } from "lucide-react";
-import Image from "next/image";
 import { signOut } from "@/app/app/actions";
 import { NavLink } from "@/components/app-shell/nav-link";
 import { NotificationBell } from "@/components/app-shell/notification-bell";
 import { ThemeToggle } from "@/components/app-shell/theme-toggle";
 import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
-import { FRANKIE_PORTRAIT } from "@/components/frankie/frankie-art";
 import { FrankieWordmark } from "@/components/frankie/frankie-wordmark";
+import { FrankieDayProvider } from "@/components/frankie-day/frankie-day-context";
+import { FrankieDaySheet } from "@/components/frankie-day/frankie-day-sheet";
+import { SidebarFrankieCard } from "@/components/frankie-day/sidebar-frankie-card";
 
 export type UserAppShellUser = {
   displayName: string;
@@ -235,7 +236,7 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
   const sectionLabelClass = "px-3 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted";
 
   return (
-    <>
+    <FrankieDayProvider enabled={user.authConfigured}>
       <div className="min-h-screen bg-background">
         <div className="flex h-screen overflow-hidden">
           <aside
@@ -285,18 +286,7 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
                   Preview mode is active until Supabase env vars are connected.
                 </p>
               ) : null}
-              <div className="relative overflow-hidden rounded-2xl border border-border bg-surface px-3 pb-0 pt-3">
-                <p className="relative z-10 max-w-[8.5rem] font-frankie text-lg leading-tight text-frankie">
-                  &ldquo;{user.frankieLine}&rdquo;
-                </p>
-                <Image
-                  alt="Frankie"
-                  className="relative -mb-1 ml-auto -mt-6 h-24 w-24 object-contain object-bottom"
-                  height={96}
-                  src={FRANKIE_PORTRAIT}
-                  width={96}
-                />
-              </div>
+              <SidebarFrankieCard fallbackLine={user.frankieLine} />
             </div>
           </aside>
 
@@ -453,6 +443,7 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
         open={overlayPanel === "next-step"}
         title={user.nextStepTitle}
       />
-    </>
+      <FrankieDaySheet />
+    </FrankieDayProvider>
   );
 }

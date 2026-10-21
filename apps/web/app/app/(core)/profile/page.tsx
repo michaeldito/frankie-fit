@@ -550,6 +550,22 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               the way.
             </span>
           </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Frankie&apos;s nudges</span>
+            <select
+              className="ff-select"
+              defaultValue={context.profile?.frankie_nudge_level ?? "polite"}
+              name="frankieNudgeLevel"
+            >
+              <option value="polite">Polite: a gentle reminder now and then</option>
+              <option value="whiny">Full whine mode: he will ask for that walk</option>
+              <option value="off">Off: Frankie keeps his requests to himself</option>
+            </select>
+            <span className="block text-xs leading-5 text-[var(--muted)]">
+              At most two a day, never before 8am or after 9pm.
+            </span>
+          </label>
         </Section>
 
         <Section

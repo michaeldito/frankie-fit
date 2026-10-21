@@ -1,0 +1,27 @@
+name: Frankie nudges
+
+# Frankie's whines need roughly hourly runs (Vercel Hobby crons are daily-only). Quiet hours,
+# the per-need windows, and the 2/day cap are enforced server-side, so every hour is safe.
+# Requires repo secrets FRANKIE_APP_URL (e.g. https://your-app.vercel.app) and CRON_SECRET;
+# without them the job skips.
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  nudge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask Frankie who needs a nudge
+        env:
+          FRANKIE_APP_URL: ${{ secrets.FRANKIE_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$FRANKIE_APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "FRANKIE_APP_URL or CRON_SECRET not set; skipping."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$FRANKIE_APP_URL/api/cron/frankie-nudges"

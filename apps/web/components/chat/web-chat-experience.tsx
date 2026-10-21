@@ -16,6 +16,9 @@ import {
 } from "@/components/chat/quick-start";
 import { PERSONAS } from "@/lib/ai/prompts/personas";
 import { PILLAR_STYLES } from "@/components/frankie/pillars";
+import { FrankieDayBar } from "@/components/frankie-day/frankie-day-bar";
+import { useFrankieDay } from "@/components/frankie-day/frankie-day-context";
+import type { BiscuitAward } from "@/lib/frankie-day";
 import { PILLARS, type Pillar } from "@frankie-fit/brand-core";
 import type { Database } from "@/types/database";
 
@@ -26,6 +29,7 @@ type ChatApiResponse = {
   messages: ChatMessage[];
   schemaReady: boolean;
   userMessageId?: string;
+  biscuitAward?: (BiscuitAward & { messageId: string }) | null;
 };
 
 type WebChatExperienceProps = {
@@ -83,6 +87,8 @@ export function WebChatExperience({
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState(initialMessages);
+  const [biscuitAwards, setBiscuitAwards] = useState<Record<string, BiscuitAward>>({});
+  const frankieDay = useFrankieDay();
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [isRefreshing, startRefreshTransition] = useTransition();
@@ -184,6 +190,13 @@ export function WebChatExperience({
 
       setMessages(replyResponse.messages);
       setError(replyResponse.error);
+
+      const award = replyResponse.biscuitAward;
+      if (award) {
+        setBiscuitAwards((current) => ({ ...current, [award.messageId]: award }));
+        void frankieDay.refresh();
+      }
+
       startRefreshTransition(() => {
         router.refresh();
       });
@@ -394,8 +407,11 @@ export function WebChatExperience({
         </div>
       ) : null}
 
+      {!activePersona ? <FrankieDayBar /> : null}
+
       <ChatTranscript
         assistantCardClass={assistantCardClass}
+        biscuitAwards={biscuitAwards}
         assistantName={activePersona?.displayName ?? DEFAULT_PERSONA_LABEL}
         followupMessage={followupMessage}
         introMessage={introMessage}
