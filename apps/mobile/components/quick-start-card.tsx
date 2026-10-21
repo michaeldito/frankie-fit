@@ -1,4 +1,5 @@
 import { pillarColor, type Pillar } from '@frankie-fit/brand-core';
+import { getPacificHour } from '@frankie-fit/dashboard-core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
@@ -8,6 +9,7 @@ import { createThemedStyles, useTheme } from '@/lib/theme';
 // apps/mobile/app/(tabs)/chat.tsx for the same known IOU.
 import {
   composeQuickStart,
+  defaultQuickStartValues,
   parseQuickStartTemplate,
   type QuickStartOption,
   type QuickStartSegment,
@@ -27,13 +29,32 @@ export function QuickStartCard({ option, disabled, onCancel, onEditAsText, onSen
   const { colors } = useTheme();
   const styles = useStyles();
   const segments = useMemo(() => parseQuickStartTemplate(option.template), [option.template]);
-  const [values, setValues] = useState<Record<number, string>>({});
+  const [values, setValues] = useState<Record<number, string>>(() =>
+    defaultQuickStartValues(segments, getPacificHour())
+  );
+  const [showMissing, setShowMissing] = useState(false);
   const inputRefs = useRef<Record<number, TextInput | null>>({});
   const message = composeQuickStart(segments, values);
   const accent = pillarColor(colors, option.label.toLowerCase() as Pillar) ?? colors.brand;
 
   const blankIds = segments.flatMap((segment) => (segment.kind === 'text' ? [] : [segment.id]));
   const filledCount = blankIds.filter((id) => values[id]?.trim()).length;
+  const remaining = blankIds.length - filledCount;
+  const isMissing = (id: number) => showMissing && !values[id]?.trim();
+
+  // A tap on the not-ready button shows what's left instead of silently doing nothing.
+  function handleSendPress() {
+    if (message) {
+      onSend(message);
+      return;
+    }
+    setShowMissing(true);
+    const firstEmptyInput = segments.find(
+      (segment): segment is Extract<QuickStartSegment, { kind: 'input' }> =>
+        segment.kind === 'input' && !values[segment.id]?.trim()
+    );
+    if (firstEmptyInput) inputRefs.current[firstEmptyInput.id]?.focus();
+  }
 
   function setValue(id: number, value: string) {
     setValues((current) => ({ ...current, [id]: value }));
@@ -75,14 +96,18 @@ export function QuickStartCard({ option, disabled, onCancel, onEditAsText, onSen
             inputRefs.current[segment.id] = ref;
           }}
           returnKeyType="next"
-          style={[styles.input, segment.numeric && styles.inputNumeric, { borderBottomColor: accent }]}
+          style={[
+            styles.input,
+            segment.numeric && styles.inputNumeric,
+            { borderBottomColor: isMissing(segment.id) ? colors.danger : accent },
+          ]}
           value={values[segment.id] ?? ''}
         />
       );
     }
 
     return (
-      <View key={index} style={styles.choiceRow}>
+      <View key={index} style={[styles.choiceRow, isMissing(segment.id) && styles.choiceRowMissing]}>
         {segment.options.map((choice) => {
           const selected = values[segment.id] === choice;
           return (
@@ -122,10 +147,12 @@ export function QuickStartCard({ option, disabled, onCancel, onEditAsText, onSen
           <Text style={styles.secondaryText}>Edit as text</Text>
         </Pressable>
         <Pressable
-          disabled={!message || disabled}
-          onPress={() => message && onSend(message)}
+          disabled={disabled}
+          onPress={handleSendPress}
           style={[styles.primary, (!message || disabled) && styles.primaryDisabled]}>
-          <Text style={styles.primaryText}>Send to Frankie</Text>
+          <Text style={styles.primaryText}>
+            {message ? 'Send to Frankie' : `${remaining} more to fill`}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -197,6 +224,13 @@ const useStyles = createThemedStyles((colors) => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
+  },
+  choiceRowMissing: {
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.danger,
+    padding: 3,
   },
   choice: {
     minWidth: 36,
