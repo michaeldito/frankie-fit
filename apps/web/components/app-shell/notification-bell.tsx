@@ -116,7 +116,7 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
           />
         </svg>
         {unreadCount > 0 ? (
-          <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[rgba(248,113,113,0.95)] px-1 text-[0.6rem] font-semibold leading-none text-white">
+          <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-danger px-1 text-[0.6rem] font-semibold leading-none text-background">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         ) : null}
@@ -134,7 +134,7 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
           <p className="ff-kicker">Notifications</p>
           {unreadCount > 0 ? (
             <button
-              className="cursor-pointer text-xs font-semibold text-[var(--accent,#93c5fd)] hover:underline"
+              className="cursor-pointer text-xs font-semibold text-accent hover:underline"
               onClick={handleMarkAllRead}
               type="button"
             >
@@ -155,7 +155,7 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-medium">{notification.title}</p>
                     {!notification.read_at ? (
-                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[rgba(147,197,253,0.9)]" />
+                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />
                     ) : null}
                   </div>
                   <p className="mt-1 text-xs leading-5 text-[var(--muted)]">{notification.body}</p>
@@ -165,8 +165,8 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
                 </>
               );
 
-              const className = `block rounded-[0.6rem] px-2.5 py-2 transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)] ${
-                notification.read_at ? "" : "bg-[rgba(147,197,253,0.06)]"
+              const className = `block rounded-[0.6rem] px-2.5 py-2 transition hover:bg-surface-contrast ${
+                notification.read_at ? "" : "bg-accent/5"
               }`;
 
               return notification.action_url ? (

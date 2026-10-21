@@ -21,6 +21,17 @@ export function getPacificDateKey(date: Date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
+/** The current hour (0–23) on the Pacific clock, for time-of-day copy like greetings. */
+export function getPacificHour(date: Date = new Date()): number {
+  const hour = new Intl.DateTimeFormat("en-US", {
+    timeZone: FRANKIE_TIME_ZONE,
+    hour: "numeric",
+    hourCycle: "h23"
+  }).format(date);
+
+  return Number(hour) % 24;
+}
+
 /** Today's Pacific calendar date, represented as a UTC-noon-anchored Date so day-level arithmetic never crosses a DST boundary. */
 export function getPacificToday(): Date {
   return fromDateKey(getPacificDateKey());

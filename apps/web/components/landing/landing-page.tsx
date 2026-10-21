@@ -120,7 +120,7 @@ export function LandingPage() {
               ))}
             </div>
 
-            <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface-strong)_86%,black_14%)] px-4 py-3 text-xs text-[var(--muted-strong)]">
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-surface-strong px-4 py-3 text-xs text-[var(--muted-strong)]">
               <span className="font-medium text-[var(--foreground)]">
                 {copy.heroHighlights[2].value}
               </span>
@@ -193,11 +193,11 @@ export function LandingPage() {
       <section>
         <div className="ff-section grid gap-5 lg:grid-cols-[0.95fr_1.05fr] lg:gap-6">
           <div className="ff-panel-strong p-6 sm:p-7" id="frankie">
-            <p className="ff-kicker text-white/70">Meet Frankie</p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            <p className="ff-kicker text-muted">Meet Frankie</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
               {copy.meetFrankieTitle}
             </h2>
-            <p className="mt-4 max-w-xl text-sm leading-7 text-white/80 sm:text-base">
+            <p className="mt-4 max-w-xl text-sm leading-7 text-muted-strong sm:text-base">
               {copy.meetFrankieBody}
             </p>
           </div>
@@ -246,11 +246,11 @@ export function LandingPage() {
             <div aria-hidden className="ff-glow -bottom-16 -right-10 h-72 w-72" />
             <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
               <div className="max-w-3xl">
-                <p className="ff-kicker text-white/70">Final call</p>
-                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
+                <p className="ff-kicker text-muted">Final call</p>
+                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
                   {copy.finalTitle}
                 </h2>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/78 sm:text-base">
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-strong sm:text-base">
                   {copy.finalBody}
                 </p>
               </div>

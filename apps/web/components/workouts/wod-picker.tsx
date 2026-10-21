@@ -12,7 +12,7 @@ export function WodPicker({ onSelect, templates }: WodPickerProps) {
     <div className="grid gap-3 sm:grid-cols-2">
       {templates.map((template) => (
         <button
-          className="ff-card-soft cursor-pointer p-4 text-left transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)]"
+          className="ff-card-soft cursor-pointer p-4 text-left transition hover:bg-surface-contrast"
           key={template.slug}
           onClick={() => onSelect(template)}
           type="button"

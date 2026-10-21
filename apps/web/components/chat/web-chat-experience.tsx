@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent, KeyboardEvent } from "react";
+import { LoaderCircle, SendHorizontal } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChatTranscript, type LoggedEntryKind } from "@/components/chat/chat-transcript";
@@ -14,6 +15,8 @@ import {
   findPreviousBlank
 } from "@/components/chat/quick-start";
 import { PERSONAS } from "@/lib/ai/prompts/personas";
+import { PILLAR_STYLES } from "@/components/frankie/pillars";
+import { PILLARS, type Pillar } from "@frankie-fit/brand-core";
 import type { Database } from "@/types/database";
 
 type ChatMessage = Database["public"]["Tables"]["conversation_messages"]["Row"];
@@ -56,35 +59,10 @@ async function chatApiFetch<T>(input: RequestInfo, init?: RequestInit) {
 }
 
 function SendIcon({ busy }: { busy: boolean }) {
-  if (busy) {
-    return (
-      <svg aria-hidden="true" className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" />
-        <path
-          className="opacity-90"
-          d="M21 12a9 9 0 0 0-9-9"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth="3"
-        />
-      </svg>
-    );
-  }
-
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2.4"
-      viewBox="0 0 24 24"
-    >
-      <path d="M19 5v6a4 4 0 0 1-4 4H5" />
-      <path d="M9 11 5 15l4 4" />
-    </svg>
+  return busy ? (
+    <LoaderCircle aria-hidden className="h-4 w-4 animate-spin" />
+  ) : (
+    <SendHorizontal aria-hidden className="h-4 w-4" strokeWidth={2.4} />
   );
 }
 
@@ -410,7 +388,7 @@ export function WebChatExperience({
     <>
       {error ? (
         <div className="border-b border-[var(--border)] px-5 py-4 sm:px-6">
-          <div className="rounded-[1.35rem] border border-[rgba(248,113,113,0.28)] bg-[rgba(127,29,29,0.24)] px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
+          <div className="rounded-[1.35rem] border border-danger/30 bg-danger/10 px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
             {error}
           </div>
         </div>
@@ -418,6 +396,7 @@ export function WebChatExperience({
 
       <ChatTranscript
         assistantCardClass={assistantCardClass}
+        assistantName={activePersona?.displayName ?? DEFAULT_PERSONA_LABEL}
         followupMessage={followupMessage}
         introMessage={introMessage}
         isThinking={isThinking}
@@ -426,6 +405,7 @@ export function WebChatExperience({
         onEditLoggedEntry={handleEditLoggedEntry}
         onWorkoutDraftSaved={handleWorkoutDraftSaved}
         pendingMessage={pendingMessage}
+        showFrankie={!activePersona}
         userCardClass={userCardClass}
       />
 
@@ -441,17 +421,24 @@ export function WebChatExperience({
             <label className="text-sm font-semibold tracking-[-0.01em]" htmlFor="chat-message-input">
               Tell Frankie anything about your
             </label>
-            {QUICK_START_OPTIONS.map((option) => (
-              <button
-                className="cursor-pointer rounded-full border border-[var(--border-strong)] bg-[var(--surface-strong)] px-3 py-1.5 text-sm font-medium text-[var(--muted-strong)] transition hover:border-[rgba(147,197,253,0.5)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!schemaReady || isBusy}
-                key={option.label}
-                onClick={() => handleQuickStart(option.template)}
-                type="button"
-              >
-                {option.label}
-              </button>
-            ))}
+            {QUICK_START_OPTIONS.map((option) => {
+              const pillarKey = option.label.toLowerCase() as Pillar;
+              const pillar = PILLARS.includes(pillarKey) ? PILLAR_STYLES[pillarKey] : null;
+              const PillarIcon = pillar?.icon;
+
+              return (
+                <button
+                  className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border-strong bg-surface px-3 py-1.5 text-sm font-medium text-muted-strong transition hover:-translate-y-px hover:border-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!schemaReady || isBusy}
+                  key={option.label}
+                  onClick={() => handleQuickStart(option.template)}
+                  type="button"
+                >
+                  {PillarIcon ? <PillarIcon aria-hidden className={`h-4 w-4 ${pillar.text}`} /> : null}
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
           {quickStartHintVisible ? (
             <div className="mb-3 flex items-center justify-between gap-3 rounded-[0.75rem] border border-[var(--border-strong)] bg-[var(--surface-strong)] px-3 py-2 text-xs leading-5 text-[var(--muted-strong)]">
@@ -521,8 +508,8 @@ export function WebChatExperience({
               <button
                 className={`block w-full truncate rounded-[0.55rem] px-2.5 py-2 text-left text-sm font-medium transition ${
                   personaId === null
-                    ? "border border-transparent bg-[color:color-mix(in_srgb,var(--brand)_86%,white_14%)] text-white shadow-[0_16px_32px_rgba(29,78,216,0.34)]"
-                    : "cursor-pointer border border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_74%,black_26%)] hover:text-[var(--foreground)]"
+                    ? "border border-transparent bg-brand text-brand-foreground shadow-[0_12px_28px_color-mix(in_srgb,var(--brand)_28%,transparent)]"
+                    : "cursor-pointer border border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-surface-contrast hover:text-[var(--foreground)]"
                 }`}
                 onClick={() => handleSelectPersona(null)}
                 type="button"
@@ -533,8 +520,8 @@ export function WebChatExperience({
                 <button
                   className={`block w-full truncate rounded-[0.55rem] px-2.5 py-2 text-left text-sm font-medium transition ${
                     personaId === persona.id
-                      ? "border border-transparent bg-[color:color-mix(in_srgb,var(--brand)_86%,white_14%)] text-white shadow-[0_16px_32px_rgba(29,78,216,0.34)]"
-                      : "cursor-pointer border border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_74%,black_26%)] hover:text-[var(--foreground)]"
+                      ? "border border-transparent bg-brand text-brand-foreground shadow-[0_12px_28px_color-mix(in_srgb,var(--brand)_28%,transparent)]"
+                      : "cursor-pointer border border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-surface-contrast hover:text-[var(--foreground)]"
                   }`}
                   key={persona.id}
                   onClick={() => handleSelectPersona(persona.id)}

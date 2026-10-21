@@ -1,3 +1,5 @@
+import Image from "next/image";
+import { FRANKIE_PORTRAIT } from "@/components/frankie/frankie-art";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { saveOnboarding } from "@/app/app/onboarding/actions";
@@ -142,7 +144,16 @@ export default async function OnboardingPage({
 
   return (
     <div className="space-y-6">
-      <header className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface-strong)] p-5">
+      <header className="flex flex-col gap-5 rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface-strong)] p-5 sm:flex-row sm:items-center">
+        <Image
+          alt="Frankie"
+          className="h-32 w-32 flex-none object-contain"
+          height={128}
+          priority
+          src={FRANKIE_PORTRAIT}
+          width={128}
+        />
+        <div>
         <p className="text-sm uppercase tracking-[0.25em] text-[var(--muted)]">
           Onboarding
         </p>
@@ -155,6 +166,7 @@ export default async function OnboardingPage({
           wellness without turning everything into a full-time tracking job. This
           first pass should take about three to five minutes.
         </p>
+        </div>
       </header>
 
       {error ? (
@@ -569,7 +581,7 @@ export default async function OnboardingPage({
               focus for the week, and point you toward one concrete next action.
             </p>
             <button
-              className="rounded-full bg-[var(--brand)] px-5 py-3 text-sm font-medium text-white transition hover:bg-[var(--brand-strong)]"
+              className="rounded-full bg-[var(--brand)] px-5 py-3 text-sm font-medium text-brand-foreground transition hover:bg-[var(--brand-strong)]"
               type="submit"
             >
               Finish onboarding

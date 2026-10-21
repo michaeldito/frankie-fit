@@ -9,9 +9,27 @@ import {
   useState,
   type ReactNode
 } from "react";
+import {
+  Bug,
+  CalendarDays,
+  ChartColumn,
+  Dumbbell,
+  FlaskConical,
+  Footprints,
+  MessageCircleHeart,
+  ShieldCheck,
+  Target,
+  UserRound,
+  X
+} from "lucide-react";
+import Image from "next/image";
 import { signOut } from "@/app/app/actions";
 import { NavLink } from "@/components/app-shell/nav-link";
 import { NotificationBell } from "@/components/app-shell/notification-bell";
+import { ThemeToggle } from "@/components/app-shell/theme-toggle";
+import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
+import { FRANKIE_PORTRAIT } from "@/components/frankie/frankie-art";
+import { FrankieWordmark } from "@/components/frankie/frankie-wordmark";
 
 export type UserAppShellUser = {
   displayName: string;
@@ -26,6 +44,7 @@ export type UserAppShellUser = {
   nextStepHref: string;
   nextStepCtaLabel: string;
   unreadNotificationCount: number;
+  frankieLine: string;
 };
 
 type UserAppShellProps = {
@@ -39,15 +58,15 @@ function getPageMeta(pathname: string) {
   if (pathname.startsWith("/app/chat")) {
     return {
       eyebrow: "",
-      title: "Chat",
-      subtitle: "Log, reflect, and plan from one running conversation."
+      title: "Chat with Frankie",
+      subtitle: "Tell me what you did, ate, or how you feel. I'll take it from there."
     };
   }
 
   if (pathname.startsWith("/app/dashboard")) {
     return {
       eyebrow: "",
-      title: "Dashboard",
+      title: "Progress",
       subtitle: ""
     };
   }
@@ -153,7 +172,7 @@ function ActionModal({
             onClick={onClose}
             type="button"
           >
-            x
+            <X aria-hidden className="h-4 w-4" />
           </button>
         </div>
         <p className="mt-5 max-w-2xl leading-7 text-[var(--muted)]">{body}</p>
@@ -211,184 +230,174 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
     }
   }, [profileMenuOpen]);
 
+  const sidebarActionClass =
+    "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-muted transition hover:bg-surface-contrast/60 hover:text-foreground";
+  const sectionLabelClass = "px-3 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted";
+
   return (
     <>
-      <div className="min-h-screen bg-[var(--background)]">
-        <div className="flex h-screen overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent_20%),linear-gradient(180deg,var(--surface)_0%,color-mix(in_srgb,var(--surface-strong)_72%,black_28%)_100%)]">
-          <aside className="hidden w-[208px] flex-col border-r border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_90%,black_10%)] p-3 lg:flex">
-            <div className="flex items-center gap-2.5 px-1.5 py-1.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-[0.6rem] bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-xs font-semibold text-white shadow-[0_10px_20px_rgba(29,78,216,0.32)]">
-                FF
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Frankie Fit</p>
-                <p className="mt-0.5 text-[0.68rem] text-[var(--muted)]">Calm performance coach</p>
-              </div>
-            </div>
+      <div className="min-h-screen bg-background">
+        <div className="flex h-screen overflow-hidden">
+          <aside
+            className="hidden w-[240px] flex-none flex-col border-r border-border bg-[color-mix(in_srgb,var(--background)_82%,black_18%)] p-3 text-foreground lg:flex"
+            data-theme="dark"
+          >
+            <Link className="px-2 py-2" href="/app/chat">
+              <FrankieWordmark />
+            </Link>
+
+            <nav aria-label="Main" className="mt-5 flex flex-col gap-0.5">
+              <NavLink href="/app/chat" icon={MessageCircleHeart}>Frankie</NavLink>
+              <NavLink href="/app/dashboard" icon={ChartColumn}>Progress</NavLink>
+              <NavLink href="/app/workouts" icon={Dumbbell}>Workouts</NavLink>
+              <NavLink href="/app/programs" icon={CalendarDays}>Programs</NavLink>
+              <NavLink href="/app/profile" icon={UserRound}>Profile</NavLink>
+            </nav>
 
             <div className="mt-6">
-              <p className="px-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                App
-              </p>
-              <nav className="mt-2 flex flex-col gap-0.5">
-                <NavLink href="/app/chat">Chat</NavLink>
-                <NavLink href="/app/dashboard">Dashboard</NavLink>
-              </nav>
-            </div>
-
-            <div className="mt-6">
-              <p className="px-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                Actions
-              </p>
+              <p className={sectionLabelClass}>Focus</p>
               <div className="mt-2 flex flex-col gap-0.5">
-                <button
-                  className="flex cursor-pointer items-center justify-between rounded-[0.55rem] px-3 py-2 text-left text-sm font-medium text-[var(--muted)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_60%,transparent)] hover:text-[var(--foreground)]"
-                  onClick={() => setOverlayPanel("goal")}
-                  type="button"
-                >
-                  Open goal
+                <button className={sidebarActionClass} onClick={() => setOverlayPanel("goal")} type="button">
+                  <Target aria-hidden className="h-[1.1rem] w-[1.1rem]" strokeWidth={1.8} />
+                  Your goal
                 </button>
-                <button
-                  className="flex cursor-pointer items-center justify-between rounded-[0.55rem] px-3 py-2 text-left text-sm font-medium text-[var(--muted)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_60%,transparent)] hover:text-[var(--foreground)]"
-                  onClick={() => setOverlayPanel("next-step")}
-                  type="button"
-                >
-                  Open next step
+                <button className={sidebarActionClass} onClick={() => setOverlayPanel("next-step")} type="button">
+                  <Footprints aria-hidden className="h-[1.1rem] w-[1.1rem]" strokeWidth={1.8} />
+                  Next step
                 </button>
               </div>
-            </div>
-
-            <div className="mt-6">
-              <p className="px-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                Beta
-              </p>
-              <nav className="mt-2 flex flex-col gap-0.5">
-                <NavLink href="/app/workouts">Workouts</NavLink>
-                <NavLink href="/app/programs">Programs</NavLink>
-              </nav>
             </div>
 
             {user.isAdmin ? (
               <div className="mt-6">
-                <p className="px-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                  Admin
-                </p>
-                <nav className="mt-2 flex flex-col gap-0.5">
-                  <NavLink href="/app/admin" match="exact">Insights</NavLink>
-                  <NavLink href="/app/admin/debug">Debug</NavLink>
-                  <NavLink href="/app/admin/evals">Evals</NavLink>
+                <p className={sectionLabelClass}>Admin</p>
+                <nav aria-label="Admin" className="mt-2 flex flex-col gap-0.5">
+                  <NavLink href="/app/admin" icon={ShieldCheck} match="exact">Insights</NavLink>
+                  <NavLink href="/app/admin/debug" icon={Bug}>Debug</NavLink>
+                  <NavLink href="/app/admin/evals" icon={FlaskConical}>Evals</NavLink>
                 </nav>
               </div>
             ) : null}
 
-            {!user.authConfigured ? (
-              <div className="mt-auto">
-                <p className="ff-card-soft px-3 py-2.5 text-sm leading-6 text-[var(--muted)]">
+            <div className="mt-auto space-y-3 pt-6">
+              {!user.authConfigured ? (
+                <p className="rounded-xl bg-surface px-3 py-2.5 text-xs leading-5 text-muted">
                   Preview mode is active until Supabase env vars are connected.
                 </p>
+              ) : null}
+              <div className="relative overflow-hidden rounded-2xl border border-border bg-surface px-3 pb-0 pt-3">
+                <p className="relative z-10 max-w-[8.5rem] font-frankie text-lg leading-tight text-frankie">
+                  &ldquo;{user.frankieLine}&rdquo;
+                </p>
+                <Image
+                  alt="Frankie"
+                  className="relative -mb-1 ml-auto -mt-6 h-24 w-24 object-contain object-bottom"
+                  height={96}
+                  src={FRANKIE_PORTRAIT}
+                  width={96}
+                />
               </div>
-            ) : null}
+            </div>
           </aside>
 
-          <div className="flex min-w-0 flex-1 flex-col">
-            <header className="border-b border-[var(--border)] px-4 py-3 sm:px-5">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="min-w-0">
-                  {pageMeta.eyebrow ? <p className="ff-kicker">{pageMeta.eyebrow}</p> : null}
-                  <div className={pageMeta.eyebrow ? "mt-1" : ""}>
-                    <h1 className="text-base font-semibold tracking-[-0.02em] sm:text-lg">
+          <div className="flex min-w-0 flex-1 flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0">
+            <header className="border-b border-border px-4 py-3 sm:px-5">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Link aria-label="Frankie Fit home" className="lg:hidden" href="/app/chat">
+                    <FrankieAvatar mood="happy" size={36} />
+                  </Link>
+                  <div className="min-w-0">
+                    {pageMeta.eyebrow ? <p className="ff-kicker">{pageMeta.eyebrow}</p> : null}
+                    <h1 className={`truncate text-base font-semibold tracking-[-0.02em] sm:text-lg ${pageMeta.eyebrow ? "mt-1" : ""}`}>
                       {pageMeta.title}
                     </h1>
+                    {pageMeta.subtitle ? (
+                      <p className="mt-0.5 hidden max-w-3xl text-sm leading-6 text-muted sm:block">{pageMeta.subtitle}</p>
+                    ) : null}
+                    {isDashboardRoute ? (
+                      <p className="mt-0.5 hidden max-w-3xl text-sm leading-6 text-muted sm:block">{dashboardBody}</p>
+                    ) : null}
                   </div>
-                  {pageMeta.subtitle ? (
-                    <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-                      {pageMeta.subtitle}
-                    </p>
-                  ) : null}
-                  {isDashboardRoute ? (
-                    <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-                      {dashboardBody}
-                    </p>
-                  ) : null}
                 </div>
 
-                <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+                <div className="flex flex-none items-center justify-end gap-2 sm:gap-3">
                   {user.authConfigured ? (
                     <NotificationBell initialUnreadCount={user.unreadNotificationCount} />
                   ) : null}
-                  {user.authConfigured ? (
-                    <div className="relative" ref={profileMenuRef}>
-                      <button
-                        aria-expanded={profileMenuOpen}
-                        aria-label="Account menu"
-                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-sm font-semibold text-white shadow-[0_10px_22px_rgba(29,78,216,0.32)] transition hover:brightness-110"
-                        onClick={() => setProfileMenuOpen((current) => !current)}
-                        type="button"
-                      >
-                        {user.initials}
-                      </button>
+                  <div className="relative" ref={profileMenuRef}>
+                    <button
+                      aria-expanded={profileMenuOpen}
+                      aria-label="Account menu"
+                      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-accent-strong text-sm font-semibold text-accent-foreground shadow-[var(--shadow-card)] transition hover:brightness-110"
+                      onClick={() => setProfileMenuOpen((current) => !current)}
+                      type="button"
+                    >
+                      {user.initials}
+                    </button>
 
-                      <div
-                        aria-hidden={!profileMenuOpen}
-                        className={`ff-card absolute right-0 z-30 mt-2 w-60 origin-top-right overflow-hidden p-2 transition-all duration-200 ease-out ${
-                          profileMenuOpen
-                            ? "translate-y-0 scale-100 opacity-100"
-                            : "pointer-events-none -translate-y-1 scale-95 opacity-0"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 px-2 py-1.5">
-                          <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-sm font-semibold text-white shadow-[0_10px_22px_rgba(29,78,216,0.32)]">
-                            {user.initials}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium tracking-[-0.01em]">
-                              {user.displayName}
-                            </p>
-                            <p className="truncate text-xs text-[var(--muted)]">{user.subtitle}</p>
-                          </div>
+                    <div
+                      aria-hidden={!profileMenuOpen}
+                      className={`ff-card absolute right-0 z-30 mt-2 w-64 origin-top-right overflow-hidden p-2 transition-all duration-200 ease-out ${
+                        profileMenuOpen
+                          ? "translate-y-0 scale-100 opacity-100"
+                          : "pointer-events-none -translate-y-1 scale-95 opacity-0"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 px-2 py-1.5">
+                        <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent-strong text-sm font-semibold text-accent-foreground">
+                          {user.initials}
                         </div>
-                        <div className="my-1.5 border-t border-[var(--border)]" />
-                        <Link
-                          className="block rounded-[0.5rem] px-2.5 py-2 text-sm font-medium text-[var(--foreground)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)]"
-                          href="/app/profile"
-                          onClick={() => setProfileMenuOpen(false)}
-                        >
-                          Profile
-                        </Link>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium tracking-[-0.01em]">{user.displayName}</p>
+                          <p className="truncate text-xs text-muted">{user.subtitle}</p>
+                        </div>
+                      </div>
+                      <div className="my-1.5 border-t border-border" />
+                      <p className="px-2.5 pb-1.5 pt-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted">
+                        Theme
+                      </p>
+                      <ThemeToggle className="mx-1" />
+                      <div className="my-1.5 border-t border-border" />
+                      {user.isAdmin ? (
+                        <div className="lg:hidden">
+                          {[
+                            ["/app/admin", "Insights"],
+                            ["/app/admin/debug", "Debug"],
+                            ["/app/admin/evals", "Evals"]
+                          ].map(([href, label]) => (
+                            <Link
+                              className="block rounded-[0.5rem] px-2.5 py-2 text-sm font-medium text-foreground transition hover:bg-surface-contrast"
+                              href={href}
+                              key={href}
+                              onClick={() => setProfileMenuOpen(false)}
+                            >
+                              {label}
+                            </Link>
+                          ))}
+                          <div className="my-1.5 border-t border-border" />
+                        </div>
+                      ) : null}
+                      <Link
+                        className="block rounded-[0.5rem] px-2.5 py-2 text-sm font-medium text-foreground transition hover:bg-surface-contrast"
+                        href="/app/profile"
+                        onClick={() => setProfileMenuOpen(false)}
+                      >
+                        Profile
+                      </Link>
+                      {user.authConfigured ? (
                         <form action={signOut}>
                           <button
-                            className="mt-1 block w-full cursor-pointer rounded-[0.5rem] px-2.5 py-2 text-left text-sm font-medium text-[var(--foreground)] transition hover:bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)]"
+                            className="mt-1 block w-full cursor-pointer rounded-[0.5rem] px-2.5 py-2 text-left text-sm font-medium text-foreground transition hover:bg-surface-contrast"
                             type="submit"
                           >
                             Log out
                           </button>
                         </form>
-                      </div>
+                      ) : null}
                     </div>
-                  ) : null}
+                  </div>
                 </div>
-              </div>
-
-              <div className="mt-4 flex items-center gap-2 overflow-x-auto lg:hidden">
-                <NavLink href="/app/chat">Chat</NavLink>
-                <NavLink href="/app/dashboard">Dashboard</NavLink>
-                <span className="mx-1 h-4 flex-none border-l border-[var(--border)]" />
-                <span className="flex-none text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                  Beta
-                </span>
-                <NavLink href="/app/workouts">Workouts</NavLink>
-                <NavLink href="/app/programs">Programs</NavLink>
-                {user.isAdmin ? (
-                  <>
-                    <span className="mx-1 h-4 flex-none border-l border-[var(--border)]" />
-                    <span className="flex-none text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                      Admin
-                    </span>
-                    <NavLink href="/app/admin" match="exact">Insights</NavLink>
-                    <NavLink href="/app/admin/debug">Debug</NavLink>
-                    <NavLink href="/app/admin/evals">Evals</NavLink>
-                  </>
-                ) : null}
               </div>
             </header>
 
@@ -401,6 +410,29 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
             </main>
           </div>
         </div>
+
+        <nav
+          aria-label="Main"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+        >
+          <div className="mx-auto flex max-w-md items-end justify-between gap-1 pt-1.5 pb-1.5">
+            <NavLink href="/app/dashboard" icon={ChartColumn} variant="tab">Progress</NavLink>
+            <NavLink href="/app/workouts" icon={Dumbbell} variant="tab">Workouts</NavLink>
+            <Link
+              aria-current={isChatRoute ? "page" : undefined}
+              aria-label="Chat with Frankie"
+              className="flex flex-1 flex-col items-center gap-0.5 text-[0.68rem] font-semibold text-frankie"
+              href="/app/chat"
+            >
+              <span className={`-mt-6 rounded-full bg-surface p-1 shadow-[var(--shadow-card)] ${isChatRoute ? "ring-2 ring-brand" : ""}`}>
+                <FrankieAvatar mood="happy" size={48} />
+              </span>
+              Frankie
+            </Link>
+            <NavLink href="/app/programs" icon={CalendarDays} variant="tab">Programs</NavLink>
+            <NavLink href="/app/profile" icon={UserRound} variant="tab">Profile</NavLink>
+          </div>
+        </nav>
       </div>
 
       <ActionModal

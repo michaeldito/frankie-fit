@@ -18,8 +18,8 @@ export default async function LoginPage({ searchParams }: AuthPageProps) {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] p-6">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(44,107,103,0.2),transparent_40%)]" />
-      <div className="relative w-full max-w-md rounded-[2rem] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_94%,black_6%)] p-8 shadow-[0_24px_80px_rgba(3,6,5,0.42)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--frankie)_14%,transparent),transparent_40%)]" />
+      <div className="relative w-full max-w-md rounded-[2rem] border border-[var(--border)] bg-surface p-8 shadow-[var(--shadow-soft)]">
         <p className="text-sm uppercase tracking-[0.25em] text-[var(--muted)]">
           Frankie Fit
         </p>
@@ -75,10 +75,10 @@ export default async function LoginPage({ searchParams }: AuthPageProps) {
           </label>
 
           <button
-            className={`w-full rounded-full px-5 py-3 font-medium text-white transition ${
+            className={`w-full rounded-full px-5 py-3 font-medium text-brand-foreground transition ${
               authConfigured
                 ? "bg-[var(--brand)] hover:bg-[var(--brand-strong)]"
-                : "cursor-not-allowed bg-[color:color-mix(in_srgb,var(--brand)_55%,black_45%)] opacity-65"
+                : "cursor-not-allowed bg-brand opacity-50"
             }`}
             disabled={!authConfigured}
             type="submit"

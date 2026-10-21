@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { dailyLine } from "@frankie-fit/brand-core";
+import { getPacificDateKey } from "@frankie-fit/dashboard-core";
 import { redirect } from "next/navigation";
 import {
   UserAppShell,
@@ -28,14 +30,16 @@ const previewUser: UserAppShellUser = {
   nextStepDescription:
     "A short update will help Frankie keep today's guidance grounded in how the week is actually feeling.",
   nextStepHref: "/app/chat",
-  nextStepCtaLabel: "Open chat"
+  nextStepCtaLabel: "Open chat",
+  frankieLine: ""
 };
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const context = await getCurrentAppContext();
+  const frankieLine = dailyLine(getPacificDateKey());
 
   if (!context.authConfigured) {
-    return <UserAppShell user={previewUser}>{children}</UserAppShell>;
+    return <UserAppShell user={{ ...previewUser, frankieLine }}>{children}</UserAppShell>;
   }
 
   if (!context.user) {
@@ -72,7 +76,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     nextStepTitle: nextStep.title,
     nextStepDescription: nextStep.description,
     nextStepHref: nextStep.href,
-    nextStepCtaLabel: nextStep.ctaLabel
+    nextStepCtaLabel: nextStep.ctaLabel,
+    frankieLine
   };
 
   return <UserAppShell user={shellUser}>{children}</UserAppShell>;

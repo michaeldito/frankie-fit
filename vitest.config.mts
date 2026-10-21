@@ -33,6 +33,7 @@ export default defineConfig({
       include: [
         "apps/web/components/admin/coaching-memory-grid.tsx",
         "apps/web/components/chat/logged-entry-format.ts",
+        "apps/web/components/chat/message-mood.ts",
         "apps/web/components/chat/quick-start.ts",
         "apps/web/lib/admin-eval-runner.ts",
         "apps/web/lib/admin-evals-data.ts",
@@ -40,6 +41,7 @@ export default defineConfig({
         "apps/web/lib/chat.ts",
         "apps/web/lib/notifications.ts",
         "apps/web/lib/rate-limit.ts",
+        "apps/web/lib/theme-preference.ts",
         "apps/web/lib/workouts/save-workout-session.ts",
         "apps/web/lib/workouts/validation.ts",
         "apps/web/lib/ai/context/load-chat-context.ts",

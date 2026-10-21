@@ -440,7 +440,7 @@ export function WorkoutLogger() {
           <button
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
               mode === "simple"
-                ? "bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-white"
+                ? "bg-brand text-brand-foreground"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
             }`}
             onClick={() => handleModeChange("simple")}
@@ -451,7 +451,7 @@ export function WorkoutLogger() {
           <button
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
               mode === "circuit"
-                ? "bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] text-white"
+                ? "bg-brand text-brand-foreground"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
             }`}
             onClick={() => handleModeChange("circuit")}
@@ -466,7 +466,7 @@ export function WorkoutLogger() {
             <button
               className={`rounded-full px-3 py-1.5 font-medium transition ${
                 weightUnit === unit
-                  ? "bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)]"
+                  ? "bg-surface-contrast"
                   : "text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
               key={unit}
@@ -571,7 +571,7 @@ export function WorkoutLogger() {
                     <div className="ff-card-soft flex flex-wrap gap-2 p-3">
                       {fixedEntries.map(({ slot, index }) => (
                         <span
-                          className="flex items-center gap-1.5 rounded-full bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)] px-3 py-1.5 text-xs"
+                          className="flex items-center gap-1.5 rounded-full bg-surface-contrast px-3 py-1.5 text-xs"
                           key={`${slot.slug}-${index}`}
                         >
                           {slot.name}
@@ -687,7 +687,7 @@ export function WorkoutLogger() {
         </label>
       </div>
 
-      {error ? <p className="text-sm text-red-400">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       <div className="flex items-center gap-3">
         <button

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { saveProfile } from "@/app/app/(core)/profile/actions";
+import { ThemeToggle } from "@/components/app-shell/theme-toggle";
 import { PERSONAS } from "@/lib/ai/prompts/personas";
 import {
   formatScheduleNotes,
@@ -173,6 +174,16 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           redoing onboarding from scratch.
         </p>
         </header>
+
+        <section className="ff-panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="ff-kicker">Appearance</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              Cream by day, Midnight by night, or follow your device.
+            </p>
+          </div>
+          <ThemeToggle className="w-full sm:w-80" />
+        </section>
 
         {saved ? (
           <div className="rounded-[1.5rem] border border-[color:color-mix(in_srgb,var(--brand)_55%,var(--border)_45%)] bg-[color:color-mix(in_srgb,var(--brand)_14%,var(--surface)_86%)] px-5 py-4 text-sm leading-6 text-[var(--foreground)] shadow-[var(--shadow-card)]">
@@ -631,7 +642,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         </form>
       </div>
 
-      <div className="-mx-4 -mb-4 shrink-0 border-t border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_84%,black_16%)]/96 px-5 py-4 backdrop-blur-xl sm:-mx-6 sm:-mb-5 sm:px-6 sm:py-5">
+      <div className="-mx-4 -mb-4 shrink-0 border-t border-[var(--border)] bg-surface/96 px-5 py-4 backdrop-blur-xl sm:-mx-6 sm:-mb-5 sm:px-6 sm:py-5">
         <div className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center justify-between gap-4">
           <p className="max-w-2xl text-sm leading-6 text-[var(--muted)]">
             Saving here updates the coaching context Frankie uses across chat, dashboard summaries,

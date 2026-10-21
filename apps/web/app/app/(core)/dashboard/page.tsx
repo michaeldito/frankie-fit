@@ -1,4 +1,18 @@
+import Image from "next/image";
 import Link from "next/link";
+import {
+  EMPTY_STATE_LINES,
+  dailyLine,
+  frankieMoodFor,
+  greetingFor,
+  type FrankieMood,
+  type Pillar
+} from "@frankie-fit/brand-core";
+import { getPacificDateKey, getPacificHour } from "@frankie-fit/dashboard-core";
+import { FRANKIE_MOOD_ART } from "@/components/frankie/frankie-art";
+import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
+import { FrankieSays } from "@/components/frankie/frankie-says";
+import { PILLAR_STYLES } from "@/components/frankie/pillars";
 import {
   getDashboardData,
   type DashboardRecentItem,
@@ -9,7 +23,7 @@ import {
   type WellnessDashboardData,
   type WellnessTrendPoint
 } from "@/lib/dashboard";
-import { getCurrentAppContext } from "@/lib/profile";
+import { getCurrentAppContext, getDisplayName } from "@/lib/profile";
 
 type DashboardPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -17,7 +31,7 @@ type DashboardPageProps = {
 
 type DashboardTabId = "exercise" | "diet" | "lifestyle" | "wellness";
 
-const dashboardTabs: Array<{ id: DashboardTabId; label: string }> = [
+const dashboardTabs: Array<{ id: DashboardTabId & Pillar; label: string }> = [
   { id: "exercise", label: "Exercise" },
   { id: "diet", label: "Diet" },
   { id: "lifestyle", label: "Lifestyle" },
@@ -36,11 +50,25 @@ function getActiveTab(value: string | undefined): DashboardTabId {
   return "exercise";
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+const EMPTY_STATE_MOODS: Record<Pillar, FrankieMood> = {
+  exercise: "waiting",
+  diet: "hungry",
+  wellness: "snuggle",
+  lifestyle: "stretching"
+};
+
+function SummaryCard({ label, value, pillar }: { label: string; value: string; pillar: Pillar }) {
+  const { icon: Icon, soft, text } = PILLAR_STYLES[pillar];
+
   return (
-    <div className="ff-card p-4">
-      <p className="text-sm text-[var(--muted)]">{label}</p>
-      <p className="mt-2 text-xl font-semibold tracking-[-0.02em]">{value}</p>
+    <div className="ff-card flex items-center gap-3 p-4">
+      <span className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${soft} ${text}`}>
+        <Icon aria-hidden className="h-5 w-5" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-xl font-semibold tracking-[-0.02em]">{value}</p>
+        <p className="text-sm text-[var(--muted)]">{label}</p>
+      </div>
     </div>
   );
 }
@@ -64,26 +92,37 @@ function SectionCard({
 }
 
 function EmptyState({
+  pillar,
   title,
   body,
   href,
   cta
 }: {
+  pillar: Pillar;
   title: string;
   body: string;
   href: string;
   cta: string;
 }) {
   return (
-    <SectionCard eyebrow="Getting started" title={title}>
-      <p className="max-w-2xl leading-7 text-[var(--muted)]">{body}</p>
-      <Link
-        className="ff-button-primary mt-5 px-4 py-2 text-sm"
-        href={href}
-      >
-        {cta}
-      </Link>
-    </SectionCard>
+    <section className="ff-panel flex flex-col items-center gap-5 p-6 text-center sm:flex-row sm:text-left">
+      <Image
+        alt=""
+        aria-hidden
+        className="h-28 w-28 flex-none object-contain"
+        height={112}
+        src={FRANKIE_MOOD_ART[EMPTY_STATE_MOODS[pillar]]}
+        width={112}
+      />
+      <div className="min-w-0">
+        <p className="ff-kicker">{title}</p>
+        <p className="mt-2 font-frankie text-2xl leading-tight text-frankie">{EMPTY_STATE_LINES[pillar]}</p>
+        <p className="mt-2 max-w-2xl leading-7 text-[var(--muted)]">{body}</p>
+        <Link className="ff-button-primary mt-4 px-4 py-2 text-sm" href={href}>
+          {cta}
+        </Link>
+      </div>
+    </section>
   );
 }
 
@@ -133,7 +172,7 @@ function ExerciseTrend({ trend }: { trend: DashboardTrendPoint[] }) {
             <div className="flex h-full flex-col items-center justify-end gap-3" key={point.label}>
               <div className="text-xs text-[var(--muted)]">{point.value}</div>
               <div
-                className="w-full rounded-t-[1.1rem] bg-[linear-gradient(180deg,rgba(147,197,253,0.98)_0%,rgba(37,99,235,0.98)_100%)] shadow-[0_12px_28px_rgba(29,78,216,0.22)]"
+                className="w-full rounded-t-[1.1rem] bg-pillar-exercise"
                 style={{ height: `${height}px` }}
               />
               <div className="text-xs uppercase tracking-[0.15em] text-[var(--muted)]">
@@ -177,7 +216,10 @@ function BreakdownList({
 function FrankieInsight({ body }: { body: string }) {
   return (
     <SectionCard eyebrow="Frankie's read" title="What stands out right now">
-      <p className="leading-7">{body}</p>
+      <div className="flex items-start gap-3">
+        <FrankieAvatar mood="focused" size={40} />
+        <p className="leading-7">{body}</p>
+      </div>
     </SectionCard>
   );
 }
@@ -212,6 +254,7 @@ function ExerciseTab({ data }: { data: ExerciseDashboardData }) {
   if (data.empty) {
     return (
       <EmptyState
+        pillar="exercise"
         title="No exercise data yet"
         body={data.insight}
         href="/app/chat"
@@ -235,7 +278,7 @@ function ExerciseTab({ data }: { data: ExerciseDashboardData }) {
 
       <div className="grid gap-3 md:grid-cols-3">
         {data.metrics.map((metric) => (
-          <SummaryCard key={metric.label} label={metric.label} value={metric.value} />
+          <SummaryCard key={metric.label} label={metric.label} pillar="exercise" value={metric.value} />
         ))}
       </div>
       <ExerciseTrend trend={data.trend} />
@@ -257,6 +300,7 @@ function DietTab({ data }: { data: DietDashboardData }) {
   if (data.empty) {
     return (
       <EmptyState
+        pillar="diet"
         title="No diet data yet"
         body={data.insight}
         href="/app/chat"
@@ -279,7 +323,7 @@ function DietTab({ data }: { data: DietDashboardData }) {
 
       <div className="grid gap-3 md:grid-cols-3">
         {data.metrics.map((metric) => (
-          <SummaryCard key={metric.label} label={metric.label} value={metric.value} />
+          <SummaryCard key={metric.label} label={metric.label} pillar="diet" value={metric.value} />
         ))}
       </div>
       <BreakdownList
@@ -300,6 +344,7 @@ function LifestyleTab({ data }: { data: LifestyleDashboardData }) {
   if (data.empty) {
     return (
       <EmptyState
+        pillar="lifestyle"
         title="No lifestyle data yet"
         body={data.insight}
         href="/app/chat"
@@ -322,7 +367,7 @@ function LifestyleTab({ data }: { data: LifestyleDashboardData }) {
 
       <div className="grid gap-3 md:grid-cols-3">
         {data.metrics.map((metric) => (
-          <SummaryCard key={metric.label} label={metric.label} value={metric.value} />
+          <SummaryCard key={metric.label} label={metric.label} pillar="lifestyle" value={metric.value} />
         ))}
       </div>
       <BreakdownList
@@ -343,6 +388,7 @@ function WellnessTab({ data }: { data: WellnessDashboardData }) {
   if (data.empty) {
     return (
       <EmptyState
+        pillar="wellness"
         title="No wellness data yet"
         body={data.insight}
         href="/app/chat"
@@ -365,7 +411,7 @@ function WellnessTab({ data }: { data: WellnessDashboardData }) {
 
       <div className="grid gap-3 md:grid-cols-3">
         {data.metrics.map((metric) => (
-          <SummaryCard key={metric.label} label={metric.label} value={metric.value} />
+          <SummaryCard key={metric.label} label={metric.label} pillar="wellness" value={metric.value} />
         ))}
       </div>
       <WellnessTrend trend={data.trend} />
@@ -388,9 +434,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const activeTab = getActiveTab(getSearchParam(resolvedSearchParams.tab));
   const context = await getCurrentAppContext();
   const dashboardData = await getDashboardData(context);
+  const hour = getPacificHour();
+  const firstName = context.user ? getDisplayName(context.user, context.profile).split(" ")[0] : null;
 
   return (
     <div className="space-y-4">
+      <h2 className="text-2xl font-semibold tracking-[-0.03em] sm:text-[1.7rem]">
+        {greetingFor(hour, firstName)} <span aria-hidden>🐾</span>
+      </h2>
+      <FrankieSays line={dailyLine(getPacificDateKey())} mood={frankieMoodFor({ hourPacific: hour })} />
+
       {!dashboardData.ready ? (
         <section className="ff-panel p-4">
           <p className="ff-kicker">
@@ -406,20 +459,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </section>
       ) : null}
 
-      <nav className="flex gap-1 border-b border-[var(--border)]">
+      <nav aria-label="Pillars" className="flex w-full gap-1 overflow-x-auto rounded-2xl border border-border bg-surface-strong p-1 sm:w-fit">
         {dashboardTabs.map((tab) => {
           const active = tab.id === activeTab;
+          const { icon: Icon, text } = PILLAR_STYLES[tab.id];
 
           return (
             <Link
-              className={`-mb-px rounded-t-[0.5rem] border border-b-0 px-3 py-2 text-sm font-semibold transition ${
-                active
-                  ? "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--foreground)]"
-                  : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+              aria-current={active ? "page" : undefined}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition sm:flex-none ${
+                active ? "bg-surface text-foreground shadow-[var(--shadow-card)]" : "text-muted hover:text-foreground"
               }`}
               href={`/app/dashboard?tab=${tab.id}`}
               key={tab.id}
             >
+              <Icon aria-hidden className={`h-4 w-4 ${active ? text : ""}`} />
               {tab.label}
             </Link>
           );

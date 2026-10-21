@@ -50,7 +50,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
     : "A short update is enough. Frankie can work from movement, meals, wellness, or a blend of all three.";
   const assistantCardClass = "ff-card max-w-3xl px-4 py-3 sm:px-5 sm:py-3.5";
   const userCardClass =
-    "ml-auto max-w-2xl rounded-[1.2rem] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(96,165,250,0.98)_0%,rgba(37,99,235,0.98)_100%)] px-4 py-3 text-white shadow-[0_18px_34px_rgba(29,78,216,0.32)] sm:px-5 sm:py-3.5";
+    "ml-auto max-w-2xl rounded-[1.2rem] rounded-br-md bg-accent-strong px-4 py-3 text-accent-foreground shadow-[0_12px_28px_color-mix(in_srgb,var(--accent-strong)_28%,transparent)] sm:px-5 sm:py-3.5";
   const frankieVersionLabel = getFrankieVersionLabel(FRANKIE_PROMPT_VERSION);
 
   return (
