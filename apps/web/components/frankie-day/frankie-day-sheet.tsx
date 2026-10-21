@@ -64,7 +64,7 @@ export function FrankieDaySheet() {
             Frankie&apos;s Day
           </h2>
           <div className="flex items-center gap-2">
-            <BiscuitJar />
+            <BiscuitJar tooltipAlign="end" />
             <button
               aria-label="Close"
               className="ff-button-secondary h-9 w-9 cursor-pointer p-0"

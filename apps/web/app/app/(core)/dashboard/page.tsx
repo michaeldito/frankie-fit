@@ -75,18 +75,15 @@ function SummaryCard({ label, value, pillar }: { label: string; value: string; p
 }
 
 function SectionCard({
-  eyebrow,
   title,
   children
 }: {
-  eyebrow: string;
   title: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="ff-panel p-4">
-      <p className="ff-kicker">{eyebrow}</p>
-      <h2 className="mt-2 text-base font-semibold tracking-[-0.02em]">{title}</h2>
+      <h2 className="text-base font-semibold tracking-[-0.02em]">{title}</h2>
       <div className="mt-3">{children}</div>
     </section>
   );
@@ -137,7 +134,7 @@ function RecentList({
   emptyCopy: string;
 }) {
   return (
-    <SectionCard eyebrow="Recent logs" title={title}>
+    <SectionCard title={title}>
       {items.length > 0 ? (
         <div className="space-y-3">
           {items.map((item) => (
@@ -164,7 +161,7 @@ function ExerciseTrend({ trend }: { trend: DashboardTrendPoint[] }) {
   const maxValue = Math.max(...trend.map((point) => point.value), 1);
 
   return (
-    <SectionCard eyebrow="7-day trend" title="Session rhythm">
+    <SectionCard title="Session rhythm, last 7 days">
       <div className="grid h-56 grid-cols-7 items-end gap-3">
         {trend.map((point) => {
           const height = point.value > 0 ? Math.max((point.value / maxValue) * 180, 18) : 10;
@@ -197,7 +194,7 @@ function BreakdownList({
   emptyCopy: string;
 }) {
   return (
-    <SectionCard eyebrow="Pattern summary" title={title}>
+    <SectionCard title={title}>
       {items.length > 0 ? (
         <div className="space-y-3">
           {items.map((item) => (
@@ -216,7 +213,7 @@ function BreakdownList({
 
 function FrankieInsight({ body }: { body: string }) {
   return (
-    <SectionCard eyebrow="Frankie's read" title="What stands out right now">
+    <SectionCard title="What stands out right now">
       <div className="flex items-start gap-3">
         <FrankieAvatar mood="focused" size={40} />
         <p className="leading-7">{body}</p>
@@ -227,7 +224,7 @@ function FrankieInsight({ body }: { body: string }) {
 
 function WellnessTrend({ trend }: { trend: WellnessTrendPoint[] }) {
   return (
-    <SectionCard eyebrow="7-day trend" title="Energy, stress, and recovery">
+    <SectionCard title="Energy, stress, and recovery, last 7 days">
       <div className="space-y-3">
         {trend.map((point) => (
           <div
@@ -268,7 +265,7 @@ function ExerciseTab({ data }: { data: ExerciseDashboardData }) {
     <div className="space-y-3">
       <section className="grid gap-3 md:grid-cols-2">
         <FrankieInsight body={data.insight} />
-        <SectionCard eyebrow="Keep it simple" title="What good logging looks like">
+        <SectionCard title="What good logging looks like">
           <p className="leading-7 text-[var(--muted)]">
             A quick note on what you did is enough — Frankie does not need exact reps or a
             perfect number. Duration and intensity help when you have them, but they are
@@ -283,16 +280,18 @@ function ExerciseTab({ data }: { data: ExerciseDashboardData }) {
         ))}
       </div>
       <ExerciseTrend trend={data.trend} />
-      <BreakdownList
-        emptyCopy="As activity types show up, Frankie will summarize the mix here."
-        items={data.breakdown}
-        title="Activity breakdown"
-      />
-      <RecentList
-        emptyCopy="Your recent activity will show up here once you start logging."
-        items={data.recent}
-        title="Latest activity"
-      />
+      <div className="grid gap-3 md:grid-cols-2">
+        <BreakdownList
+          emptyCopy="As activity types show up, Frankie will summarize the mix here."
+          items={data.breakdown}
+          title="Activity breakdown"
+        />
+        <RecentList
+          emptyCopy="Your recent activity will show up here once you start logging."
+          items={data.recent}
+          title="Latest activity"
+        />
+      </div>
     </div>
   );
 }
@@ -314,7 +313,7 @@ function DietTab({ data }: { data: DietDashboardData }) {
     <div className="space-y-3">
       <section className="grid gap-3 md:grid-cols-2">
         <FrankieInsight body={data.insight} />
-        <SectionCard eyebrow="Use this well" title="What good logging looks like">
+        <SectionCard title="What good logging looks like">
           <p className="leading-7 text-[var(--muted)]">
             Keep meal updates simple. Frankie does not need perfect nutrition detail to notice
             useful patterns. A quick note about what you ate is enough.
@@ -327,16 +326,18 @@ function DietTab({ data }: { data: DietDashboardData }) {
           <SummaryCard key={metric.label} label={metric.label} pillar="diet" value={metric.value} />
         ))}
       </div>
-      <BreakdownList
-        emptyCopy="As meals get logged, Frankie will summarize your patterns here."
-        items={data.patterns}
-        title="What shows up most"
-      />
-      <RecentList
-        emptyCopy="Your latest meals and snacks will show up here."
-        items={data.recent}
-        title="Latest meals"
-      />
+      <div className="grid gap-3 md:grid-cols-2">
+        <BreakdownList
+          emptyCopy="As meals get logged, Frankie will summarize your patterns here."
+          items={data.patterns}
+          title="What shows up most"
+        />
+        <RecentList
+          emptyCopy="Your latest meals and snacks will show up here."
+          items={data.recent}
+          title="Latest meals"
+        />
+      </div>
     </div>
   );
 }
@@ -358,7 +359,7 @@ function LifestyleTab({ data }: { data: LifestyleDashboardData }) {
     <div className="space-y-3">
       <section className="grid gap-3 md:grid-cols-2">
         <FrankieInsight body={data.insight} />
-        <SectionCard eyebrow="Keep it simple" title="What good logging looks like">
+        <SectionCard title="What good logging looks like">
           <p className="leading-7 text-[var(--muted)]">
             Anything outside a workout or a meal counts — social plans, family time,
             entertainment, travel, or substance use. A quick note is enough.
@@ -371,16 +372,18 @@ function LifestyleTab({ data }: { data: LifestyleDashboardData }) {
           <SummaryCard key={metric.label} label={metric.label} pillar="lifestyle" value={metric.value} />
         ))}
       </div>
-      <BreakdownList
-        emptyCopy="As lifestyle updates get logged, Frankie will summarize your patterns here."
-        items={data.patterns}
-        title="What shows up most"
-      />
-      <RecentList
-        emptyCopy="Your latest lifestyle logs will show up here."
-        items={data.recent}
-        title="Latest lifestyle logs"
-      />
+      <div className="grid gap-3 md:grid-cols-2">
+        <BreakdownList
+          emptyCopy="As lifestyle updates get logged, Frankie will summarize your patterns here."
+          items={data.patterns}
+          title="What shows up most"
+        />
+        <RecentList
+          emptyCopy="Your latest lifestyle logs will show up here."
+          items={data.recent}
+          title="Latest lifestyle logs"
+        />
+      </div>
     </div>
   );
 }
@@ -402,7 +405,7 @@ function WellnessTab({ data }: { data: WellnessDashboardData }) {
     <div className="space-y-3">
       <section className="grid gap-3 md:grid-cols-2">
         <FrankieInsight body={data.insight} />
-        <SectionCard eyebrow="Keep it light" title="What to tell Frankie">
+        <SectionCard title="What to tell Frankie">
           <p className="leading-7 text-[var(--muted)]">
             A good check-in can be short: energy, soreness, mood, stress, or motivation. Frankie
             does not need a perfect journal entry to keep the coaching grounded.
@@ -416,16 +419,18 @@ function WellnessTab({ data }: { data: WellnessDashboardData }) {
         ))}
       </div>
       <WellnessTrend trend={data.trend} />
-      <BreakdownList
-        emptyCopy="As check-ins come in, Frankie will summarize which signals show up most here."
-        items={data.breakdown}
-        title="What you check in on most"
-      />
-      <RecentList
-        emptyCopy="Your check-ins will show up here once you start saving them."
-        items={data.recent}
-        title="Latest check-ins"
-      />
+      <div className="grid gap-3 md:grid-cols-2">
+        <BreakdownList
+          emptyCopy="As check-ins come in, Frankie will summarize which signals show up most here."
+          items={data.breakdown}
+          title="What you check in on most"
+        />
+        <RecentList
+          emptyCopy="Your check-ins will show up here once you start saving them."
+          items={data.recent}
+          title="Latest check-ins"
+        />
+      </div>
     </div>
   );
 }

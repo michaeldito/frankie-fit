@@ -13,7 +13,27 @@ export const NEED_STICKERS: Record<FrankieNeed, StickerName> = {
   snuggle: "zzz"
 };
 
-export function BiscuitJar({ className = "" }: { className?: string }) {
+// Styled hover/focus label; the native title tooltip is slow and unstyled.
+export type TooltipAlign = "start" | "center" | "end";
+
+const ALIGN_CLASSES: Record<TooltipAlign, string> = {
+  start: "left-0",
+  center: "left-1/2 -translate-x-1/2",
+  end: "right-0"
+};
+
+function HoverLabel({ text, align }: { text: string; align: TooltipAlign }) {
+  return (
+    <span
+      className={`pointer-events-none absolute bottom-full ${ALIGN_CLASSES[align]} z-30 mb-2 whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 shadow-[var(--shadow-card)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100`}
+      role="tooltip"
+    >
+      {text}
+    </span>
+  );
+}
+
+export function BiscuitJar({ className = "", tooltipAlign = "center" }: { className?: string; tooltipAlign?: TooltipAlign }) {
   const { day, openSheet } = useFrankieDay();
 
   if (!day) return null;
@@ -21,7 +41,7 @@ export function BiscuitJar({ className = "" }: { className?: string }) {
   return (
     <button
       aria-label={`${day.balance} biscuits in the jar. Open Frankie's Day.`}
-      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-frankie/30 bg-frankie-soft px-2.5 py-1 text-sm font-semibold text-foreground transition hover:-translate-y-px ${className}`}
+      className={`group relative inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-frankie/30 bg-frankie-soft px-2.5 py-1 text-sm font-semibold text-foreground transition hover:-translate-y-px ${className}`}
       onClick={openSheet}
       type="button"
     >
@@ -29,13 +49,14 @@ export function BiscuitJar({ className = "" }: { className?: string }) {
       <span className="ff-pop tabular-nums" key={day.balance}>
         {day.balance}
       </span>
+      <HoverLabel align={tooltipAlign} text={`${day.balance} ${day.balance === 1 ? "biscuit" : "biscuits"} in the jar · open Frankie's Day`} />
     </button>
   );
 }
 
 // Tapping a need Frankie wants (and the user can afford) redeems it on the spot; anything else
 // opens the sheet so the user can see why.
-export function NeedsStrip({ size = "md" }: { size?: "sm" | "md" }) {
+export function NeedsStrip({ size = "md", tooltipAlign = "center" }: { size?: "sm" | "md"; tooltipAlign?: TooltipAlign }) {
   const { day, redeem, redeeming, openSheet } = useFrankieDay();
 
   if (!day) return null;
@@ -48,28 +69,30 @@ export function NeedsStrip({ size = "md" }: { size?: "sm" | "md" }) {
         const filled = day.needs[need] === "filled";
         const ready = day.canAfford[need];
         const label = filled
-          ? `${FRANKIE_ACTIONS[need].needLabel} today`
+          ? `${FRANKIE_ACTIONS[need].needLabel} today ✓`
           : ready
-            ? `${FRANKIE_ACTIONS[need].label} (1 biscuit)`
-            : `${FRANKIE_ACTIONS[need].label}: earn a biscuit first`;
+            ? `${FRANKIE_ACTIONS[need].label} · ${FRANKIE_ACTIONS[need].cost} 🦴`
+            : `${FRANKIE_ACTIONS[need].label} · log something to earn a biscuit`;
 
         return (
           <button
             aria-label={label}
-            className={`relative flex ${box} cursor-pointer items-center justify-center rounded-xl border transition ${
+            className={`group relative flex ${box} cursor-pointer items-center justify-center rounded-xl border transition ${
               filled
                 ? "border-success/40 bg-success/10"
                 : ready
-                  ? "animate-pulse border-frankie bg-frankie-soft hover:animate-none hover:-translate-y-px"
-                  : "border-border bg-surface-strong opacity-60 grayscale"
+                  ? "border-frankie bg-frankie-soft hover:-translate-y-px"
+                  : "border-border bg-surface-strong"
             } ${redeeming === need ? "opacity-50" : ""}`}
             disabled={redeeming !== null}
             key={need}
             onClick={() => (ready ? void redeem(need) : openSheet())}
-            title={label}
             type="button"
           >
-            <FrankieSticker name={NEED_STICKERS[need]} size={size === "sm" ? 16 : 20} />
+            <HoverLabel align={tooltipAlign} text={label} />
+            <span className={!filled && !ready ? "opacity-50 grayscale" : ready ? "animate-pulse group-hover:animate-none" : ""}>
+              <FrankieSticker name={NEED_STICKERS[need]} size={size === "sm" ? 16 : 20} />
+            </span>
             {filled ? (
               <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-success text-background">
                 <Check aria-hidden className="h-3 w-3" strokeWidth={3} />
