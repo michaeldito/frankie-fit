@@ -5,6 +5,8 @@ import { moodForMessage, type FrankieMood } from "@frankie-fit/brand-core";
 import { LoggedEntryCard } from "@/components/chat/logged-entry-card";
 import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
 import { FrankieThinking } from "@/components/frankie/frankie-thinking";
+import { BiscuitAwardChip } from "@/components/frankie-day/biscuit-award-chip";
+import type { BiscuitAward } from "@/lib/frankie-day";
 import {
   formatActivityDetail,
   formatActivityTitle,
@@ -35,6 +37,7 @@ type ChatTranscriptMessage = {
 
 type ChatTranscriptProps = {
   assistantCardClass: string;
+  biscuitAwards?: Record<string, BiscuitAward>;
   assistantName?: string;
   showFrankie?: boolean;
   introMessage: string;
@@ -209,6 +212,7 @@ function AssistantRow({
 export function ChatTranscript({
   assistantCardClass,
   assistantName = "Frankie",
+  biscuitAwards = {},
   showFrankie = true,
   introMessage,
   followupMessage,
@@ -326,6 +330,12 @@ export function ChatTranscript({
                   ) : null}
                   {workoutDraft ? (
                     <WorkoutDraftCard messageId={message.id} onSaved={onWorkoutDraftSaved} workoutDraft={workoutDraft} />
+                  ) : null}
+                  {biscuitAwards[message.id] ? (
+                    <BiscuitAwardChip
+                      award={biscuitAwards[message.id]}
+                      isLatest={message.id === messages.at(-1)?.id}
+                    />
                   ) : null}
                 </article>
               );

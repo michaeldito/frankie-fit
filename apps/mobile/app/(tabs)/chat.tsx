@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 
 import { FrankieAvatar, FrankieThinking } from '@/components/frankie';
+import { FrankieDayBar, useFrankieDay } from '@/components/frankie-day';
 import { LoggedEntryCard } from '@/components/logged-entry-card';
 import { QuickStartCard } from '@/components/quick-start-card';
 import { Screen, ScrollCard } from '@/components/frankie-ui';
@@ -61,6 +62,7 @@ type ChatBubble = {
 };
 
 type MobileChatResponse = {
+  biscuitAward?: { messageId: string; earned: number; fullBowl: boolean } | null;
   error: string | null;
   messages: ChatMessageRow[];
   schemaReady: boolean;
@@ -115,6 +117,8 @@ export default function ChatScreen() {
   const { colors } = useTheme();
   const styles = useStyles();
   const scrollRef = useRef<ScrollView>(null);
+  const frankieDay = useFrankieDay();
+  const [biscuitAwards, setBiscuitAwards] = useState<Record<string, { earned: number; fullBowl: boolean }>>({});
   const [draft, setDraft] = useState('');
   const [activeTemplate, setActiveTemplate] = useState<QuickStartOption | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -220,6 +224,12 @@ export default function ChatScreen() {
       if (replyBubbles.at(-1)?.messageType === 'log_confirmation') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
+
+      const award = replyResponse.biscuitAward;
+      if (award) {
+        setBiscuitAwards((current) => ({ ...current, [award.messageId]: award }));
+        frankieDay.refresh();
+      }
     } catch (sendError) {
       const message = sendError instanceof Error ? sendError.message : 'Frankie could not send that.';
       setError(message);
@@ -233,6 +243,7 @@ export default function ChatScreen() {
 
   return (
     <Screen inTabs padded={false}>
+      <FrankieDayBar />
       <KeyboardAvoidingView behavior="padding" style={styles.keyboard}>
         <ScrollView
           ref={scrollRef}
@@ -316,6 +327,13 @@ export default function ChatScreen() {
                         pillar="wellness"
                       />
                     </View>
+                  ) : null}
+                  {biscuitAwards[message.id] ? (
+                    <Text style={styles.biscuitChip}>
+                      🦴 +{biscuitAwards[message.id].earned}{' '}
+                      {biscuitAwards[message.id].earned === 1 ? 'biscuit' : 'biscuits'}
+                      {biscuitAwards[message.id].fullBowl ? ' · Full bowl bonus!' : ''}
+                    </Text>
                   ) : null}
                 </View>
               );
@@ -500,6 +518,20 @@ const useStyles = createThemedStyles((colors) => ({
     backgroundColor: colors.surfaceStrong,
     paddingHorizontal: 14,
     paddingVertical: 8,
+  },
+  biscuitChip: {
+    alignSelf: 'flex-start',
+    overflow: 'hidden',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.frankieSoft,
+    color: colors.foreground,
+    fontSize: 12,
+    fontWeight: '800',
+    marginLeft: 42,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   logCards: {
     gap: 8,

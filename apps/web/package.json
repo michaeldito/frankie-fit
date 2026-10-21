@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@frankie-fit/brand-core": "workspace:*",
+    "@frankie-fit/companion-core": "workspace:*",
     "@frankie-fit/dashboard-core": "workspace:*",
     "@frankie-fit/profile-core": "workspace:*",
     "@frankie-fit/workout-core": "workspace:*",

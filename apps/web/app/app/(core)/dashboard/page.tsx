@@ -12,6 +12,7 @@ import { getPacificDateKey, getPacificHour } from "@frankie-fit/dashboard-core";
 import { FRANKIE_MOOD_ART } from "@/components/frankie/frankie-art";
 import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
 import { FrankieSays } from "@/components/frankie/frankie-says";
+import { FrankieDayInline } from "@/components/frankie-day/frankie-day-inline";
 import { PILLAR_STYLES } from "@/components/frankie/pillars";
 import {
   getDashboardData,
@@ -442,7 +443,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <h2 className="text-2xl font-semibold tracking-[-0.03em] sm:text-[1.7rem]">
         {greetingFor(hour, firstName)} <span aria-hidden>🐾</span>
       </h2>
-      <FrankieSays line={dailyLine(getPacificDateKey())} mood={frankieMoodFor({ hourPacific: hour })} />
+      <FrankieSays line={dailyLine(getPacificDateKey())} mood={frankieMoodFor({ hourPacific: hour })}>
+        <FrankieDayInline />
+      </FrankieSays>
 
       {!dashboardData.ready ? (
         <section className="ff-panel p-4">

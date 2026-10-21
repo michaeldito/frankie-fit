@@ -450,7 +450,27 @@ textarea::placeholder {
   }
 }
 
+@keyframes ff-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--ff-burst-x, 0px)), -150px) scale(1.1) rotate(18deg);
+  }
+}
+
 @layer utilities {
+  .ff-burst {
+    animation: ff-burst 1100ms ease-out both;
+  }
+
   .ff-pop {
     animation: ff-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
@@ -461,7 +481,8 @@ textarea::placeholder {
 
   @media (prefers-reduced-motion: reduce) {
     .ff-pop,
-    .ff-wiggle {
+    .ff-wiggle,
+    .ff-burst {
       animation: none;
     }
   }

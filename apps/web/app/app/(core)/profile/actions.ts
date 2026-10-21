@@ -13,6 +13,10 @@ import {
 } from "@/lib/profile-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+function parseNudgeLevel(value: string): "off" | "polite" | "whiny" {
+  return value === "off" || value === "whiny" ? value : "polite";
+}
+
 function toProfileRedirect(params: { error?: string; saved?: boolean }) {
   if (params.error) {
     return `/app/profile?error=${encodeURIComponent(params.error)}`;
@@ -81,6 +85,7 @@ export async function saveProfile(formData: FormData) {
     avoidances: parseTextList(getStringValue(formData, "avoidances")),
     coaching_style: coachingStyle,
     coach_persona: getStringValue(formData, "coachPersona") || null,
+    frankie_nudge_level: parseNudgeLevel(getStringValue(formData, "frankieNudgeLevel")),
     preferred_checkin_style: getStringValue(formData, "preferredCheckinStyle") || null,
     safety_acknowledged: context.profile?.safety_acknowledged ?? true,
     onboarding_completed: context.profile?.onboarding_completed ?? true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { derivePendingClarification, runFrankieTurn } from "@/lib/ai/run-frankie-turn";
+import { awardBiscuitsForReply } from "@/lib/frankie-day";
 import { loadChatThreadAndMessages, MAX_CHAT_MESSAGE_LENGTH } from "@/lib/chat";
 import type { AppProfile } from "@/lib/profile";
 import { getDisplayName } from "@/lib/profile";
@@ -244,6 +245,7 @@ export async function POST(request: NextRequest) {
   }
 
   const refreshedExperience = await loadChatExperience(context);
+  const biscuitAward = await awardBiscuitsForReply(context.supabase, refreshedExperience.messages?.at(-1));
 
-  return NextResponse.json(refreshedExperience);
+  return NextResponse.json({ ...refreshedExperience, biscuitAward });
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  planFrankieNudge,
   getWeeklySummaryPeriod,
   shouldSendCheckinReminder,
   shouldSendDailySummaryNotification,
@@ -89,5 +90,50 @@ describe("getWeeklySummaryPeriod", () => {
       periodStart: "2026-08-30",
       periodEnd: "2026-09-05"
     });
+  });
+});
+
+describe("planFrankieNudge", () => {
+  const base = {
+    ledgerRows: [],
+    pillarsLoggedToday: [],
+    sentToday: [],
+    level: "polite" as const,
+    todayKey: "2026-10-20",
+    hourPacific: 12
+  };
+
+  it("asks about food at lunch with an empty jar", () => {
+    expect(planFrankieNudge(base)).toMatchObject({ need: "feed", actionUrl: "/app/chat" });
+  });
+
+  it("counts logs that haven't been credited yet toward the jar", () => {
+    const nudge = planFrankieNudge({ ...base, pillarsLoggedToday: ["diet"] });
+    expect(nudge?.actionUrl).toBe("/app/chat?frankie=open");
+    expect(nudge?.body).toContain("1 🦴");
+  });
+
+  it("doesn't double count a pillar that was already credited", () => {
+    const nudge = planFrankieNudge({
+      ...base,
+      ledgerRows: [{ delta: 1, reason: "log_reward", pillar: "diet", date_key: "2026-10-20" }],
+      pillarsLoggedToday: ["diet"]
+    });
+    expect(nudge?.body).toContain("1 🦴");
+  });
+
+  it("skips needs already filled or already nudged today", () => {
+    expect(
+      planFrankieNudge({
+        ...base,
+        ledgerRows: [{ delta: -1, reason: "care_feed", pillar: null, date_key: "2026-10-20" }]
+      })
+    ).toBeNull();
+    expect(planFrankieNudge({ ...base, sentToday: [{ need: "feed" }] })).toBeNull();
+  });
+
+  it("respects the off switch and the daily cap", () => {
+    expect(planFrankieNudge({ ...base, level: "off" })).toBeNull();
+    expect(planFrankieNudge({ ...base, sentToday: [{ need: null }, { need: null }] })).toBeNull();
   });
 });
