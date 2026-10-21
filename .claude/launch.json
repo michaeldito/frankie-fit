@@ -4,9 +4,29 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
+      "runtimeArgs": [
+        "dev"
+      ],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "web-preview",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "NEXT_PUBLIC_SUPABASE_URL=",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=",
+        "pnpm",
+        "--dir",
+        "apps/web",
+        "exec",
+        "next",
+        "dev",
+        "--webpack",
+        "-p",
+        "3001"
+      ],
+      "port": 3001
     }
   ]
 }

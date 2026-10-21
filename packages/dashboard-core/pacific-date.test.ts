@@ -5,6 +5,7 @@ import {
   formatShortDay,
   fromDateKey,
   getPacificDateKey,
+  getPacificHour,
   getPacificDayUtcRange,
   getPacificYesterday,
   getWeekStart,
@@ -24,6 +25,13 @@ describe("getPacificDateKey", () => {
   it("rolls to the next Pacific day once UTC crosses the Pacific offset", () => {
     // 2026-03-05T08:01:00Z is 2026-03-05T00:01:00-08:00 in Los Angeles.
     expect(getPacificDateKey(new Date("2026-03-05T08:01:00.000Z"))).toBe("2026-03-05");
+  });
+});
+
+describe("getPacificHour", () => {
+  it("reads the hour on the Pacific clock, not UTC", () => {
+    expect(getPacificHour(new Date("2026-07-01T03:30:00Z"))).toBe(20);
+    expect(getPacificHour(new Date("2026-01-15T08:05:00Z"))).toBe(0);
   });
 });
 

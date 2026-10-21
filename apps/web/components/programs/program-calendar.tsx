@@ -65,8 +65,8 @@ export function ProgramCalendar({ schedule, startDate, completedDays }: ProgramC
 
                 return (
                   <div
-                    className={`ff-card-soft p-3 text-sm ${isToday ? "ring-2 ring-[color:rgba(96,165,250,0.9)]" : ""} ${
-                      isCompleted ? "bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)]" : ""
+                    className={`ff-card-soft p-3 text-sm ${isToday ? "ring-2 ring-accent" : ""} ${
+                      isCompleted ? "bg-surface-contrast" : ""
                     }`}
                     key={day.day}
                   >

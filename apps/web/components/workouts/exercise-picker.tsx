@@ -83,7 +83,7 @@ export function ExercisePicker({ onSelect, placeholder = "Search an exercise…"
             <button
               className={`block w-full cursor-pointer rounded-[1rem] px-3 py-2.5 text-left text-sm ${
                 index === highlightedIndex
-                  ? "bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)]"
+                  ? "bg-surface-contrast"
                   : ""
               }`}
               key={entry.slug}
@@ -98,7 +98,7 @@ export function ExercisePicker({ onSelect, placeholder = "Search an exercise…"
           <button
             className={`mt-1 block w-full cursor-pointer rounded-[1rem] px-3 py-2.5 text-left text-sm text-[var(--muted)] hover:text-[var(--foreground)] ${
               highlightedIndex === matches.length
-                ? "bg-[color:color-mix(in_srgb,var(--surface-contrast)_72%,black_28%)]"
+                ? "bg-surface-contrast"
                 : ""
             }`}
             onClick={() => selectEntry({ slug: slugifyExerciseName(query), name: query.trim() })}

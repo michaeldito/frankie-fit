@@ -1,0 +1,27 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { View } from 'react-native';
+
+import { BodyText, Screen, ScreenTitle, ScrollCard } from '@/components/frankie-ui';
+import { useTheme } from '@/lib/theme';
+
+export default function WorkoutsScreen() {
+  const { colors } = useTheme();
+  return (
+    <Screen inTabs>
+      <ScreenTitle
+        title="Workouts"
+        subtitle="Program browsing, scheduling, and enrollment are coming to mobile."
+      />
+
+      <ScrollCard>
+        <View style={{ alignItems: 'center', gap: 12, paddingVertical: 12 }}>
+          <Ionicons color={colors.brand} name="barbell-outline" size={32} />
+          <BodyText>
+            For now, browse and enroll in P90X-style programs from Frankie Fit on the web. Logging
+            individual workouts still works through chat here on mobile.
+          </BodyText>
+        </View>
+      </ScrollCard>
+    </Screen>
+  );
+}

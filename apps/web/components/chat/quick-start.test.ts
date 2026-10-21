@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { QUICK_START_OPTIONS, findBracketBlanks, findNextBlank, findPreviousBlank } from "./quick-start";
+import {
+  QUICK_START_OPTIONS,
+  composeQuickStart,
+  defaultQuickStartValues,
+  mealForHour,
+  findBracketBlanks,
+  findNextBlank,
+  findPreviousBlank,
+  parseQuickStartTemplate,
+  toRatingRows
+} from "./quick-start";
 
 describe("findBracketBlanks", () => {
   it("returns no blanks for a string with no brackets", () => {
@@ -72,5 +82,86 @@ describe("QUICK_START_OPTIONS", () => {
     QUICK_START_OPTIONS.forEach((option) => {
       expect(findBracketBlanks(option.template).length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe("parseQuickStartTemplate", () => {
+  it("turns exercise blanks into a text field, a numeric field, and intensity choices", () => {
+    expect(parseQuickStartTemplate(QUICK_START_OPTIONS[0].template)).toEqual([
+      { kind: "text", text: "Today I did " },
+      { kind: "input", id: 0, placeholder: "what you did", numeric: false },
+      { kind: "text", text: " for " },
+      { kind: "input", id: 1, placeholder: "30", numeric: true },
+      { kind: "text", text: " minutes at " },
+      { kind: "choice", id: 2, options: ["light", "moderate", "hard"] },
+      { kind: "text", text: " intensity" }
+    ]);
+  });
+
+  it("expands numeric ranges into score choices", () => {
+    const wellness = parseQuickStartTemplate(QUICK_START_OPTIONS[2].template);
+    expect(wellness.filter((segment) => segment.kind === "choice")).toHaveLength(5);
+    expect(wellness[1]).toEqual({ kind: "choice", id: 0, options: ["1", "2", "3", "4", "5"] });
+  });
+
+  it("names free blanks from context and falls back to 'fill in'", () => {
+    const [, ate] = parseQuickStartTemplate("For lunch, I ate [fill in]");
+    expect(ate).toMatchObject({ kind: "input", placeholder: "what you ate" });
+    const [, felt] = parseQuickStartTemplate("It made me feel [fill in]");
+    expect(felt).toMatchObject({ placeholder: "how you felt" });
+    expect(parseQuickStartTemplate("[something]")[0]).toMatchObject({ kind: "input", placeholder: "fill in" });
+  });
+
+  it("treats odd ranges as free text and keeps trailing-free templates intact", () => {
+    expect(parseQuickStartTemplate("Score [5-1]")[1]).toMatchObject({ kind: "input" });
+    expect(parseQuickStartTemplate("No blanks here")).toEqual([{ kind: "text", text: "No blanks here" }]);
+  });
+});
+
+describe("composeQuickStart", () => {
+  const segments = parseQuickStartTemplate("For [breakfast/lunch], I ate [fill in]");
+
+  it("builds the sentence once every blank is filled", () => {
+    expect(composeQuickStart(segments, { 0: "lunch", 1: " a burrito " })).toBe("For lunch, I ate a burrito");
+  });
+
+  it("returns null while any blank is empty", () => {
+    expect(composeQuickStart(segments, { 0: "lunch" })).toBeNull();
+    expect(composeQuickStart(segments, { 0: "lunch", 1: "   " })).toBeNull();
+  });
+});
+
+describe("defaultQuickStartValues", () => {
+  it.each([
+    [8, "breakfast"],
+    [12, "lunch"],
+    [16, "snack"],
+    [19, "dinner"],
+    [23, "snack"]
+  ])("pre-picks the meal at hour %i", (hour, meal) => {
+    expect(mealForHour(hour)).toBe(meal);
+    expect(defaultQuickStartValues(parseQuickStartTemplate(QUICK_START_OPTIONS[1].template), hour)).toEqual({ 0: meal });
+  });
+
+  it("leaves non-meal choices like intensity empty", () => {
+    expect(defaultQuickStartValues(parseQuickStartTemplate(QUICK_START_OPTIONS[0].template), 12)).toEqual({});
+  });
+});
+
+describe("toRatingRows", () => {
+  it("lays the wellness check-in out as labeled 1-5 rows", () => {
+    expect(toRatingRows(parseQuickStartTemplate(QUICK_START_OPTIONS[2].template))).toEqual({
+      rows: ["Energy", "Stress", "Soreness", "Mood", "Motivation"].map((label, id) => ({
+        id,
+        label,
+        options: ["1", "2", "3", "4", "5"]
+      }))
+    });
+  });
+
+  it("leaves sentence-style templates alone", () => {
+    expect(toRatingRows(parseQuickStartTemplate(QUICK_START_OPTIONS[0].template))).toBeNull();
+    expect(toRatingRows(parseQuickStartTemplate("For [breakfast/lunch]"))).toBeNull();
+    expect(toRatingRows(parseQuickStartTemplate("No blanks"))).toBeNull();
   });
 });

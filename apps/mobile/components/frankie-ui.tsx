@@ -11,17 +11,27 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, spacing } from '@/constants/frankie-theme';
+import { createThemedStyles, spacing, useTheme } from '@/lib/theme';
 
 type ScreenProps = PropsWithChildren<{
   padded?: boolean;
+  // Tab screens sit between the navigator's header and tab bar, which already handle the insets.
+  inTabs?: boolean;
 }>;
 
-export function Screen({ children, padded = true }: ScreenProps) {
-  return <SafeAreaView style={[styles.screen, padded && styles.screenPadded]}>{children}</SafeAreaView>;
+export function Screen({ children, padded = true, inTabs = false }: ScreenProps) {
+  const styles = useStyles();
+  return (
+    <SafeAreaView
+      edges={inTabs ? ['left', 'right'] : undefined}
+      style={[styles.screen, padded && styles.screenPadded]}>
+      {children}
+    </SafeAreaView>
+  );
 }
 
 export function ScrollCard({ children, style }: PropsWithChildren<ViewProps>) {
+  const styles = useStyles();
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
@@ -32,6 +42,7 @@ export function ScreenTitle({
   title: string;
   subtitle?: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.titleBlock}>
       <Text style={styles.title}>{title}</Text>
@@ -46,12 +57,14 @@ export function Field({
 }: TextInputProps & {
   label: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         autoCapitalize="none"
-        placeholderTextColor={colors.subtle}
+        placeholderTextColor={colors.muted}
         style={styles.input}
         {...props}
       />
@@ -69,6 +82,8 @@ export function PrimaryButton({
   loading?: boolean;
   onPress: () => void;
 }>) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       disabled={disabled || loading}
@@ -78,7 +93,7 @@ export function PrimaryButton({
         (disabled || loading) && styles.buttonDisabled,
         pressed && !disabled && !loading && styles.buttonPressed,
       ]}>
-      {loading ? <ActivityIndicator color={colors.background} /> : <Text style={styles.buttonText}>{children}</Text>}
+      {loading ? <ActivityIndicator color={colors.brandForeground} /> : <Text style={styles.buttonText}>{children}</Text>}
     </Pressable>
   );
 }
@@ -89,6 +104,7 @@ export function SecondaryLink({
 }: PropsWithChildren<{
   onPress: () => void;
 }>) {
+  const styles = useStyles();
   return (
     <Pressable onPress={onPress} style={styles.secondaryLink}>
       <Text style={styles.secondaryLinkText}>{children}</Text>
@@ -97,20 +113,23 @@ export function SecondaryLink({
 }
 
 export function LoadingScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Screen>
       <View style={styles.loading}>
-        <ActivityIndicator color={colors.accentStrong} />
+        <ActivityIndicator color={colors.brand} />
       </View>
     </Screen>
   );
 }
 
 export function BodyText({ children }: PropsWithChildren) {
+  const styles = useStyles();
   return <Text style={styles.body}>{children}</Text>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => ({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -129,7 +148,7 @@ const styles = StyleSheet.create({
     paddingTop: 18,
   },
   title: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 34,
     fontWeight: '800',
     letterSpacing: 0,
@@ -149,7 +168,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: spacing.radius,
-    backgroundColor: colors.panel,
+    backgroundColor: colors.surface,
     padding: 18,
   },
   fieldWrap: {
@@ -166,8 +185,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 14,
-    backgroundColor: colors.backgroundSoft,
-    color: colors.text,
+    backgroundColor: colors.surfaceStrong,
+    color: colors.foreground,
     fontSize: 16,
     paddingHorizontal: 14,
   },
@@ -176,7 +195,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 14,
-    backgroundColor: colors.accentStrong,
+    backgroundColor: colors.brand,
     paddingHorizontal: 16,
   },
   buttonPressed: {
@@ -186,7 +205,7 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   buttonText: {
-    color: colors.background,
+    color: colors.brandForeground,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -195,8 +214,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   secondaryLinkText: {
-    color: colors.accentStrong,
+    color: colors.accent,
     fontSize: 15,
     fontWeight: '700',
   },
-});
+}));
