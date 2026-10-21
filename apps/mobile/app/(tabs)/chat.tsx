@@ -18,6 +18,7 @@ import {
 import { FrankieAvatar, FrankieThinking } from '@/components/frankie';
 import { FrankieDayBar, useFrankieDay } from '@/components/frankie-day';
 import { LoggedEntryCard } from '@/components/logged-entry-card';
+import { QuickStartCard } from '@/components/quick-start-card';
 import { Screen, ScrollCard } from '@/components/frankie-ui';
 import { createThemedStyles, useTheme } from '@/lib/theme';
 import { frankieApiFetch } from '@/lib/api';
@@ -40,7 +41,7 @@ import {
   type LoggedWellnessCheckin,
 } from '../../../../apps/web/components/chat/logged-entry-format';
 // TODO(Phase 3 / shared-types extraction): reaches into apps/web by relative path — see above.
-import { QUICK_START_OPTIONS } from '../../../../apps/web/components/chat/quick-start';
+import { QUICK_START_OPTIONS, type QuickStartOption } from '../../../../apps/web/components/chat/quick-start';
 
 type ChatMessageRow = Database['public']['Tables']['conversation_messages']['Row'];
 
@@ -119,6 +120,7 @@ export default function ChatScreen() {
   const frankieDay = useFrankieDay();
   const [biscuitAwards, setBiscuitAwards] = useState<Record<string, { earned: number; fullBowl: boolean }>>({});
   const [draft, setDraft] = useState('');
+  const [activeTemplate, setActiveTemplate] = useState<QuickStartOption | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -170,8 +172,8 @@ export default function ChatScreen() {
     }, [loadChat])
   );
 
-  async function handleSend() {
-    const content = draft.trim();
+  async function handleSend(contentOverride?: string) {
+    const content = (contentOverride ?? draft).trim();
 
     if (!content || isSending || isThinking) {
       return;
@@ -188,6 +190,7 @@ export default function ChatScreen() {
     };
 
     setDraft('');
+    setActiveTemplate(null);
     setMessages((current) => [...current, optimisticUserMessage]);
     setIsSending(true);
     Keyboard.dismiss();
@@ -294,7 +297,7 @@ export default function ChatScreen() {
                   )}
 
                   {logConfirmation ? (
-                    <>
+                    <View style={styles.logCards}>
                       <LoggedEntryCard
                         entries={logConfirmation.activitiesLogged ?? []}
                         formatDetail={formatActivityDetail}
@@ -323,7 +326,7 @@ export default function ChatScreen() {
                         kicker="Wellness check-in"
                         pillar="wellness"
                       />
-                    </>
+                    </View>
                   ) : null}
                   {biscuitAwards[message.id] ? (
                     <Text style={styles.biscuitChip}>
@@ -340,13 +343,27 @@ export default function ChatScreen() {
           </View>
         </ScrollView>
 
-        {!draft ? (
+        {activeTemplate ? (
+          <QuickStartCard
+            disabled={isSending || isThinking}
+            key={activeTemplate.label}
+            onCancel={() => setActiveTemplate(null)}
+            onEditAsText={(text) => {
+              setActiveTemplate(null);
+              setDraft(text);
+            }}
+            onSend={(message) => handleSend(message)}
+            option={activeTemplate}
+          />
+        ) : null}
+
+        {!draft && !activeTemplate ? (
           <View style={styles.quickStartRow}>
             <ScrollView horizontal contentContainerStyle={styles.quickStartContent} showsHorizontalScrollIndicator={false}>
               {QUICK_START_OPTIONS.map((option) => (
                 <Pressable
                   key={option.label}
-                  onPress={() => setDraft(option.template)}
+                  onPress={() => setActiveTemplate(option)}
                   style={styles.quickStartChip}>
                   <View
                     style={[
@@ -361,31 +378,33 @@ export default function ChatScreen() {
           </View>
         ) : null}
 
-        <View style={styles.composerWrap}>
-          <TextInput
-            multiline
-            onChangeText={setDraft}
-            onSubmitEditing={Keyboard.dismiss}
-            placeholder="Message Frankie..."
-            placeholderTextColor={colors.muted}
-            returnKeyType="default"
-            style={styles.composer}
-            value={draft}
-          />
-          <Pressable
-            disabled={isSending || isThinking || !draft.trim()}
-            onPress={handleSend}
-            style={[
-              styles.sendButton,
-              (isSending || isThinking || !draft.trim()) && styles.sendButtonDisabled,
-            ]}>
-            {isSending || isThinking ? (
-              <ActivityIndicator color={colors.brandForeground} />
-            ) : (
-              <Text style={styles.sendText}>Send</Text>
-            )}
-          </Pressable>
-        </View>
+        {!activeTemplate ? (
+          <View style={styles.composerWrap}>
+            <TextInput
+              multiline
+              onChangeText={setDraft}
+              onSubmitEditing={Keyboard.dismiss}
+              placeholder="Message Frankie..."
+              placeholderTextColor={colors.muted}
+              returnKeyType="default"
+              style={styles.composer}
+              value={draft}
+            />
+            <Pressable
+              disabled={isSending || isThinking || !draft.trim()}
+              onPress={() => handleSend()}
+              style={[
+                styles.sendButton,
+                (isSending || isThinking || !draft.trim()) && styles.sendButtonDisabled,
+              ]}>
+              {isSending || isThinking ? (
+                <ActivityIndicator color={colors.brandForeground} />
+              ) : (
+                <Text style={styles.sendText}>Send</Text>
+              )}
+            </Pressable>
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </Screen>
   );
@@ -513,6 +532,10 @@ const useStyles = createThemedStyles((colors) => ({
     marginLeft: 42,
     paddingHorizontal: 10,
     paddingVertical: 4,
+  },
+  logCards: {
+    gap: 8,
+    marginLeft: 42,
   },
   quickStartDot: {
     width: 8,
