@@ -143,7 +143,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <Screen padded={false}>
+    <Screen inTabs padded={false}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={isRefreshing} tintColor={colors.brand} onRefresh={handleRefresh} />}>

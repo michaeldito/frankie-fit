@@ -7,7 +7,7 @@ import { useTheme } from '@/lib/theme';
 export default function WorkoutsScreen() {
   const { colors } = useTheme();
   return (
-    <Screen>
+    <Screen inTabs>
       <ScreenTitle
         title="Workouts"
         subtitle="Program browsing, scheduling, and enrollment are coming to mobile."

@@ -11,6 +11,7 @@ import {
   composeQuickStart,
   defaultQuickStartValues,
   parseQuickStartTemplate,
+  toRatingRows,
   type QuickStartOption,
   type QuickStartSegment,
 } from '../../../apps/web/components/chat/quick-start';
@@ -29,6 +30,7 @@ export function QuickStartCard({ option, disabled, onCancel, onEditAsText, onSen
   const { colors } = useTheme();
   const styles = useStyles();
   const segments = useMemo(() => parseQuickStartTemplate(option.template), [option.template]);
+  const ratingRows = useMemo(() => toRatingRows(segments), [segments]);
   const [values, setValues] = useState<Record<number, string>>(() =>
     defaultQuickStartValues(segments, getPacificHour())
   );
@@ -138,7 +140,35 @@ export function QuickStartCard({ option, disabled, onCancel, onEditAsText, onSen
         </Pressable>
       </View>
 
-      <View style={styles.sentence}>{segments.map(renderSegment)}</View>
+      {ratingRows ? (
+        <View style={styles.ratings}>
+          {ratingRows.rows.map((row) => (
+            <View key={row.id} style={[styles.ratingRow, isMissing(row.id) && styles.ratingRowMissing]}>
+              <Text style={styles.ratingLabel}>{row.label}</Text>
+              <View style={styles.ratingPills}>
+                {row.options.map((choice) => {
+                  const selected = values[row.id] === choice;
+                  return (
+                    <Pressable
+                      accessibilityLabel={`${row.label} ${choice}`}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
+                      hitSlop={4}
+                      key={choice}
+                      onPress={() => setValue(row.id, selected ? '' : choice)}
+                      style={[styles.ratingPill, selected && { backgroundColor: accent, borderColor: accent }]}>
+                      <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>{choice}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+          <Text style={styles.ratingScale}>1 = low · 5 = high</Text>
+        </View>
+      ) : (
+        <View style={styles.sentence}>{segments.map(renderSegment)}</View>
+      )}
 
       <View style={styles.footer}>
         <Pressable
@@ -194,6 +224,50 @@ const useStyles = createThemedStyles((colors) => ({
     color: colors.muted,
     fontSize: 13,
     fontWeight: '700',
+  },
+  ratings: {
+    gap: 6,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  ratingRowMissing: {
+    borderStyle: 'dashed',
+    borderColor: colors.danger,
+  },
+  ratingLabel: {
+    flex: 1,
+    color: colors.foreground,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  ratingPills: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  ratingPill: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceStrong,
+  },
+  ratingScale: {
+    alignSelf: 'flex-end',
+    color: colors.muted,
+    fontSize: 12,
+    paddingRight: 6,
   },
   sentence: {
     flexDirection: 'row',

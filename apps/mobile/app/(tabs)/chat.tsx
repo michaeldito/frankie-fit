@@ -232,7 +232,7 @@ export default function ChatScreen() {
   }
 
   return (
-    <Screen padded={false}>
+    <Screen inTabs padded={false}>
       <KeyboardAvoidingView behavior="padding" style={styles.keyboard}>
         <ScrollView
           ref={scrollRef}
