@@ -327,7 +327,7 @@ export async function getLatestCoachSummary(input: {
 
   return {
     summaryText: data.summary_text,
-    summaryType: data.summary_type,
+    summaryType: data.summary_type as "daily" | "weekly",
     periodEnd: data.period_end
   };
 }

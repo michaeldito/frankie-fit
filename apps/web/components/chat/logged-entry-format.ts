@@ -1,3 +1,12 @@
+export type LoggedEntryKind = "activity" | "diet" | "lifestyle" | "wellness";
+
+export const loggedEntryRoutes: Record<LoggedEntryKind, string> = {
+  activity: "/api/logs/activity",
+  diet: "/api/logs/diet",
+  lifestyle: "/api/logs/lifestyle",
+  wellness: "/api/logs/wellness"
+};
+
 export type LoggedActivity = {
   id: string | null;
   activityType: string;
@@ -28,6 +37,7 @@ export type LoggedWellnessCheckin = {
   motivationScore: number | null;
   sorenessScore: number | null;
   stressScore: number | null;
+  notes: string | null;
   loggedForDate: string | null;
 };
 

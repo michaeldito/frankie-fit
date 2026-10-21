@@ -39,6 +39,7 @@ export type Database = {
           avoidances: string[];
           coaching_style: string | null;
           coach_persona: string | null;
+          strict_workout_logging: boolean;
           preferred_checkin_style: string | null;
           safety_acknowledged: boolean;
           onboarding_completed: boolean;
@@ -75,6 +76,7 @@ export type Database = {
           avoidances?: string[];
           coaching_style?: string | null;
           coach_persona?: string | null;
+          strict_workout_logging?: boolean;
           preferred_checkin_style?: string | null;
           safety_acknowledged?: boolean;
           onboarding_completed?: boolean;
@@ -111,6 +113,7 @@ export type Database = {
           avoidances?: string[];
           coaching_style?: string | null;
           coach_persona?: string | null;
+          strict_workout_logging?: boolean;
           preferred_checkin_style?: string | null;
           safety_acknowledged?: boolean;
           onboarding_completed?: boolean;
@@ -166,7 +169,8 @@ export type Database = {
             | "recommendation"
             | "checkin_prompt"
             | "system_event"
-            | "clarification_request";
+            | "clarification_request"
+            | "workout_draft";
           content: string;
           structured_payload: Json;
           created_at: string;
@@ -184,7 +188,8 @@ export type Database = {
             | "recommendation"
             | "checkin_prompt"
             | "system_event"
-            | "clarification_request";
+            | "clarification_request"
+            | "workout_draft";
           content: string;
           structured_payload?: Json;
           created_at?: string;
@@ -202,7 +207,8 @@ export type Database = {
             | "recommendation"
             | "checkin_prompt"
             | "system_event"
-            | "clarification_request";
+            | "clarification_request"
+            | "workout_draft";
           content?: string;
           structured_payload?: Json;
           created_at?: string;

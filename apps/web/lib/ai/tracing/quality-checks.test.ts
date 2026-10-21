@@ -9,6 +9,7 @@ function makeReply(overrides: Partial<FrankieOrchestrationResult> = {}): Frankie
     parsedDietEntries: [],
     parsedLifestyleEntries: [],
     parsedWellnessCheckin: null,
+    workoutDraft: null,
     reply: "Logged!",
     orchestrationMode: "model",
     shouldPersistStructuredData: true,
@@ -43,7 +44,8 @@ describe("runQualityChecks", () => {
         timePrecision: "implicit_today",
         confidence: 0.9,
         missingFields: [],
-        ambiguityFlags: []
+        ambiguityFlags: [],
+        structuredExercises: []
       }],
       persistPlan: { activities: true, dietEntries: false, lifestyleEntries: false, wellnessCheckin: false }
     });
@@ -80,7 +82,8 @@ describe("runQualityChecks", () => {
         timePrecision: "implicit_today",
         confidence: 0.5,
         missingFields: [],
-        ambiguityFlags: []
+        ambiguityFlags: [],
+        structuredExercises: []
       }]
     });
     const results = runQualityChecks({ reply, userMessage: "had eggs", runStatus: "completed" });
@@ -102,7 +105,8 @@ describe("runQualityChecks", () => {
         timePrecision: "implicit_today",
         confidence: 0.5,
         missingFields: [],
-        ambiguityFlags: []
+        ambiguityFlags: [],
+        structuredExercises: []
       }]
     });
     const results = runQualityChecks({ reply, userMessage: "smoked a joint", runStatus: "completed" });
@@ -123,7 +127,8 @@ describe("runQualityChecks", () => {
       timePrecision: "implicit_today" as const,
       confidence: 0.9,
       missingFields: [] as string[],
-      ambiguityFlags: [] as string[]
+      ambiguityFlags: [] as string[],
+      structuredExercises: []
     };
     const reply = makeReply({ parsedActivities: [activity, activity] });
     const results = runQualityChecks({ reply, userMessage: "ran twice", runStatus: "completed" });
@@ -145,7 +150,8 @@ describe("runQualityChecks", () => {
         timePrecision: "implicit_today",
         confidence: 0.9,
         missingFields: [],
-        ambiguityFlags: []
+        ambiguityFlags: [],
+        structuredExercises: []
       }]
     });
     const results = runQualityChecks({ reply, userMessage: "ran today", runStatus: "completed" });
@@ -184,7 +190,8 @@ describe("runQualityChecks", () => {
         timePrecision: "implicit_today",
         confidence: 0.9,
         missingFields: ["durationMinutes"],
-        ambiguityFlags: []
+        ambiguityFlags: [],
+        structuredExercises: []
       }],
       metadata: { extractionSource: "model", usedOpenAi: true, promptVersion: "v1", needsClarification: true }
     });

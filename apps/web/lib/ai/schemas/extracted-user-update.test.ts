@@ -44,6 +44,7 @@ function baseActivity(overrides: Partial<ExtractedUserUpdate["activities"][numbe
     confidence: 0.9,
     missingFields: [],
     ambiguityFlags: [],
+    structuredExercises: [],
     ...overrides
   };
 }
