@@ -6,6 +6,8 @@ import {
   type PendingClarification
 } from "@/lib/ai/orchestrator/frankie-orchestrator";
 import { recordAiTraceRun } from "@/lib/ai/tracing/ai-trace-runs";
+import { runQualityChecks, buildQualitySummary } from "@/lib/ai/tracing/quality-checks";
+import { persistQualityChecks } from "@/lib/ai/tracing/persist-quality-checks";
 import { logActivityEntries } from "@/lib/ai/tools/log-activity";
 import { logDietEntries } from "@/lib/ai/tools/log-diet";
 import { logLifestyleEntries } from "@/lib/ai/tools/log-lifestyle";
@@ -265,6 +267,11 @@ export async function runFrankieTurn(input: {
         latencyMs: Date.now() - startedAt
       });
 
+      if (traceId) {
+        const checks = runQualityChecks({ reply, userMessage: input.message, runStatus: "log_write_failed" });
+        await persistQualityChecks({ supabase: input.supabase, traceRunId: traceId, checks, summary: buildQualitySummary(checks) });
+      }
+
       return {
         assistantMessage: null,
         assistantReply: reply.reply,
@@ -316,6 +323,11 @@ export async function runFrankieTurn(input: {
       latencyMs: Date.now() - startedAt
     });
 
+    if (traceId) {
+      const checks = runQualityChecks({ reply, userMessage: input.message, runStatus: "assistant_message_failed" });
+      await persistQualityChecks({ supabase: input.supabase, traceRunId: traceId, checks, summary: buildQualitySummary(checks) });
+    }
+
     return {
       assistantMessage: null,
       assistantReply: reply.reply,
@@ -353,6 +365,11 @@ export async function runFrankieTurn(input: {
     runStatus,
     latencyMs: Date.now() - startedAt
   });
+
+  if (traceId) {
+    const checks = runQualityChecks({ reply, userMessage: input.message, runStatus });
+    await persistQualityChecks({ supabase: input.supabase, traceRunId: traceId, checks, summary: buildQualitySummary(checks) });
+  }
 
   return {
     assistantMessage,
