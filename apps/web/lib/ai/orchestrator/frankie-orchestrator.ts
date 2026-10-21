@@ -44,7 +44,7 @@ type ChatContextSnapshot = {
 };
 
 const DEFAULT_OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
-export const FRANKIE_PROMPT_VERSION = "frankie-orchestrator-v10";
+export const FRANKIE_PROMPT_VERSION = "frankie-orchestrator-v11";
 const FRANKIE_UNAVAILABLE_REPLY = "Frankie is not reachable right now.";
 const BLOCKING_ACTIVITY_MISSING_FIELDS = new Set([
   "activityType",
