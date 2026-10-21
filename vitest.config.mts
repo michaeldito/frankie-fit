@@ -44,6 +44,7 @@ export default defineConfig({
         "apps/web/lib/theme-preference.ts",
         "apps/web/lib/workouts/save-workout-session.ts",
         "apps/web/lib/workouts/validation.ts",
+        "apps/web/lib/ai/context/already-logged.ts",
         "apps/web/lib/ai/context/load-chat-context.ts",
         "apps/web/lib/ai/orchestrator/frankie-orchestrator.ts",
         "apps/web/lib/ai/prompts/coach-response.ts",
