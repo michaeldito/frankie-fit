@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import { saveProfile } from "@/app/app/(core)/profile/actions";
 import { ThemeToggle } from "@/components/app-shell/theme-toggle";
+import { ProfileSectionNav } from "@/components/profile/profile-section-nav";
 import { PERSONAS } from "@/lib/ai/prompts/personas";
 import {
+  getInitials,
   formatScheduleNotes,
   getAccountLabel,
   getCurrentAppContext,
@@ -90,6 +92,7 @@ function yesNo(value: boolean | null | undefined) {
   return value ? "Yes" : "No";
 }
 
+// Multi-select as tap-to-toggle chips: the checkbox stays in the form, the chip is its label.
 function CheckboxGrid({
   name,
   options,
@@ -100,43 +103,62 @@ function CheckboxGrid({
   selected: string[];
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="flex flex-wrap gap-2">
       {options.map((option) => (
-        <label
-          className="ff-card-soft flex cursor-pointer items-center gap-3 px-4 py-3 text-sm"
-          key={option}
-        >
+        <label className="cursor-pointer" key={option}>
           <input
-            className="h-4 w-4 cursor-pointer accent-[var(--brand)]"
+            className="peer sr-only"
             defaultChecked={selected.includes(option)}
             name={name}
             type="checkbox"
             value={option}
           />
-          <span>{option}</span>
+          <span className="inline-flex items-center rounded-full border border-border-strong px-3.5 py-1.5 text-sm text-muted-strong transition hover:border-foreground/40 peer-checked:border-brand peer-checked:bg-brand peer-checked:text-brand-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
+            {option}
+          </span>
         </label>
       ))}
     </div>
   );
 }
 
+// A plain on/off row: switch on the left, explanation beside it. No box around it.
+function ToggleRow({ name, defaultChecked, children }: { name: string; defaultChecked: boolean; children: ReactNode }) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 py-1 text-sm leading-6">
+      <input className="peer sr-only" defaultChecked={defaultChecked} name={name} type="checkbox" />
+      <span className="relative mt-0.5 h-5 w-9 flex-none rounded-full bg-surface-contrast transition after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-surface after:shadow after:transition peer-checked:bg-brand peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-accent" />
+      <span className="text-muted-strong">{children}</span>
+    </label>
+  );
+}
+
+const SECTIONS = [
+  { id: "account", label: "Account" },
+  { id: "goals", label: "Goals" },
+  { id: "movement", label: "Movement" },
+  { id: "food-wellness", label: "Food and wellness" },
+  { id: "coaching", label: "Coaching" }
+] as const;
+
 function Section({
-  eyebrow,
-  title,
-  description,
+  id,
+  label,
+  question,
   children
 }: {
-  eyebrow: string;
-  title: string;
-  description: string;
+  id: (typeof SECTIONS)[number]["id"];
+  label: string;
+  question: string;
   children: ReactNode;
 }) {
   return (
-    <section className="ff-panel p-5 sm:p-6">
-      <p className="ff-kicker">{eyebrow}</p>
-      <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">{title}</h2>
-      <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">{description}</p>
-      <div className="mt-6 space-y-5">{children}</div>
+    <section className="grid scroll-mt-2 gap-x-8 gap-y-4 border-t border-border py-7 md:grid-cols-[11rem_minmax(0,1fr)]" id={id}>
+      <div>
+        <h2 className="text-base font-semibold tracking-[-0.01em]">{label}</h2>
+        <p className="mt-1.5 text-sm leading-6 text-muted">{question}</p>
+      </div>
+      <div className="space-y-6">{children}</div>
     </section>
   );
 }
@@ -163,108 +185,75 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="ff-scroll min-h-0 flex-1 space-y-6 overflow-y-auto pr-1 lg:space-y-7">
-        <header className="ff-panel-strong p-6">
-        <p className="ff-kicker">Profile</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-[2.35rem]">
-          The context Frankie uses to coach you.
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--muted)]">
-          Update the important pieces of your goals, routine, and coaching preferences without
-          redoing onboarding from scratch.
-        </p>
-        </header>
+      <div className="ff-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="grid w-full max-w-5xl gap-8 pb-10 pt-1 lg:grid-cols-[11.5rem_minmax(0,1fr)]">
+          <div className="hidden lg:block">
+            <ProfileSectionNav sections={SECTIONS} />
+          </div>
 
-        <section className="ff-panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="ff-kicker">Appearance</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-              Cream by day, Midnight by night, or follow your device.
+          <div className="min-w-0">
+        <div className="flex items-center gap-4 pb-6">
+          <div className="flex h-14 w-14 flex-none items-center justify-center rounded-full bg-accent-strong text-lg font-semibold text-accent-foreground">
+            {getInitials(displayName)}
+          </div>
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-semibold tracking-[-0.03em]">{displayName}</h1>
+            <p className="truncate text-sm text-muted">
+              {accountLabel} · {context.profile?.primary_goal || "No primary goal yet"}
             </p>
           </div>
-          <ThemeToggle className="w-full sm:w-80" />
-        </section>
+        </div>
 
         {saved ? (
-          <div className="rounded-[1.5rem] border border-[color:color-mix(in_srgb,var(--brand)_55%,var(--border)_45%)] bg-[color:color-mix(in_srgb,var(--brand)_14%,var(--surface)_86%)] px-5 py-4 text-sm leading-6 text-[var(--foreground)] shadow-[var(--shadow-card)]">
-            Your profile is updated. Frankie will use this new context in chat, the dashboard, and
-            the next-step guidance.
-          </div>
+          <p className="mb-6 border-l-2 border-brand pl-3 text-sm leading-6" role="status">
+            Profile updated. Frankie will use it in chat, Progress, and next steps.
+          </p>
         ) : null}
 
         {error ? (
-          <div className="rounded-[1.5rem] border border-[color:color-mix(in_srgb,var(--accent)_55%,var(--border)_45%)] bg-[color:color-mix(in_srgb,var(--accent)_12%,var(--surface)_88%)] px-5 py-4 text-sm leading-6 text-[var(--foreground)] shadow-[var(--shadow-card)]">
+          <p className="mb-6 border-l-2 border-danger pl-3 text-sm leading-6 text-danger" role="alert">
             {error}
-          </div>
+          </p>
         ) : null}
 
         {!context.schemaReady ? (
-          <section className="ff-panel p-5 sm:p-6">
-            <p className="ff-kicker">
-              Database setup needed
-            </p>
-            <p className="mt-3 max-w-3xl leading-7 text-[var(--muted)]">
-              This page becomes editable once the Supabase profile schema is available. Right now
-              auth is live, but the `profiles` table is still missing in the connected project.
-            </p>
-          </section>
+          <p className="mb-6 border-l-2 border-border-strong pl-3 text-sm leading-6 text-muted">
+            This page becomes editable once the Supabase profile schema is available.
+          </p>
         ) : null}
 
-        <form action={saveProfile} className="space-y-6 pb-6" id="profile-form">
-          <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="ff-panel p-5">
-            <p className="ff-kicker">
-              Profile summary
-            </p>
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-              <span className="ff-pill">{displayName}</span>
-              <span className="ff-pill">
-                Primary goal: {context.profile?.primary_goal || "Not set yet"}
-              </span>
-              <span className="ff-pill">{accountLabel}</span>
+        <form action={saveProfile} id="profile-form">
+        <Section id="account" label="Account" question="Who you are to Frankie, and how the app looks.">
+          <dl className="divide-y divide-border text-sm">
+            {[
+              ["Email", email],
+              ["Account type", accountLabel],
+              ["Schedule", formatScheduleNotes(context.profile)],
+              ["Safety acknowledged", yesNo(context.profile?.safety_acknowledged)]
+            ].map(([label, value]) => (
+              <div className="flex items-start justify-between gap-6 py-2.5 first:pt-0" key={label}>
+                <dt className="text-muted">{label}</dt>
+                <dd className="max-w-[22rem] break-words text-right font-medium">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          {context.profile?.onboarding_summary ? (
+            <div>
+              <p className="text-sm font-medium">What Frankie knows about you</p>
+              <p className="mt-1.5 text-sm leading-6 text-muted">{context.profile.onboarding_summary}</p>
             </div>
-            {context.profile?.onboarding_summary ? (
-              <p className="mt-4 leading-7 text-[var(--muted)]">{context.profile.onboarding_summary}</p>
-            ) : (
-              <p className="mt-4 leading-7 text-[var(--muted)]">
-                Frankie will keep this summary updated as your goals and preferences change.
-              </p>
-            )}
+          ) : null}
+          <div>
+            <p className="text-sm font-medium">Appearance</p>
+            <p className="mt-0.5 text-sm text-muted">Cream by day, Midnight by night, or follow your device.</p>
+            <ThemeToggle className="mt-3 w-full sm:w-80" />
           </div>
-
-          <div className="ff-panel p-5">
-            <p className="ff-kicker">
-              Account details
-            </p>
-            <div className="mt-4 space-y-3">
-              <div className="flex items-start justify-between gap-6">
-                <span className="text-sm text-[var(--muted)]">Email</span>
-                <span className="max-w-[18rem] break-all text-right font-medium">{email}</span>
-              </div>
-              <div className="flex items-start justify-between gap-6">
-                <span className="text-sm text-[var(--muted)]">Account type</span>
-                <span className="text-right font-medium">{accountLabel}</span>
-              </div>
-              <div className="flex items-start justify-between gap-6">
-                <span className="text-sm text-[var(--muted)]">Schedule notes</span>
-                <span className="max-w-[18rem] text-right font-medium">
-                  {formatScheduleNotes(context.profile)}
-                </span>
-              </div>
-              <div className="flex items-start justify-between gap-6">
-                <span className="text-sm text-[var(--muted)]">Safety acknowledged</span>
-                <span className="text-right font-medium">
-                  {yesNo(context.profile?.safety_acknowledged)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
+        </Section>
 
         <Section
-          description="Keep the goal and cadence current so Frankie is coaching the version of your life you are actually living."
-          eyebrow="Goals"
-          title="What should Frankie optimize around now?"
+          id="goals"
+          label="Goals"
+          question="What should Frankie optimize around now?"
         >
           <div className="grid gap-5 md:grid-cols-2">
             <label className="block space-y-2">
@@ -317,9 +306,9 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         </Section>
 
         <Section
-          description="This tells Frankie what kind of movement fits your baseline, preferences, and setup right now."
-          eyebrow="Movement"
-          title="What does your training life actually look like?"
+          id="movement"
+          label="Movement"
+          question="What does your training life actually look like?"
         >
           <div className="grid gap-5 md:grid-cols-2">
             <label className="block space-y-2">
@@ -443,25 +432,17 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             />
           </label>
 
-          <label className="ff-card-soft flex cursor-pointer items-start gap-3 px-4 py-4 text-sm leading-6">
-            <input
-              className="mt-1 h-4 w-4 cursor-pointer accent-[var(--brand)]"
-              defaultChecked={context.profile?.strict_workout_logging ?? false}
-              name="strictWorkoutLogging"
-              type="checkbox"
-            />
-            <span>
+          <ToggleRow defaultChecked={context.profile?.strict_workout_logging ?? false} name="strictWorkoutLogging">
               For strength workouts, have Frankie draft the full exercise, set, rep, and weight
               breakdown for you to review before it&apos;s saved. Cardio and other activities
               stay logged instantly either way.
-            </span>
-          </label>
+            </ToggleRow>
         </Section>
 
         <Section
-          description="This keeps Frankie grounded in how food, recovery, and overall strain are actually showing up for you."
-          eyebrow="Food + Wellness"
-          title="How should Frankie think about meals and recovery?"
+          id="food-wellness"
+          label="Food and wellness"
+          question="How should Frankie think about meals and recovery?"
         >
           <div className="space-y-3">
             <p className="text-sm font-medium">Diet preferences</p>
@@ -484,15 +465,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               />
             </label>
 
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Diet restrictions or allergies</span>
-              <textarea
-                className="ff-textarea min-h-24"
-                defaultValue={(context.profile?.diet_restrictions ?? []).join(", ")}
-                name="dietRestrictions"
-                placeholder="Comma or line-separated is fine"
-              />
-            </label>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
@@ -538,18 +510,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             />
           </div>
 
-          <label className="ff-card-soft flex cursor-pointer items-start gap-3 px-4 py-4 text-sm leading-6">
-            <input
-              className="mt-1 h-4 w-4 cursor-pointer accent-[var(--brand)]"
-              defaultChecked={context.profile?.wellness_checkin_opt_in ?? true}
-              name="wellnessCheckinOptIn"
-              type="checkbox"
-            />
-            <span>
+          <ToggleRow defaultChecked={context.profile?.wellness_checkin_opt_in ?? true} name="wellnessCheckinOptIn">
               Frankie can keep checking in lightly on energy, stress, mood, and recovery along
               the way.
-            </span>
-          </label>
+            </ToggleRow>
 
           <label className="block space-y-2">
             <span className="text-sm font-medium">Frankie&apos;s nudges</span>
@@ -566,44 +530,23 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               At most two a day, never before 8am or after 9pm.
             </span>
           </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Diet restrictions or allergies</span>
+            <textarea
+              className="ff-textarea min-h-24"
+              defaultValue={(context.profile?.diet_restrictions ?? []).join(", ")}
+              name="dietRestrictions"
+              placeholder="Comma or line-separated is fine"
+            />
+          </label>
         </Section>
 
         <Section
-          description="This is where you tune how Frankie sounds, what he should avoid, and what kind of support actually helps."
-          eyebrow="Coaching + safety"
-          title="What kind of coaching works best for you now?"
+          id="coaching"
+          label="Coaching"
+          question="What kind of coaching works best for you now?"
         >
-          <div className="grid gap-5 lg:grid-cols-3">
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Injuries or limitations</span>
-              <textarea
-                className="ff-textarea min-h-24"
-                defaultValue={(context.profile?.injuries_limitations ?? []).join(", ")}
-                name="injuriesLimitations"
-                placeholder="Knee pain, shoulder mobility, low back tightness..."
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Health considerations</span>
-              <textarea
-                className="ff-textarea min-h-24"
-                defaultValue={(context.profile?.health_considerations ?? []).join(", ")}
-                name="healthConsiderations"
-                placeholder="Anything Frankie should know before making suggestions"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Avoidances</span>
-              <textarea
-                className="ff-textarea min-h-24"
-                defaultValue={(context.profile?.avoidances ?? []).join(", ")}
-                name="avoidances"
-                placeholder="Exercises, coaching language, food guidance, or patterns to avoid"
-              />
-            </label>
-          </div>
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="block space-y-2">
@@ -654,18 +597,47 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               </select>
             </label>
           </div>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Injuries or limitations</span>
+            <textarea
+              className="ff-textarea min-h-24"
+              defaultValue={(context.profile?.injuries_limitations ?? []).join(", ")}
+              name="injuriesLimitations"
+              placeholder="Knee pain, shoulder mobility, low back tightness..."
+            />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Health considerations</span>
+            <textarea
+              className="ff-textarea min-h-24"
+              defaultValue={(context.profile?.health_considerations ?? []).join(", ")}
+              name="healthConsiderations"
+              placeholder="Anything Frankie should know before making suggestions"
+            />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Avoidances</span>
+            <textarea
+              className="ff-textarea min-h-24"
+              defaultValue={(context.profile?.avoidances ?? []).join(", ")}
+              name="avoidances"
+              placeholder="Exercises, coaching language, food guidance, or patterns to avoid"
+            />
+          </label>
         </Section>
         </form>
+          </div>
+        </div>
       </div>
 
-      <div className="-mx-4 -mb-4 shrink-0 border-t border-[var(--border)] bg-surface/96 px-5 py-4 backdrop-blur-xl sm:-mx-6 sm:-mb-5 sm:px-6 sm:py-5">
-        <div className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center justify-between gap-4">
-          <p className="max-w-2xl text-sm leading-6 text-[var(--muted)]">
-            Saving here updates the coaching context Frankie uses across chat, dashboard summaries,
-            and the app shell. This is the practical v1 editor, not a full settings maze.
-          </p>
-          <button className="ff-button-primary px-5 py-3 text-sm" form="profile-form" type="submit">
-            Save profile changes
+      <div className="-mx-4 -mb-4 shrink-0 border-t border-border bg-background/95 px-5 py-3 backdrop-blur-xl sm:-mx-5 sm:-mb-4">
+        <div className="flex w-full max-w-5xl items-center justify-between gap-4">
+          <p className="hidden text-sm text-muted sm:block">Changes apply to chat, Progress, and Frankie&apos;s nudges.</p>
+          <button className="ff-button-primary ml-auto px-5 py-2.5 text-sm" form="profile-form" type="submit">
+            Save changes
           </button>
         </div>
       </div>

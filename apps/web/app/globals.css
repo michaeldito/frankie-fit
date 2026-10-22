@@ -469,7 +469,22 @@ textarea::placeholder {
   }
 }
 
+@keyframes ff-section-arrive {
+  0% {
+    background-color: color-mix(in srgb, var(--brand) 9%, transparent);
+  }
+
+  100% {
+    background-color: transparent;
+  }
+}
+
 @layer utilities {
+  .ff-section-arrive {
+    animation: ff-section-arrive 1400ms ease-out 350ms both;
+    border-radius: 0.75rem;
+  }
+
   .ff-burst {
     animation: ff-burst 1100ms ease-out both;
   }
