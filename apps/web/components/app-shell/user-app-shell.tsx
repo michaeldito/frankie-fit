@@ -30,7 +30,9 @@ import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
 import { FrankieWordmark } from "@/components/frankie/frankie-wordmark";
 import { FrankieDayProvider } from "@/components/frankie-day/frankie-day-context";
 import { FrankieDaySheet } from "@/components/frankie-day/frankie-day-sheet";
-import { SidebarFrankieCard } from "@/components/frankie-day/sidebar-frankie-card";
+import { SidebarFrankieDock } from "@/components/frankie-day/sidebar-frankie-card";
+import { HoverLabel } from "@/components/app-shell/hover-label";
+import { SidebarCollapseButton, SidebarResizeHandle } from "@/components/app-shell/sidebar-controls";
 
 export type UserAppShellUser = {
   displayName: string;
@@ -232,62 +234,78 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
   }, [profileMenuOpen]);
 
   const sidebarActionClass =
-    "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-muted transition hover:bg-surface-contrast/60 hover:text-foreground";
-  const sectionLabelClass = "px-3 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted";
+    "group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-muted transition hover:bg-surface-contrast/60 hover:text-foreground sidebar-collapsed:justify-center sidebar-collapsed:px-0";
+  // Collapsed to the rail, section labels turn into a thin divider.
+  const sectionLabelClass =
+    "px-3 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted sidebar-collapsed:mx-2 sidebar-collapsed:h-px sidebar-collapsed:overflow-hidden sidebar-collapsed:bg-border sidebar-collapsed:p-0 sidebar-collapsed:text-transparent";
 
   return (
     <FrankieDayProvider enabled={user.authConfigured}>
       <div className="min-h-screen bg-background">
         <div className="flex h-screen overflow-hidden">
           <aside
-            className="hidden w-[240px] flex-none flex-col border-r border-border bg-[color-mix(in_srgb,var(--background)_82%,black_18%)] p-3 text-foreground lg:flex"
+            className="relative hidden w-[var(--sidebar-width,240px)] flex-none flex-col border-r border-border bg-[color-mix(in_srgb,var(--background)_82%,black_18%)] p-3 text-foreground lg:flex sidebar-collapsed:w-[68px] sidebar-collapsed:px-2"
             data-theme="dark"
           >
-            <Link className="px-2 py-2" href="/app/chat">
-              <FrankieWordmark />
-            </Link>
-
-            <nav aria-label="Main" className="mt-5 flex flex-col gap-0.5">
-              <NavLink href="/app/chat" icon={MessageCircleHeart}>Frankie</NavLink>
-              <NavLink href="/app/dashboard" icon={ChartColumn}>Progress</NavLink>
-              <NavLink href="/app/workouts" icon={Dumbbell}>Workouts</NavLink>
-              <NavLink href="/app/programs" icon={CalendarDays}>Programs</NavLink>
-              <NavLink href="/app/profile" icon={UserRound}>Profile</NavLink>
-            </nav>
-
-            <div className="mt-6">
-              <p className={sectionLabelClass}>Focus</p>
-              <div className="mt-2 flex flex-col gap-0.5">
-                <button className={sidebarActionClass} onClick={() => setOverlayPanel("goal")} type="button">
-                  <Target aria-hidden className="h-[1.1rem] w-[1.1rem]" strokeWidth={1.8} />
-                  Your goal
-                </button>
-                <button className={sidebarActionClass} onClick={() => setOverlayPanel("next-step")} type="button">
-                  <Footprints aria-hidden className="h-[1.1rem] w-[1.1rem]" strokeWidth={1.8} />
-                  Next step
-                </button>
-              </div>
+            <div className="flex flex-none items-center gap-1 sidebar-collapsed:flex-col sidebar-collapsed:gap-2">
+              <Link aria-label="Frankie Fit home" className="min-w-0 flex-1 px-1 py-1.5 sidebar-collapsed:flex-none sidebar-collapsed:px-0" href="/app/chat">
+                <span className="block truncate sidebar-collapsed:hidden">
+                  <FrankieWordmark />
+                </span>
+                <span className="hidden sidebar-collapsed:block">
+                  <FrankieAvatar mood="happy" size={36} />
+                </span>
+              </Link>
+              <SidebarCollapseButton />
             </div>
 
-            {user.isAdmin ? (
-              <div className="mt-6">
-                <p className={sectionLabelClass}>Admin</p>
-                <nav aria-label="Admin" className="mt-2 flex flex-col gap-0.5">
-                  <NavLink href="/app/admin" icon={ShieldCheck} match="exact">Insights</NavLink>
-                  <NavLink href="/app/admin/debug" icon={Bug}>Debug</NavLink>
-                  <NavLink href="/app/admin/evals" icon={FlaskConical}>Evals</NavLink>
-                </nav>
-              </div>
-            ) : null}
+            <div className="ff-scroll -mx-1 mt-4 min-h-0 flex-1 overflow-y-auto px-1 sidebar-collapsed:overflow-visible">
+              <nav aria-label="Main" className="flex flex-col gap-0.5">
+                <NavLink href="/app/chat" icon={MessageCircleHeart} label="Frankie">Frankie</NavLink>
+                <NavLink href="/app/dashboard" icon={ChartColumn} label="Progress">Progress</NavLink>
+                <NavLink href="/app/workouts" icon={Dumbbell} label="Workouts">Workouts</NavLink>
+                <NavLink href="/app/programs" icon={CalendarDays} label="Programs">Programs</NavLink>
+                <NavLink href="/app/profile" icon={UserRound} label="Profile">Profile</NavLink>
+              </nav>
 
-            <div className="mt-auto space-y-3 pt-6">
+              <div className="mt-6 sidebar-collapsed:mt-3">
+                <p className={sectionLabelClass}>Focus</p>
+                <div className="mt-2 flex flex-col gap-0.5">
+                  <button className={sidebarActionClass} onClick={() => setOverlayPanel("goal")} type="button">
+                    <Target aria-hidden className="h-[1.1rem] w-[1.1rem] flex-none" strokeWidth={1.8} />
+                    <span className="truncate sidebar-collapsed:sr-only">Your goal</span>
+                    <HoverLabel className="hidden sidebar-collapsed:block" side="right" text="Your goal" />
+                  </button>
+                  <button className={sidebarActionClass} onClick={() => setOverlayPanel("next-step")} type="button">
+                    <Footprints aria-hidden className="h-[1.1rem] w-[1.1rem] flex-none" strokeWidth={1.8} />
+                    <span className="truncate sidebar-collapsed:sr-only">Next step</span>
+                    <HoverLabel className="hidden sidebar-collapsed:block" side="right" text="Next step" />
+                  </button>
+                </div>
+              </div>
+
+              {user.isAdmin ? (
+                <div className="mt-6 sidebar-collapsed:mt-3">
+                  <p className={sectionLabelClass}>Admin</p>
+                  <nav aria-label="Admin" className="mt-2 flex flex-col gap-0.5">
+                    <NavLink href="/app/admin" icon={ShieldCheck} label="Insights" match="exact">Insights</NavLink>
+                    <NavLink href="/app/admin/debug" icon={Bug} label="Debug">Debug</NavLink>
+                    <NavLink href="/app/admin/evals" icon={FlaskConical} label="Evals">Evals</NavLink>
+                  </nav>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex-none space-y-3 pt-3">
               {!user.authConfigured ? (
-                <p className="rounded-xl bg-surface px-3 py-2.5 text-xs leading-5 text-muted">
+                <p className="rounded-xl bg-surface px-3 py-2.5 text-xs leading-5 text-muted sidebar-collapsed:hidden">
                   Preview mode is active until Supabase env vars are connected.
                 </p>
               ) : null}
-              <SidebarFrankieCard fallbackLine={user.frankieLine} />
+              <SidebarFrankieDock fallbackLine={user.frankieLine} />
             </div>
+
+            <SidebarResizeHandle />
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0">

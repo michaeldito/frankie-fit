@@ -41,6 +41,7 @@ export default defineConfig({
         "apps/web/lib/frankie-day.ts",
         "apps/web/lib/notifications.ts",
         "apps/web/lib/rate-limit.ts",
+        "apps/web/lib/sidebar-preference.ts",
         "apps/web/lib/theme-preference.ts",
         "apps/web/lib/workouts/save-workout-session.ts",
         "apps/web/lib/workouts/validation.ts",

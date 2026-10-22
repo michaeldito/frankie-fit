@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { FRANKIE_ACTIONS, FRANKIE_NEEDS, type FrankieNeed } from "@frankie-fit/companion-core";
 import { FrankieSticker } from "@/components/frankie/frankie-sticker";
 import type { FrankieSticker as StickerName } from "@/components/frankie/frankie-art";
+import { HoverLabel, type HoverLabelAlign } from "@/components/app-shell/hover-label";
 import { useFrankieDay } from "@/components/frankie-day/frankie-day-context";
 
 export const NEED_STICKERS: Record<FrankieNeed, StickerName> = {
@@ -13,58 +14,67 @@ export const NEED_STICKERS: Record<FrankieNeed, StickerName> = {
   snuggle: "zzz"
 };
 
-// Styled hover/focus label; the native title tooltip is slow and unstyled.
-export type TooltipAlign = "start" | "center" | "end";
+export type TooltipAlign = HoverLabelAlign;
 
-const ALIGN_CLASSES: Record<TooltipAlign, string> = {
-  start: "left-0",
-  center: "left-1/2 -translate-x-1/2",
-  end: "right-0"
-};
-
-function HoverLabel({ text, align }: { text: string; align: TooltipAlign }) {
-  return (
-    <span
-      className={`pointer-events-none absolute bottom-full ${ALIGN_CLASSES[align]} z-30 mb-2 whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 shadow-[var(--shadow-card)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100`}
-      role="tooltip"
-    >
-      {text}
-    </span>
-  );
-}
-
-export function BiscuitJar({ className = "", tooltipAlign = "center" }: { className?: string; tooltipAlign?: TooltipAlign }) {
+export function BiscuitJar({
+  className = "",
+  compact = false,
+  tooltipAlign = "center",
+  tooltipClassName = ""
+}: {
+  className?: string;
+  compact?: boolean;
+  tooltipAlign?: TooltipAlign;
+  tooltipClassName?: string;
+}) {
   const { day, openSheet } = useFrankieDay();
 
   if (!day) return null;
 
+  // The outer span takes the caller's positioning (absolute etc.); the button stays `relative` to
+  // anchor its hover label, so the two never fight over `position`.
   return (
-    <button
-      aria-label={`${day.balance} biscuits in the jar. Open Frankie's Day.`}
-      className={`group relative inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-frankie/30 bg-frankie-soft px-2.5 py-1 text-sm font-semibold text-foreground transition hover:-translate-y-px ${className}`}
-      onClick={openSheet}
-      type="button"
-    >
-      <FrankieSticker name="biscuit" size={18} />
-      <span className="ff-pop tabular-nums" key={day.balance}>
-        {day.balance}
-      </span>
-      <HoverLabel align={tooltipAlign} text={`${day.balance} ${day.balance === 1 ? "biscuit" : "biscuits"} in the jar · open Frankie's Day`} />
-    </button>
+    <span className={`inline-flex ${className}`}>
+      <button
+        aria-label={`${day.balance} biscuits in the jar. Open Frankie's Day.`}
+        className={`group relative inline-flex cursor-pointer items-center rounded-full border border-frankie/30 bg-frankie-soft font-semibold text-foreground transition hover:-translate-y-px ${
+          compact ? "gap-1 px-2 py-0.5 text-xs" : "gap-1.5 px-2.5 py-1 text-sm"
+        }`}
+        onClick={openSheet}
+        type="button"
+      >
+        <FrankieSticker name="biscuit" size={compact ? 14 : 18} />
+        <span className="ff-pop tabular-nums" key={day.balance}>
+          {day.balance}
+        </span>
+        <HoverLabel
+          align={tooltipAlign}
+          className={tooltipClassName}
+          text={`${day.balance} ${day.balance === 1 ? "biscuit" : "biscuits"} in the jar · open Frankie's Day`}
+        />
+      </button>
+    </span>
   );
 }
 
 // Tapping a need Frankie wants (and the user can afford) redeems it on the spot; anything else
 // opens the sheet so the user can see why.
-export function NeedsStrip({ size = "md", tooltipAlign = "center" }: { size?: "sm" | "md"; tooltipAlign?: TooltipAlign }) {
+export function NeedsStrip({
+  size = "md",
+  tooltipAlign = "center"
+}: {
+  size?: "xs" | "sm" | "md";
+  tooltipAlign?: TooltipAlign;
+}) {
   const { day, redeem, redeeming, openSheet } = useFrankieDay();
 
   if (!day) return null;
 
-  const box = size === "sm" ? "h-8 w-8" : "h-10 w-10";
+  const box = size === "xs" ? "h-6 w-6 rounded-md" : size === "sm" ? "h-8 w-8 rounded-xl" : "h-10 w-10 rounded-xl";
+  const icon = size === "xs" ? 12 : size === "sm" ? 16 : 20;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className={`flex items-center ${size === "xs" ? "gap-1" : "gap-1.5"}`}>
       {FRANKIE_NEEDS.map((need) => {
         const filled = day.needs[need] === "filled";
         const ready = day.canAfford[need];
@@ -77,7 +87,7 @@ export function NeedsStrip({ size = "md", tooltipAlign = "center" }: { size?: "s
         return (
           <button
             aria-label={label}
-            className={`group relative flex ${box} cursor-pointer items-center justify-center rounded-xl border transition ${
+            className={`group relative flex ${box} cursor-pointer items-center justify-center border transition ${
               filled
                 ? "border-success/40 bg-success/10"
                 : ready
@@ -91,11 +101,15 @@ export function NeedsStrip({ size = "md", tooltipAlign = "center" }: { size?: "s
           >
             <HoverLabel align={tooltipAlign} text={label} />
             <span className={!filled && !ready ? "opacity-50 grayscale" : ready ? "animate-pulse group-hover:animate-none" : ""}>
-              <FrankieSticker name={NEED_STICKERS[need]} size={size === "sm" ? 16 : 20} />
+              <FrankieSticker name={NEED_STICKERS[need]} size={icon} />
             </span>
             {filled ? (
-              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-success text-background">
-                <Check aria-hidden className="h-3 w-3" strokeWidth={3} />
+              <span
+                className={`absolute -right-1 -top-1 flex items-center justify-center rounded-full bg-success text-background ${
+                  size === "xs" ? "h-3 w-3" : "h-4 w-4"
+                }`}
+              >
+                <Check aria-hidden className={size === "xs" ? "h-2 w-2" : "h-3 w-3"} strokeWidth={3} />
               </span>
             ) : null}
           </button>

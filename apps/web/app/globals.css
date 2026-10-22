@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "./brand-tokens.css";
 
+/* Set on <html> by the sidebar collapse button (and restored before paint from localStorage). */
+@custom-variant sidebar-collapsed (html[data-sidebar="collapsed"] &);
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
