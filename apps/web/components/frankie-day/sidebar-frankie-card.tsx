@@ -19,7 +19,7 @@ export function SidebarFrankieCard({ fallbackLine }: { fallbackLine: string }) {
         onClick={openSheet}
         type="button"
       >
-        <p className="relative z-10 max-w-[8.5rem] font-frankie text-lg leading-tight text-frankie">&ldquo;{line}&rdquo;</p>
+        <p className="relative z-10 max-w-[8.5rem] pr-1 font-frankie text-lg leading-tight text-frankie">&ldquo;{line}&rdquo;</p>
         <Image
           alt="Frankie"
           className="ff-pop relative -mb-1 ml-auto -mt-6 h-24 w-24 object-contain object-bottom"
@@ -30,10 +30,12 @@ export function SidebarFrankieCard({ fallbackLine }: { fallbackLine: string }) {
         />
       </button>
       {day ? (
-        <div className="-mx-3 flex items-center justify-between gap-2 border-t border-border px-3 py-2">
-          <NeedsStrip size="sm" tooltipAlign="start" />
-          <BiscuitJar />
-        </div>
+        <>
+          <BiscuitJar className="absolute right-2 top-2 z-20" />
+          <div className="-mx-3 flex justify-center border-t border-border px-3 py-2">
+            <NeedsStrip size="sm" tooltipAlign="start" />
+          </div>
+        </>
       ) : null}
     </div>
   );

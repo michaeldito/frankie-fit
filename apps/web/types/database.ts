@@ -806,6 +806,8 @@ export type Database = {
           reason: "log_reward" | "full_bowl_bonus" | "care_feed" | "care_walk" | "care_play" | "care_snuggle";
           pillar: "exercise" | "diet" | "wellness" | "lifestyle" | null;
           date_key: string;
+          source_table: "activity_logs" | "diet_logs" | "wellness_checkins" | "lifestyle_logs" | null;
+          source_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -815,6 +817,8 @@ export type Database = {
           reason: "log_reward" | "full_bowl_bonus" | "care_feed" | "care_walk" | "care_play" | "care_snuggle";
           pillar?: "exercise" | "diet" | "wellness" | "lifestyle" | null;
           date_key: string;
+          source_table?: "activity_logs" | "diet_logs" | "wellness_checkins" | "lifestyle_logs" | null;
+          source_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -824,6 +828,8 @@ export type Database = {
           reason?: "log_reward" | "full_bowl_bonus" | "care_feed" | "care_walk" | "care_play" | "care_snuggle";
           pillar?: "exercise" | "diet" | "wellness" | "lifestyle" | null;
           date_key?: string;
+          source_table?: "activity_logs" | "diet_logs" | "wellness_checkins" | "lifestyle_logs" | null;
+          source_id?: string | null;
           created_at?: string;
         };
         Relationships: [];

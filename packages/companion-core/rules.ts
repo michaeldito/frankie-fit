@@ -1,9 +1,9 @@
 import type { FrankieMood } from "@frankie-fit/brand-core";
 
-// The numbers here are mirrored in supabase/migrations/20261021072622_frankie_biscuits.sql
+// The numbers here are mirrored by the biscuit migrations in supabase/migrations
 // (award_biscuits / redeem_frankie_action); apps/web/lib/frankie-biscuits-sql.test.ts keeps them in sync.
 export const BISCUIT_EARN_RULES = {
-  perPillarPerDay: 1,
+  perLog: 1,
   fullBowlBonus: 1
 } as const;
 
@@ -67,3 +67,30 @@ export function needFromReason(reason: string): FrankieNeed | null {
   const need = reason.startsWith("care_") ? reason.slice("care_".length) : null;
   return isFrankieNeed(need) ? need : null;
 }
+
+// The in-app "How biscuits work" breakdown, shared by web and mobile so both explain the same rules.
+export const HOW_BISCUITS_WORK: { heading: string; points: string[] }[] = [
+  {
+    heading: "Earn",
+    points: [
+      `+${BISCUIT_EARN_RULES.perLog} 🦴 for every workout, meal, check-in, or lifestyle update you log`,
+      `+${BISCUIT_EARN_RULES.fullBowlBonus} 🦴 bonus when you log all four areas in one day`,
+      "Logs dated more than a week back don't earn, and deleting a log never takes a biscuit back"
+    ]
+  },
+  {
+    heading: "Spend",
+    points: [
+      `Feed, walk, play, and snuggle cost ${FRANKIE_ACTIONS.feed.cost} 🦴 each`,
+      "Each one can be done once a day; do all four for a Good Boy Day 👑",
+      "Belly rubs are always free. Tap Frankie"
+    ]
+  },
+  {
+    heading: "Every day",
+    points: [
+      "Frankie's needs reset at midnight Pacific",
+      "Biscuits you don't spend stay in the jar"
+    ]
+  }
+];
