@@ -2,18 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, type ReactNode } from "react";
 import {
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode
-} from "react";
-import {
-  Bell,
   Bug,
-  ChevronLeft,
-  ChevronRight,
-  LogOut,
   CalendarDays,
   ChartColumn,
   Dumbbell,
@@ -25,10 +16,8 @@ import {
   UserRound,
   X
 } from "lucide-react";
-import { signOut } from "@/app/app/actions";
 import { NavLink } from "@/components/app-shell/nav-link";
-import { NotificationsList, UnreadBadge } from "@/components/app-shell/notifications-list";
-import { ThemeToggle } from "@/components/app-shell/theme-toggle";
+import { AccountMenu } from "@/components/app-shell/account-menu";
 import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
 import { FrankieWordmark } from "@/components/frankie/frankie-wordmark";
 import { FrankieDayProvider } from "@/components/frankie-day/frankie-day-context";
@@ -132,29 +121,8 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
   const managesOwnScroll = isChatRoute || isProfileRoute;
   const contentWidthClass = isProfileRoute ? "w-full h-full" : `w-full ${managesOwnScroll ? "h-full" : ""} max-w-[1180px] mx-auto`;
   const [overlayPanel, setOverlayPanel] = useState<OverlayPanel>(null);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [menuView, setMenuView] = useState<"main" | "notifications">("main");
   const [unreadCount, setUnreadCount] = useState(user.unreadNotificationCount);
-  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      if (
-        profileMenuRef.current &&
-        !profileMenuRef.current.contains(event.target as Node)
-      ) {
-        setProfileMenuOpen(false);
-      }
-    }
-
-    if (profileMenuOpen) {
-      document.addEventListener("mousedown", handlePointerDown);
-      return () => document.removeEventListener("mousedown", handlePointerDown);
-    }
-  }, [profileMenuOpen]);
-
-  const menuItemClass =
-    "rounded-[0.5rem] px-2.5 py-2 text-sm font-medium text-foreground transition hover:bg-surface-contrast";
   const sidebarActionClass =
     "group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-muted transition hover:bg-surface-contrast/60 hover:text-foreground sidebar-collapsed:justify-center sidebar-collapsed:px-0";
   // Collapsed to the rail, section labels turn into a thin divider.
@@ -225,126 +193,19 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
                 </p>
               ) : null}
               <SidebarFrankieDock fallbackLine={user.frankieLine} />
+              <AccountMenu placement="up" setUnreadCount={setUnreadCount} unreadCount={unreadCount} user={user} />
             </div>
 
             <SidebarResizeHandle />
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0">
-            <header className="flex flex-none items-center justify-between gap-3 px-4 pt-3 sm:px-5 lg:justify-end">
-              <Link aria-label="Frankie Fit home" className="lg:hidden" href="/app/chat">
+            <header className="flex flex-none items-center justify-between gap-3 px-4 pt-3 sm:px-5 lg:hidden">
+              <Link aria-label="Frankie Fit home" href="/app/chat">
                 <FrankieAvatar mood="happy" size={36} />
               </Link>
 
-              <div className="relative" ref={profileMenuRef}>
-                <button
-                  aria-expanded={profileMenuOpen}
-                  aria-label={unreadCount > 0 ? `Account menu, ${unreadCount} unread notifications` : "Account menu"}
-                  className="relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-accent-strong text-sm font-semibold text-accent-foreground shadow-[var(--shadow-card)] transition hover:brightness-110"
-                  onClick={() => {
-                    setMenuView("main");
-                    setProfileMenuOpen((current) => !current);
-                  }}
-                  type="button"
-                >
-                  {user.initials}
-                  <UnreadBadge className="absolute -right-1 -top-1" count={unreadCount} />
-                </button>
-
-                <div
-                  aria-hidden={!profileMenuOpen}
-                  className={`ff-card absolute right-0 z-30 mt-2 origin-top-right overflow-hidden p-2 transition-all duration-200 ease-out ${
-                    menuView === "notifications" ? "w-80" : "w-64"
-                  } ${
-                    profileMenuOpen
-                      ? "translate-y-0 scale-100 opacity-100"
-                      : "pointer-events-none -translate-y-1 scale-95 opacity-0"
-                  }`}
-                >
-                  {menuView === "notifications" ? (
-                    <>
-                      <button
-                        className="flex w-full cursor-pointer items-center gap-1.5 rounded-[0.5rem] px-2 py-1.5 text-sm font-semibold transition hover:bg-surface-contrast"
-                        onClick={() => setMenuView("main")}
-                        type="button"
-                      >
-                        <ChevronLeft aria-hidden className="h-4 w-4" />
-                        Notifications
-                      </button>
-                      <div className="my-1.5 border-t border-border" />
-                      {profileMenuOpen ? (
-                        <NotificationsList
-                          onNavigate={() => setProfileMenuOpen(false)}
-                          onUnreadCountChange={setUnreadCount}
-                          unreadCount={unreadCount}
-                        />
-                      ) : null}
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2.5 px-2 py-1.5">
-                        <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent-strong text-sm font-semibold text-accent-foreground">
-                          {user.initials}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium tracking-[-0.01em]">{user.displayName}</p>
-                          <p className="truncate text-xs text-muted">{user.subtitle}</p>
-                        </div>
-                      </div>
-                      <div className="my-1.5 border-t border-border" />
-                      {user.authConfigured ? (
-                        <button
-                          className={`${menuItemClass} flex w-full cursor-pointer items-center justify-between gap-2 text-left`}
-                          onClick={() => setMenuView("notifications")}
-                          type="button"
-                        >
-                          <span className="flex items-center gap-2">
-                            <Bell aria-hidden className="h-4 w-4 text-muted" />
-                            Notifications
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <UnreadBadge count={unreadCount} />
-                            <ChevronRight aria-hidden className="h-4 w-4 text-muted" />
-                          </span>
-                        </button>
-                      ) : null}
-                      <Link className={`${menuItemClass} flex items-center gap-2`} href="/app/profile" onClick={() => setProfileMenuOpen(false)}>
-                        <UserRound aria-hidden className="h-4 w-4 text-muted" />
-                        Profile
-                      </Link>
-                      {user.isAdmin ? (
-                        <div className="lg:hidden">
-                          {[
-                            ["/app/admin", "Insights"],
-                            ["/app/admin/debug", "Debug"],
-                            ["/app/admin/evals", "Evals"]
-                          ].map(([href, label]) => (
-                            <Link className={`${menuItemClass} block`} href={href} key={href} onClick={() => setProfileMenuOpen(false)}>
-                              {label}
-                            </Link>
-                          ))}
-                        </div>
-                      ) : null}
-                      <div className="my-1.5 border-t border-border" />
-                      <p className="px-2.5 pb-1.5 pt-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted">
-                        Theme
-                      </p>
-                      <ThemeToggle className="mx-1" />
-                      {user.authConfigured ? (
-                        <>
-                          <div className="my-1.5 border-t border-border" />
-                          <form action={signOut}>
-                            <button className={`${menuItemClass} flex w-full cursor-pointer items-center gap-2 text-left`} type="submit">
-                              <LogOut aria-hidden className="h-4 w-4 text-muted" />
-                              Log out
-                            </button>
-                          </form>
-                        </>
-                      ) : null}
-                    </>
-                  )}
-                </div>
-              </div>
+              <AccountMenu placement="down" setUnreadCount={setUnreadCount} unreadCount={unreadCount} user={user} />
             </header>
 
             <main
