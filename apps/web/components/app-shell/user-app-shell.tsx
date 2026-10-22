@@ -4,13 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
   type ReactNode
 } from "react";
 import {
+  Bell,
   Bug,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
   CalendarDays,
   ChartColumn,
   Dumbbell,
@@ -24,7 +27,7 @@ import {
 } from "lucide-react";
 import { signOut } from "@/app/app/actions";
 import { NavLink } from "@/components/app-shell/nav-link";
-import { NotificationBell } from "@/components/app-shell/notification-bell";
+import { NotificationsList, UnreadBadge } from "@/components/app-shell/notifications-list";
 import { ThemeToggle } from "@/components/app-shell/theme-toggle";
 import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
 import { FrankieWordmark } from "@/components/frankie/frankie-wordmark";
@@ -56,86 +59,6 @@ type UserAppShellProps = {
 };
 
 type OverlayPanel = "goal" | "next-step" | null;
-
-function getPageMeta(pathname: string) {
-  if (pathname.startsWith("/app/chat")) {
-    return {
-      eyebrow: "",
-      title: "Chat with Frankie",
-      subtitle: "Tell me what you did, ate, or how you feel. I'll take it from there."
-    };
-  }
-
-  if (pathname.startsWith("/app/dashboard")) {
-    return {
-      eyebrow: "",
-      title: "Progress",
-      subtitle: ""
-    };
-  }
-
-  if (pathname.startsWith("/app/workouts")) {
-    return {
-      eyebrow: "",
-      title: "Workouts",
-      subtitle: "Log a strength or conditioning session set by set."
-    };
-  }
-
-  if (pathname.startsWith("/app/programs")) {
-    return {
-      eyebrow: "",
-      title: "Programs",
-      subtitle: "Follow a structured program day by day."
-    };
-  }
-
-  if (pathname.startsWith("/app/profile")) {
-    return {
-      eyebrow: "",
-      title: "Profile",
-      subtitle: "Tune the information Frankie uses to coach you."
-    };
-  }
-
-  if (pathname.startsWith("/app/admin/debug")) {
-    return {
-      eyebrow: "Founder View",
-      title: "Debug",
-      subtitle: "Inspect individual Frankie turns when behavior gets weird."
-    };
-  }
-
-  if (pathname.startsWith("/app/admin/evals")) {
-    return {
-      eyebrow: "Founder View",
-      title: "Evals",
-      subtitle: "Benchmark, review, and tune Frankie intelligence over time."
-    };
-  }
-
-  if (pathname.startsWith("/app/admin")) {
-    return {
-      eyebrow: "Founder View",
-      title: "Insights",
-      subtitle: "Aggregate product health, safely surfaced."
-    };
-  }
-
-  if (pathname.startsWith("/app/onboarding")) {
-    return {
-      eyebrow: "Welcome",
-      title: "Onboarding",
-      subtitle: "Set the first layer of context before Frankie starts coaching."
-    };
-  }
-
-  return {
-    eyebrow: "Frankie Fit",
-    title: "Workspace",
-    subtitle: "A calmer command center for movement, meals, and wellness."
-  };
-}
 
 function ActionModal({
   open,
@@ -204,18 +127,15 @@ function ActionModal({
 
 export function UserAppShell({ children, user }: UserAppShellProps) {
   const pathname = usePathname();
-  const pageMeta = useMemo(() => getPageMeta(pathname), [pathname]);
   const isChatRoute = pathname.startsWith("/app/chat");
   const isProfileRoute = pathname.startsWith("/app/profile");
-  const isDashboardRoute = pathname.startsWith("/app/dashboard");
   const managesOwnScroll = isChatRoute || isProfileRoute;
   const contentWidthClass = isProfileRoute ? "w-full h-full" : `w-full ${managesOwnScroll ? "h-full" : ""} max-w-[1180px] mx-auto`;
   const [overlayPanel, setOverlayPanel] = useState<OverlayPanel>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [menuView, setMenuView] = useState<"main" | "notifications">("main");
+  const [unreadCount, setUnreadCount] = useState(user.unreadNotificationCount);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
-  const dashboardBody = user.primaryGoal
-    ? `A simple read on how your current rhythm is supporting ${user.primaryGoal.toLowerCase()}.`
-    : "A simple read on how your current rhythm is supporting your goals.";
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -233,6 +153,8 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
     }
   }, [profileMenuOpen]);
 
+  const menuItemClass =
+    "rounded-[0.5rem] px-2.5 py-2 text-sm font-medium text-foreground transition hover:bg-surface-contrast";
   const sidebarActionClass =
     "group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-muted transition hover:bg-surface-contrast/60 hover:text-foreground sidebar-collapsed:justify-center sidebar-collapsed:px-0";
   // Collapsed to the rail, section labels turn into a thin divider.
@@ -309,49 +231,57 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0">
-            <header className="border-b border-border px-4 py-3 sm:px-5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <Link aria-label="Frankie Fit home" className="lg:hidden" href="/app/chat">
-                    <FrankieAvatar mood="happy" size={36} />
-                  </Link>
-                  <div className="min-w-0">
-                    {pageMeta.eyebrow ? <p className="ff-kicker">{pageMeta.eyebrow}</p> : null}
-                    <h1 className={`truncate text-base font-semibold tracking-[-0.02em] sm:text-lg ${pageMeta.eyebrow ? "mt-1" : ""}`}>
-                      {pageMeta.title}
-                    </h1>
-                    {pageMeta.subtitle ? (
-                      <p className="mt-0.5 hidden max-w-3xl text-sm leading-6 text-muted sm:block">{pageMeta.subtitle}</p>
-                    ) : null}
-                    {isDashboardRoute ? (
-                      <p className="mt-0.5 hidden max-w-3xl text-sm leading-6 text-muted sm:block">{dashboardBody}</p>
-                    ) : null}
-                  </div>
-                </div>
+            <header className="flex flex-none items-center justify-between gap-3 px-4 pt-3 sm:px-5 lg:justify-end">
+              <Link aria-label="Frankie Fit home" className="lg:hidden" href="/app/chat">
+                <FrankieAvatar mood="happy" size={36} />
+              </Link>
 
-                <div className="flex flex-none items-center justify-end gap-2 sm:gap-3">
-                  {user.authConfigured ? (
-                    <NotificationBell initialUnreadCount={user.unreadNotificationCount} />
-                  ) : null}
-                  <div className="relative" ref={profileMenuRef}>
-                    <button
-                      aria-expanded={profileMenuOpen}
-                      aria-label="Account menu"
-                      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-accent-strong text-sm font-semibold text-accent-foreground shadow-[var(--shadow-card)] transition hover:brightness-110"
-                      onClick={() => setProfileMenuOpen((current) => !current)}
-                      type="button"
-                    >
-                      {user.initials}
-                    </button>
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  aria-expanded={profileMenuOpen}
+                  aria-label={unreadCount > 0 ? `Account menu, ${unreadCount} unread notifications` : "Account menu"}
+                  className="relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-accent-strong text-sm font-semibold text-accent-foreground shadow-[var(--shadow-card)] transition hover:brightness-110"
+                  onClick={() => {
+                    setMenuView("main");
+                    setProfileMenuOpen((current) => !current);
+                  }}
+                  type="button"
+                >
+                  {user.initials}
+                  <UnreadBadge className="absolute -right-1 -top-1" count={unreadCount} />
+                </button>
 
-                    <div
-                      aria-hidden={!profileMenuOpen}
-                      className={`ff-card absolute right-0 z-30 mt-2 w-64 origin-top-right overflow-hidden p-2 transition-all duration-200 ease-out ${
-                        profileMenuOpen
-                          ? "translate-y-0 scale-100 opacity-100"
-                          : "pointer-events-none -translate-y-1 scale-95 opacity-0"
-                      }`}
-                    >
+                <div
+                  aria-hidden={!profileMenuOpen}
+                  className={`ff-card absolute right-0 z-30 mt-2 origin-top-right overflow-hidden p-2 transition-all duration-200 ease-out ${
+                    menuView === "notifications" ? "w-80" : "w-64"
+                  } ${
+                    profileMenuOpen
+                      ? "translate-y-0 scale-100 opacity-100"
+                      : "pointer-events-none -translate-y-1 scale-95 opacity-0"
+                  }`}
+                >
+                  {menuView === "notifications" ? (
+                    <>
+                      <button
+                        className="flex w-full cursor-pointer items-center gap-1.5 rounded-[0.5rem] px-2 py-1.5 text-sm font-semibold transition hover:bg-surface-contrast"
+                        onClick={() => setMenuView("main")}
+                        type="button"
+                      >
+                        <ChevronLeft aria-hidden className="h-4 w-4" />
+                        Notifications
+                      </button>
+                      <div className="my-1.5 border-t border-border" />
+                      {profileMenuOpen ? (
+                        <NotificationsList
+                          onNavigate={() => setProfileMenuOpen(false)}
+                          onUnreadCountChange={setUnreadCount}
+                          unreadCount={unreadCount}
+                        />
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
                       <div className="flex items-center gap-2.5 px-2 py-1.5">
                         <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent-strong text-sm font-semibold text-accent-foreground">
                           {user.initials}
@@ -362,11 +292,26 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
                         </div>
                       </div>
                       <div className="my-1.5 border-t border-border" />
-                      <p className="px-2.5 pb-1.5 pt-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted">
-                        Theme
-                      </p>
-                      <ThemeToggle className="mx-1" />
-                      <div className="my-1.5 border-t border-border" />
+                      {user.authConfigured ? (
+                        <button
+                          className={`${menuItemClass} flex w-full cursor-pointer items-center justify-between gap-2 text-left`}
+                          onClick={() => setMenuView("notifications")}
+                          type="button"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Bell aria-hidden className="h-4 w-4 text-muted" />
+                            Notifications
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <UnreadBadge count={unreadCount} />
+                            <ChevronRight aria-hidden className="h-4 w-4 text-muted" />
+                          </span>
+                        </button>
+                      ) : null}
+                      <Link className={`${menuItemClass} flex items-center gap-2`} href="/app/profile" onClick={() => setProfileMenuOpen(false)}>
+                        <UserRound aria-hidden className="h-4 w-4 text-muted" />
+                        Profile
+                      </Link>
                       {user.isAdmin ? (
                         <div className="lg:hidden">
                           {[
@@ -374,37 +319,30 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
                             ["/app/admin/debug", "Debug"],
                             ["/app/admin/evals", "Evals"]
                           ].map(([href, label]) => (
-                            <Link
-                              className="block rounded-[0.5rem] px-2.5 py-2 text-sm font-medium text-foreground transition hover:bg-surface-contrast"
-                              href={href}
-                              key={href}
-                              onClick={() => setProfileMenuOpen(false)}
-                            >
+                            <Link className={`${menuItemClass} block`} href={href} key={href} onClick={() => setProfileMenuOpen(false)}>
                               {label}
                             </Link>
                           ))}
-                          <div className="my-1.5 border-t border-border" />
                         </div>
                       ) : null}
-                      <Link
-                        className="block rounded-[0.5rem] px-2.5 py-2 text-sm font-medium text-foreground transition hover:bg-surface-contrast"
-                        href="/app/profile"
-                        onClick={() => setProfileMenuOpen(false)}
-                      >
-                        Profile
-                      </Link>
+                      <div className="my-1.5 border-t border-border" />
+                      <p className="px-2.5 pb-1.5 pt-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted">
+                        Theme
+                      </p>
+                      <ThemeToggle className="mx-1" />
                       {user.authConfigured ? (
-                        <form action={signOut}>
-                          <button
-                            className="mt-1 block w-full cursor-pointer rounded-[0.5rem] px-2.5 py-2 text-left text-sm font-medium text-foreground transition hover:bg-surface-contrast"
-                            type="submit"
-                          >
-                            Log out
-                          </button>
-                        </form>
+                        <>
+                          <div className="my-1.5 border-t border-border" />
+                          <form action={signOut}>
+                            <button className={`${menuItemClass} flex w-full cursor-pointer items-center gap-2 text-left`} type="submit">
+                              <LogOut aria-hidden className="h-4 w-4 text-muted" />
+                              Log out
+                            </button>
+                          </form>
+                        </>
                       ) : null}
-                    </div>
-                  </div>
+                    </>
+                  )}
                 </div>
               </div>
             </header>
