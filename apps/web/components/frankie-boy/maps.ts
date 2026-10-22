@@ -55,8 +55,10 @@ export const INTERIOR = {
   entry: { human: { x: 70, y: 82 }, frankie: { x: 88, y: 86 } } satisfies Record<string, Point>,
   atCounter: { x: 34, y: 34 } satisfies Point,
   atBowls: { x: 12, y: 66 } satisfies Point,
-  frankieAtBowl: { x: 18, y: 84 } satisfies Point,
-  frankieAtWater: { x: 34, y: 84 } satisfies Point,
+  // Placed so his mouth (rows 10–11 of the eat sprite) lands on the bowl's rim, not the floor below
+  // it: he walks up facing left to the food, then steps right to the water.
+  frankieAtBowl: { x: 20, y: 71 } satisfies Point,
+  frankieAtWater: { x: 28, y: 71 } satisfies Point,
   onCouch: { x: 112, y: 40 } satisfies Point,
   frankieOnCouch: { x: 128, y: 44 } satisfies Point
 } as const;

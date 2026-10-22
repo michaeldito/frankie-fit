@@ -80,17 +80,21 @@ function TextBox({ text, prompt, revealRef }: { text: string; prompt: boolean; r
 }
 
 function FrankieBoyDevice() {
-  const { day, closeSheet, redeem, bellyRub } = useFrankieDay();
+  const { day, closeSheet, redeem, bellyRub, launchNeed } = useFrankieDay();
   const [scale, setScale] = useState(computeScale);
-  const [mode, setMode] = useState<Mode>({ kind: "greeting" });
-  const [menuIndex, setMenuIndex] = useState(0);
+  // Opened from a specific action button: start in that scene. Otherwise greet, with the menu
+  // cursor on whatever Frankie wants most.
+  const [mode, setMode] = useState<Mode>(() => (launchNeed ? { kind: "scene", need: launchNeed } : { kind: "greeting" }));
+  const [menuIndex, setMenuIndex] = useState(() =>
+    Math.max(0, FRANKIE_NEEDS.indexOf(launchNeed ?? day?.mostPressingNeed ?? "feed"))
+  );
   const [sceneText, setSceneText] = useState<{ text: string; prompt: boolean } | null>(null);
   const [helpPage, setHelpPage] = useState(0);
   const [pressed, setPressed] = useState<"a" | "b" | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const idleWorld = useRef<World>(createIdleWorld());
-  const runnerRef = useRef<SceneRunner | null>(null);
+  const runnerRef = useRef<SceneRunner | null>(launchNeed ? new SceneRunner(SCENES[launchNeed]) : null);
   const redeemPending = useRef(false);
   const wanderTarget = useRef({ x: 96, y: 70 });
   const revealRef = useRef({ done: true, finish: () => {} });
