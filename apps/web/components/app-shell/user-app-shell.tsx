@@ -21,7 +21,7 @@ import { AccountMenu } from "@/components/app-shell/account-menu";
 import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
 import { FrankieWordmark } from "@/components/frankie/frankie-wordmark";
 import { FrankieDayProvider } from "@/components/frankie-day/frankie-day-context";
-import { FrankieDaySheet } from "@/components/frankie-day/frankie-day-sheet";
+import { FrankieBoy } from "@/components/frankie-boy/frankie-boy";
 import { SidebarFrankieDock } from "@/components/frankie-day/sidebar-frankie-card";
 import { HoverLabel } from "@/components/app-shell/hover-label";
 import { SidebarCollapseButton, SidebarResizeHandle } from "@/components/app-shell/sidebar-controls";
@@ -260,7 +260,7 @@ export function UserAppShell({ children, user }: UserAppShellProps) {
         open={overlayPanel === "next-step"}
         title={user.nextStepTitle}
       />
-      <FrankieDaySheet />
+      <FrankieBoy />
     </FrankieDayProvider>
   );
 }

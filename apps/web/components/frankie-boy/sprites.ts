@@ -1,0 +1,145 @@
+// Original pixel art for the Frankie Boy, as palette-indexed rows. "." is transparent. Each sprite
+// is baked once into an offscreen canvas (see renderer.ts) and mirrored for the other facing.
+
+export type SpriteGrid = readonly string[];
+
+export const PALETTE: Record<string, string> = {
+  k: "#3B2416", // outline (dark brown, never pure black)
+  t: "#C58B4B", // Frankie Fur
+  b: "#8B5E3C", // Ear Brown
+  c: "#F3D9B1", // muzzle and belly cream
+  e: "#1F1F1F", // eye and nose
+  p: "#E8828A", // tongue
+  w: "#FFFFFF", // eye shine
+  h: "#5B3A22", // human hair
+  s: "#F2C9A0", // human skin
+  r: "#2563EB", // human shirt (accent blue)
+  j: "#3A3F5C", // human pants
+  y: "#E3B23C", // biscuit
+  g: "#C9E05A", // tennis ball
+  G: "#8DA43A" // tennis ball seam
+};
+
+// Frankie, side view facing right: long dachshund body, floppy ear, short legs.
+const FRANKIE_BODY = [
+  "................",
+  "................",
+  "................",
+  "..........kkk...",
+  ".........ktttk..",
+  "........kbttwek.",
+  "k.......kbttttke",
+  "tk.kkkkkkbtcccck",
+  ".ktttttttbbtcck.",
+  "..ktttttttttkk..",
+  "..ktttttttttk...",
+  "..kccccccccck..."
+];
+
+const LEGS_A = ["...kt.....kt....", "...kk.....kk....", "................", "................"];
+const LEGS_B = ["....kt...kt.....", "....kk...kk.....", "................", "................"];
+const LEGS_RUN = ["..kt.......kt...", "..kk.......kk...", "................", "................"];
+
+export const FRANKIE_SPRITES: Record<"idle" | "walk" | "run" | "eat" | "sleep", readonly SpriteGrid[]> = {
+  idle: [[...FRANKIE_BODY, ...LEGS_A]],
+  walk: [
+    [...FRANKIE_BODY, ...LEGS_A],
+    [...FRANKIE_BODY, ...LEGS_B]
+  ],
+  run: [
+    [...FRANKIE_BODY, ...LEGS_RUN],
+    [...FRANKIE_BODY, ...LEGS_B]
+  ],
+  // Head dipped toward the bowl, tongue out.
+  eat: [
+    [
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
+      "k...............",
+      "tk.kkkkkkkk.....",
+      ".ktttttttbbkkk..",
+      "..ktttttttbtttk.",
+      "..ktttttttbtwek.",
+      "..kccccccckttttk",
+      "...kt.....ktcccp",
+      "...kk.....kk.kk.",
+      "................",
+      "................",
+      "................"
+    ],
+    [
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
+      "k...............",
+      "tk.kkkkkkkk.....",
+      ".ktttttttbbkkk..",
+      "..ktttttttbtttk.",
+      "..ktttttttbtwek.",
+      "..kccccccckttttk",
+      "...kt.....ktccck",
+      "...kk.....kk.pp.",
+      "................",
+      "................",
+      "................"
+    ]
+  ],
+  // Curled up, eyes closed.
+  sleep: [
+    [
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
+      "................",
+      "....kkkkkkkk....",
+      "...kttttttttkk..",
+      "..kttttttbbttek.",
+      "..ktttttttbtttk.",
+      "..kcccccccccccck",
+      "...kkkkkkkkkkkk.",
+      "................",
+      "................",
+      "................"
+    ]
+  ]
+};
+
+// The human, facing the camera; walking alternates the feet and bobs a pixel.
+const HUMAN_TOP = [
+  "................",
+  ".....kkkkkk.....",
+  "....khhhhhhk....",
+  "....khhhhhhk....",
+  "....khsssshk....",
+  "....kseesesk....",
+  "....kssssssk....",
+  ".....kkssk......",
+  "....krrrrrrk....",
+  "...krrrrrrrrk...",
+  "...ksrrrrrrsk...",
+  "...ksrrrrrrsk...",
+  "....kjjjjjjk...."
+];
+
+export const HUMAN_SPRITES: Record<"idle" | "walk" | "sit", readonly SpriteGrid[]> = {
+  idle: [[...HUMAN_TOP, "....kjjkkjjk....", "....kjjkkjjk....", "....kkk..kkk...."]],
+  walk: [
+    [...HUMAN_TOP, "....kjjkkjjk....", "....kjjk.kkk....", "....kkk........."],
+    [...HUMAN_TOP, "....kjjkkjjk....", "....kkk.kjjk....", ".........kkk...."]
+  ],
+  sit: [[...HUMAN_TOP.slice(0, 12), "...kjjjjjjjjk...", "...kkkkkkkkkk...", "................", "................"]]
+};
+
+export const ITEM_SPRITES: Record<"biscuit" | "ball", SpriteGrid> = {
+  biscuit: ["..kkkk..", ".kyyyyk.", "kyykkyyk", "kyyyyyyk", ".kyyyyk.", "..kkkk.."],
+  ball: [".kkkk.", "kggGgk", "kgGggk", "kggGgk", ".kkkk."]
+};
+

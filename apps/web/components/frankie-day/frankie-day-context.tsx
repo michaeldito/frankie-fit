@@ -47,6 +47,14 @@ export function FrankieDayProvider({ children, enabled }: { children: ReactNode;
   }, [enabled]);
 
   useEffect(() => {
+    // Nudge notifications deep-link here with ?frankie=open. Checked even when the ledger can't
+    // load, so the Frankie Boy still opens (its redeems will just be refused).
+    if (new URLSearchParams(window.location.search).get("frankie") === "open") {
+      queueMicrotask(() => setSheetOpen(true));
+    }
+  }, []);
+
+  useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
 
@@ -54,10 +62,6 @@ export function FrankieDayProvider({ children, enabled }: { children: ReactNode;
       .then((loaded) => {
         if (cancelled) return;
         setDay(loaded);
-        // Nudge notifications deep-link here with ?frankie=open.
-        if (loaded && new URLSearchParams(window.location.search).get("frankie") === "open") {
-          setSheetOpen(true);
-        }
       })
       .catch(() => undefined);
 
