@@ -105,7 +105,7 @@ Logging real life earns 🦴 biscuits, and biscuits are spent on time with Frank
 
 **Earning** (`award_biscuits`, safe to call repeatedly):
 
-- +1 for the first log in each pillar on a Pacific day.
+- +1 for every log: each workout, meal, check-in, or lifestyle update. Each reward is tied to the log that earned it (`source_table`, `source_id`), so awarding stays idempotent.
 - +1 "full bowl" bonus when all four pillars are logged.
 - Only days within the last 7 can earn, so back-dated or future-dated logs can't farm biscuits.
 - Deleting a log never takes a biscuit back.

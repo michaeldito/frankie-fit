@@ -2,7 +2,7 @@
 
 import { Flame, X } from "lucide-react";
 import { useState } from "react";
-import { FRANKIE_ACTIONS, FRANKIE_NEEDS, type FrankieNeed } from "@frankie-fit/companion-core";
+import { FRANKIE_ACTIONS, FRANKIE_NEEDS, HOW_BISCUITS_WORK, type FrankieNeed } from "@frankie-fit/companion-core";
 import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
 import { FrankieSticker } from "@/components/frankie/frankie-sticker";
 import { useFrankieDay } from "@/components/frankie-day/frankie-day-context";
@@ -138,10 +138,25 @@ export function FrankieDaySheet() {
           <p className="font-frankie text-base text-frankie">
             &ldquo;Every time you tell me what you did, I earn a biscuit. You spend them on me. Obviously.&rdquo;
           </p>
-          <p className="mt-1.5">
-            +1 🦴 for the first log in each area today (exercise, food, wellness, lifestyle), +1 bonus when
-            you log all four. Tap Frankie for a free belly rub.
-          </p>
+          <details className="group mt-2" open={day.balance === 0 && day.earnedToday === 0}>
+            <summary className="cursor-pointer list-none text-sm font-semibold text-foreground">
+              How biscuits work <span className="text-muted group-open:hidden">›</span>
+            </summary>
+            <div className="mt-2 space-y-2.5">
+              {HOW_BISCUITS_WORK.map((section) => (
+                <div key={section.heading}>
+                  <p className="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-frankie">
+                    {section.heading}
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {section.points.map((point) => (
+                      <li key={point}>{point}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </details>
         </div>
       </div>
     </div>

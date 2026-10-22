@@ -7,6 +7,11 @@ const migration = readFileSync(
   new URL("../../../supabase/migrations/20261021072622_frankie_biscuits.sql", import.meta.url),
   "utf8"
 );
+// award_biscuits was redefined to pay per log; earning rules come from the latest definition.
+const perLogMigration = readFileSync(
+  new URL("../../../supabase/migrations/20261022015556_biscuits_per_log.sql", import.meta.url),
+  "utf8"
+);
 
 describe("rules mirror the SQL that enforces them", () => {
   it("charges the same cost for every action as redeem_frankie_action", () => {
@@ -22,8 +27,8 @@ describe("rules mirror the SQL that enforces them", () => {
   });
 
   it("awards the same log reward and full-bowl bonus as award_biscuits", () => {
-    expect(migration).toContain(`select v_user, ${BISCUIT_EARN_RULES.perPillarPerDay}, 'log_reward'`);
-    expect(migration).toContain(`values (v_user, ${BISCUIT_EARN_RULES.fullBowlBonus}, 'full_bowl_bonus'`);
+    expect(perLogMigration).toContain(`select v_user, ${BISCUIT_EARN_RULES.perLog}, 'log_reward', day_logs.pillar`);
+    expect(perLogMigration).toContain(`values (v_user, ${BISCUIT_EARN_RULES.fullBowlBonus}, 'full_bowl_bonus'`);
   });
 });
 

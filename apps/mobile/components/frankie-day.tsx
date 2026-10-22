@@ -1,5 +1,11 @@
 import type { FrankieMood } from '@frankie-fit/brand-core';
-import { FRANKIE_ACTIONS, FRANKIE_NEEDS, type FrankieDay, type FrankieNeed } from '@frankie-fit/companion-core';
+import {
+  FRANKIE_ACTIONS,
+  FRANKIE_NEEDS,
+  HOW_BISCUITS_WORK,
+  type FrankieDay,
+  type FrankieNeed,
+} from '@frankie-fit/companion-core';
 import * as Haptics from 'expo-haptics';
 import { Image, type ImageSource } from 'expo-image';
 import {
@@ -11,7 +17,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { FrankieAvatar } from '@/components/frankie';
 import { frankieApiFetch } from '@/lib/api';
@@ -191,10 +197,11 @@ function FrankieDaySheet({
   visible: boolean;
 }) {
   const styles = useStyles();
+  const [showRules, setShowRules] = useState(false);
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
-      <View style={styles.sheet}>
+      <ScrollView contentContainerStyle={styles.sheet} style={styles.sheetScroll}>
         <View style={styles.sheetHeader}>
           <Text style={styles.sheetTitle}>{"Frankie's Day"}</Text>
           <BiscuitCount count={day.balance} />
@@ -235,14 +242,26 @@ function FrankieDaySheet({
         <Text style={styles.explainer}>
           {'"Every time you tell me what you did, I earn a biscuit. You spend them on me. Obviously."'}
         </Text>
-        <Text style={styles.rules}>
-          +1 🦴 for the first log in each area today, +1 bonus when you log all four. Tap Frankie for a free belly rub.
-        </Text>
+        <Pressable onPress={() => setShowRules((current) => !current)}>
+          <Text style={styles.rulesToggle}>How biscuits work {showRules ? '⌃' : '⌄'}</Text>
+        </Pressable>
+        {showRules
+          ? HOW_BISCUITS_WORK.map((section) => (
+              <View key={section.heading} style={styles.rulesSection}>
+                <Text style={styles.rulesHeading}>{section.heading.toUpperCase()}</Text>
+                {section.points.map((point) => (
+                  <Text key={point} style={styles.rules}>
+                    • {point}
+                  </Text>
+                ))}
+              </View>
+            ))
+          : null}
 
         <Pressable onPress={onClose} style={styles.close}>
           <Text style={styles.closeText}>Done</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </Modal>
   );
 }
@@ -274,7 +293,8 @@ const useStyles = createThemedStyles((colors) => ({
   barNeeds: { flexDirection: 'row', gap: 3 },
   barNeed: { width: 16, height: 16 },
   barNeedWanting: { opacity: 0.3 },
-  sheet: { flex: 1, gap: 16, backgroundColor: colors.background, padding: 20 },
+  sheetScroll: { flex: 1, backgroundColor: colors.background },
+  sheet: { flexGrow: 1, gap: 16, padding: 20, paddingBottom: 40 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sheetTitle: { color: colors.foreground, fontFamily: fonts.frankie, fontSize: 32 },
   hero: { alignItems: 'center', gap: 8 },
@@ -315,7 +335,10 @@ const useStyles = createThemedStyles((colors) => ({
   actionMeta: { color: colors.muted, fontSize: 12 },
   error: { color: colors.danger, fontSize: 14 },
   explainer: { color: colors.frankie, fontFamily: fonts.frankie, fontSize: 18, textAlign: 'center' },
-  rules: { color: colors.muted, fontSize: 12, lineHeight: 17, textAlign: 'center' },
+  rules: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  rulesToggle: { color: colors.foreground, fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  rulesSection: { gap: 2 },
+  rulesHeading: { color: colors.frankie, fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
   close: {
     alignItems: 'center',
     borderRadius: 14,
