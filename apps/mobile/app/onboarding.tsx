@@ -15,7 +15,7 @@ import Animated, { SlideInLeft, SlideInRight, SlideOutLeft, SlideOutRight } from
 
 import { LoadingScreen, PrimaryButton, Screen, ScreenTitle, ScrollCard } from '@/components/frankie-ui';
 import { StepDots } from '@/components/step-dots';
-import { colors } from '@/constants/frankie-theme';
+import { createThemedStyles, useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
@@ -244,6 +244,7 @@ function Section({
   subtitle: string;
   title: string;
 }) {
+  const styles = useStyles();
   return (
     <ScrollCard>
       <Text style={styles.eyebrow}>{eyebrow}</Text>
@@ -267,6 +268,8 @@ function Field({
   placeholder: string;
   value: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -274,7 +277,7 @@ function Field({
         multiline={multiline}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.subtle}
+        placeholderTextColor={colors.muted}
         returnKeyType={multiline ? 'default' : 'next'}
         style={[styles.input, multiline && styles.textarea]}
         textAlignVertical={multiline ? 'top' : 'center'}
@@ -297,6 +300,7 @@ function SingleSelect({
   required?: boolean;
   value: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>
@@ -334,6 +338,7 @@ function MultiSelect({
   options: string[];
   values: string[];
 }) {
+  const styles = useStyles();
   function toggle(option: string) {
     onChange(values.includes(option) ? values.filter((value) => value !== option) : [...values, option]);
   }
@@ -370,6 +375,7 @@ function ToggleRow({
   onChange: (value: boolean) => void;
   value: boolean;
 }) {
+  const styles = useStyles();
   return (
     <Pressable onPress={() => onChange(!value)} style={[styles.toggle, value && styles.toggleSelected]}>
       <View style={[styles.checkbox, value && styles.checkboxSelected]}>
@@ -477,6 +483,7 @@ function buildFormStateFromProfile(
 }
 
 export default function OnboardingScreen() {
+  const styles = useStyles();
   const { refreshProfile, session } = useAuth();
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -940,7 +947,7 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => ({
   keyboard: {
     flex: 1,
   },
@@ -950,14 +957,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   eyebrow: {
-    color: colors.accentStrong,
+    color: colors.accent,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0,
     textTransform: 'uppercase',
   },
   sectionTitle: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 22,
     fontWeight: '800',
   },
@@ -974,20 +981,20 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   fieldLabel: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 16,
     fontWeight: '800',
   },
   required: {
-    color: colors.accentStrong,
+    color: colors.accent,
   },
   input: {
     minHeight: 52,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 14,
-    backgroundColor: colors.backgroundSoft,
-    color: colors.text,
+    backgroundColor: colors.surfaceStrong,
+    color: colors.foreground,
     fontSize: 16,
     paddingHorizontal: 14,
   },
@@ -1004,13 +1011,13 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 999,
-    backgroundColor: colors.backgroundSoft,
+    backgroundColor: colors.surfaceStrong,
     paddingHorizontal: 13,
     paddingVertical: 10,
   },
   choiceSelected: {
-    borderColor: colors.accentStrong,
-    backgroundColor: colors.accentStrong,
+    borderColor: colors.brand,
+    backgroundColor: colors.brand,
   },
   choiceText: {
     color: colors.muted,
@@ -1018,7 +1025,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   choiceTextSelected: {
-    color: colors.background,
+    color: colors.brandForeground,
   },
   toggle: {
     flexDirection: 'row',
@@ -1027,11 +1034,11 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 16,
-    backgroundColor: colors.backgroundSoft,
+    backgroundColor: colors.surfaceStrong,
     padding: 15,
   },
   toggleSelected: {
-    borderColor: colors.accentStrong,
+    borderColor: colors.brand,
   },
   checkbox: {
     alignItems: 'center',
@@ -1043,11 +1050,11 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   checkboxSelected: {
-    borderColor: colors.accentStrong,
-    backgroundColor: colors.accentStrong,
+    borderColor: colors.brand,
+    backgroundColor: colors.brand,
   },
   checkmark: {
-    color: colors.background,
+    color: colors.brandForeground,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -1064,7 +1071,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   stepLabel: {
-    color: colors.subtle,
+    color: colors.muted,
     fontSize: 13,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -1084,11 +1091,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   backButtonText: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 16,
     fontWeight: '800',
   },
   continueWrap: {
     flex: 1,
   },
-});
+}));

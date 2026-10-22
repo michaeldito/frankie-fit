@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { derivePendingClarification, runFrankieTurn } from "@/lib/ai/run-frankie-turn";
+import { awardBiscuitsForReply } from "@/lib/frankie-day";
 import { getChatExperience, MAX_CHAT_MESSAGE_LENGTH } from "@/lib/chat";
 import { PERSONAS } from "@/lib/ai/prompts/personas";
 import { getCurrentAppContext, getDisplayName } from "@/lib/profile";
@@ -201,6 +202,7 @@ export async function POST(request: NextRequest) {
   }
 
   const refreshedExperience = await getChatExperience(context, displayName);
+  const biscuitAward = await awardBiscuitsForReply(supabase, refreshedExperience.messages?.at(-1));
 
-  return NextResponse.json(refreshedExperience);
+  return NextResponse.json({ ...refreshedExperience, biscuitAward });
 }

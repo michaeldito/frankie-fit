@@ -1,8 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { pillarColor, type Pillar } from '@frankie-fit/brand-core';
+import { Text, View } from 'react-native';
 
-import { colors } from '@/constants/frankie-theme';
+import { createThemedStyles, useTheme } from '@/lib/theme';
 // TODO(Phase 3 / shared-types extraction): reaches into apps/web by relative path — see
-// apps/mobile/app/(drawer)/chat.tsx and packages/dashboard-core/dashboard.ts for the same
+// apps/mobile/app/(tabs)/chat.tsx and packages/dashboard-core/dashboard.ts for the same
 // known IOU and its rationale.
 import { formatLoggedDate } from '../../../apps/web/components/chat/logged-entry-format';
 
@@ -16,12 +17,18 @@ export function LoggedEntryCard<T extends LoggedEntry>({
   formatDetail,
   formatTitle,
   kicker,
+  pillar,
 }: {
   entries: T[];
   formatDetail: (entry: T) => string | null;
   formatTitle: (entry: T) => string;
   kicker: string;
+  pillar: Pillar;
 }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const accent = pillarColor(colors, pillar);
+
   if (entries.length === 0) {
     return null;
   }
@@ -32,9 +39,9 @@ export function LoggedEntryCard<T extends LoggedEntry>({
         const detail = formatDetail(entry);
 
         return (
-          <View key={entry.id ?? index} style={styles.card}>
+          <View key={entry.id ?? index} style={[styles.card, { borderLeftColor: accent }]}>
             <View style={styles.headerRow}>
-              <Text style={styles.kicker}>{kicker}</Text>
+              <Text style={[styles.kicker, { color: accent }]}>{kicker}</Text>
               {entry.loggedForDate ? (
                 <Text style={styles.date}>{formatLoggedDate(entry.loggedForDate)}</Text>
               ) : null}
@@ -48,7 +55,7 @@ export function LoggedEntryCard<T extends LoggedEntry>({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => ({
   stack: {
     gap: 8,
   },
@@ -57,9 +64,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     maxWidth: '86%',
     borderLeftWidth: 3,
-    borderLeftColor: colors.accentStrong,
     borderRadius: 14,
-    backgroundColor: colors.panel,
+    backgroundColor: colors.surface,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
@@ -70,19 +76,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   kicker: {
-    color: colors.accentStrong,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0,
     textTransform: 'uppercase',
   },
   date: {
-    color: colors.subtle,
+    color: colors.muted,
     fontSize: 11,
     fontWeight: '700',
   },
   title: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -91,4 +96,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
-});
+}));

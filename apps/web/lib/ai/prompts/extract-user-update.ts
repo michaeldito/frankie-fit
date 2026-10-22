@@ -1,6 +1,7 @@
 export function buildExtractUserUpdatePrompt(input?: {
   isAnsweringClarification?: boolean;
   strictWorkoutLoggingEnabled?: boolean;
+  hasAlreadyLoggedContext?: boolean;
 }) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Los_Angeles",
@@ -24,6 +25,17 @@ export function buildExtractUserUpdatePrompt(input?: {
       ? [
           "",
           "The user prompt below has two labeled lines: the previous message and Frankie's clarification question, followed by the user's answer. Combine only those two lines into one complete update. Do not use any other prior conversation history."
+        ]
+      : []),
+    ...(input?.hasAlreadyLoggedContext
+      ? [
+          "",
+          "Already logged:",
+          "- The user prompt starts with a list of entries the user already logged today or yesterday. It is there only so you can recognize references back to them. Never extract anything from that list itself.",
+          "- If the current message refers back to an already-logged entry instead of reporting a new one (for example \"remember\", \"like I said\", \"as I mentioned\", \"from earlier\", or mentioning it as a reason: \"I'm starving cuz I lifted earlier\"), do not extract it again.",
+          "- A message that restates an already-logged entry with the same activity or food and no new details (no different time, duration, or session) is a reference, even without a word like remember. Example: with \"running (30 min)\" already logged today, \"like I said, I ran this morning, then had a sandwich for lunch\" has no activities and one lunch entry.",
+          "- Still extract it when the message clearly reports a new or additional event (\"again\", \"another\", \"a second\", \"this evening too\"), or adds a different activity, meal, or day than the list shows.",
+          "- Everything else in the message is extracted normally. A reference to an old workout does not stop you from extracting a new meal in the same message."
         ]
       : []),
     "",

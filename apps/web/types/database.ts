@@ -39,6 +39,7 @@ export type Database = {
           avoidances: string[];
           coaching_style: string | null;
           coach_persona: string | null;
+          frankie_nudge_level: "off" | "polite" | "whiny";
           strict_workout_logging: boolean;
           preferred_checkin_style: string | null;
           safety_acknowledged: boolean;
@@ -76,6 +77,7 @@ export type Database = {
           avoidances?: string[];
           coaching_style?: string | null;
           coach_persona?: string | null;
+          frankie_nudge_level?: "off" | "polite" | "whiny";
           strict_workout_logging?: boolean;
           preferred_checkin_style?: string | null;
           safety_acknowledged?: boolean;
@@ -113,6 +115,7 @@ export type Database = {
           avoidances?: string[];
           coaching_style?: string | null;
           coach_persona?: string | null;
+          frankie_nudge_level?: "off" | "polite" | "whiny";
           strict_workout_logging?: boolean;
           preferred_checkin_style?: string | null;
           safety_acknowledged?: boolean;
@@ -763,7 +766,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
-          type: "checkin_reminder" | "daily_summary" | "weekly_summary";
+          type: "checkin_reminder" | "daily_summary" | "weekly_summary" | "frankie_nudge";
           title: string;
           body: string;
           action_url: string | null;
@@ -774,7 +777,7 @@ export type Database = {
         Insert: {
           id?: string;
           user_id: string;
-          type: "checkin_reminder" | "daily_summary" | "weekly_summary";
+          type: "checkin_reminder" | "daily_summary" | "weekly_summary" | "frankie_nudge";
           title: string;
           body: string;
           action_url?: string | null;
@@ -785,12 +788,48 @@ export type Database = {
         Update: {
           id?: string;
           user_id?: string;
-          type?: "checkin_reminder" | "daily_summary" | "weekly_summary";
+          type?: "checkin_reminder" | "daily_summary" | "weekly_summary" | "frankie_nudge";
           title?: string;
           body?: string;
           action_url?: string | null;
           metadata_json?: Json;
           read_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      biscuit_ledger: {
+        Row: {
+          id: string;
+          user_id: string;
+          delta: number;
+          reason: "log_reward" | "full_bowl_bonus" | "care_feed" | "care_walk" | "care_play" | "care_snuggle";
+          pillar: "exercise" | "diet" | "wellness" | "lifestyle" | null;
+          date_key: string;
+          source_table: "activity_logs" | "diet_logs" | "wellness_checkins" | "lifestyle_logs" | null;
+          source_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          delta: number;
+          reason: "log_reward" | "full_bowl_bonus" | "care_feed" | "care_walk" | "care_play" | "care_snuggle";
+          pillar?: "exercise" | "diet" | "wellness" | "lifestyle" | null;
+          date_key: string;
+          source_table?: "activity_logs" | "diet_logs" | "wellness_checkins" | "lifestyle_logs" | null;
+          source_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          delta?: number;
+          reason?: "log_reward" | "full_bowl_bonus" | "care_feed" | "care_walk" | "care_play" | "care_snuggle";
+          pillar?: "exercise" | "diet" | "wellness" | "lifestyle" | null;
+          date_key?: string;
+          source_table?: "activity_logs" | "diet_logs" | "wellness_checkins" | "lifestyle_logs" | null;
+          source_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -1013,6 +1052,18 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      award_biscuits: {
+        Args: { p_date_key: string };
+        Returns: Database["public"]["Tables"]["biscuit_ledger"]["Row"][];
+      };
+      frankie_pacific_today: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      redeem_frankie_action: {
+        Args: { p_kind: string };
+        Returns: Json;
+      };
       admin_friction_summary: {
         Args: Record<PropertyKey, never>;
         Returns: {

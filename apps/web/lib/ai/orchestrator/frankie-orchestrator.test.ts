@@ -1053,3 +1053,69 @@ describe("orchestrateFrankieReply strict workout logging", () => {
     expect(result.persistPlan.activities).toBe(true);
   });
 });
+
+describe("orchestrateFrankieReply already-logged context", () => {
+  const alreadyLogged = [
+    { pillar: "activity" as const, loggedForDate: "2026-10-21", summary: "weight lifting (benched with some tri and bi work, Hard)" }
+  ];
+
+  it("shows the extractor what's already logged so references aren't re-logged", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(baseExtraction({ activities: [] }));
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    await orchestrateFrankieReply({
+      profile: null,
+      message: "steak for dinner cuz I lifted earlier remember",
+      recentMessages,
+      skipCoachResponse: true,
+      alreadyLogged
+    });
+
+    const request = createStructuredOpenAiResponse.mock.calls.at(-1)?.[0] as { systemPrompt: string; userPrompt: string };
+    expect(request.systemPrompt).toContain("Already logged:");
+    expect(request.userPrompt).toContain("weight lifting (benched with some tri and bi work, Hard)");
+    expect(request.userPrompt).toMatch(/Current message:\nsteak for dinner cuz I lifted earlier remember$/);
+  });
+
+  it("leaves the prompts unchanged when nothing is logged yet", async () => {
+    hasOpenAiApiKey.mockReturnValue(true);
+    createStructuredOpenAiResponse.mockResolvedValue(baseExtraction({ activities: [] }));
+    const { orchestrateFrankieReply } = await importOrchestrator();
+
+    await orchestrateFrankieReply({
+      profile: null,
+      message: "ran 5k",
+      recentMessages,
+      skipCoachResponse: true,
+      alreadyLogged: []
+    });
+
+    const request = createStructuredOpenAiResponse.mock.calls.at(-1)?.[0] as { systemPrompt: string; userPrompt: string };
+    expect(request.systemPrompt).not.toContain("Already logged:");
+    expect(request.userPrompt).toBe("ran 5k");
+  });
+
+  it("keeps the clarification framing after the already-logged list", async () => {
+    const { buildExtractionUserPrompt } = await importOrchestrator();
+
+    expect(
+      buildExtractionUserPrompt({
+        message: "running",
+        pendingClarification: { originalMessage: "worked out", clarificationQuestion: "What did you do?" } as never,
+        alreadyLogged,
+        todayKey: "2026-10-21"
+      })
+    ).toBe(
+      [
+        "Already logged (context only, never extract from this list):",
+        "- today · activity: weight lifting (benched with some tri and bi work, Hard)",
+        "",
+        "Current message:",
+        'Previous message: "worked out"',
+        'Frankie asked: "What did you do?"',
+        'User\'s answer: "running"'
+      ].join("\n")
+    );
+  });
+});

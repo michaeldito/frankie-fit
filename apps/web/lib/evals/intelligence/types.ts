@@ -1,4 +1,5 @@
 import type { EvalPillar } from "@/lib/admin-evals";
+import type { AlreadyLoggedEntry } from "@/lib/ai/context/already-logged";
 import type {
   ActivityTimePrecision,
   ParsedActivity,
@@ -69,4 +70,7 @@ export type IntelligenceEvalCase = {
   // API routes thread it — for testing that answering a clarification actually completes a log
   // instead of re-asking. `expected` is only asserted against the final `message`'s result.
   precedingMessages?: string[];
+  // Entries the user already logged, passed to extraction the same way runFrankieTurn does, for
+  // testing that references back to them aren't logged a second time.
+  alreadyLogged?: AlreadyLoggedEntry[];
 };

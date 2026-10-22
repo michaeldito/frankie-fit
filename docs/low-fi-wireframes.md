@@ -387,6 +387,6 @@ Investigate a product signal or inspect a test account
 ## Next Visual Questions
 
 - Should the app shell feel more premium-minimal or more warm and coach-like?
-- Should Frankie appear as an avatar, a subtle badge, or mostly through text?
+- Should Frankie appear as an avatar, a subtle badge, or mostly through text? **Decided Oct 2026:** as an avatar with moods. See [design-system.md](design-system.md).
 - How much contrast do we want between user surfaces and admin surfaces?
 - Do we want the dashboard to feel airy and editorial, or more structured and utility-first?

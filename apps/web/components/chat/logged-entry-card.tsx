@@ -1,6 +1,8 @@
 "use client";
 
+import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { PILLAR_BY_ENTRY_KIND, PILLAR_STYLES } from "@/components/frankie/pillars";
 import { EditLoggedEntryModal, type EditableEntry } from "@/components/chat/edit-logged-entry-modal";
 import { formatLoggedDate, type LoggedEntryKind } from "@/components/chat/logged-entry-format";
 
@@ -31,6 +33,8 @@ export function LoggedEntryCard<T extends EditableEntry>({
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<T | null>(null);
   const removable = entries.filter((entry) => entry.id);
+  const pillar = PILLAR_STYLES[PILLAR_BY_ENTRY_KIND[kind]];
+  const PillarIcon = pillar.icon;
 
   if (removable.length === 0) {
     return null;
@@ -53,11 +57,14 @@ export function LoggedEntryCard<T extends EditableEntry>({
 
         return (
           <div
-            className="ff-card-soft border-l-2 border-l-[var(--border-strong)] p-3.5"
+            className={`ff-card-soft ff-pop border-l-[3px] p-3.5 ${pillar.edge}`}
             key={entry.id}
           >
             <div className="flex items-center justify-between gap-3">
-              <p className="ff-kicker">{kicker}</p>
+              <p className={`ff-kicker flex items-center gap-1.5 ${pillar.text}`}>
+                <PillarIcon aria-hidden className="h-3.5 w-3.5" />
+                {kicker}
+              </p>
               <div className="flex items-center gap-2 text-[0.72rem] text-[var(--muted)]">
                 {entry.loggedForDate ? <span>{formatLoggedDate(entry.loggedForDate)}</span> : null}
                 {onEdit ? (
@@ -68,19 +75,7 @@ export function LoggedEntryCard<T extends EditableEntry>({
                     title="Edit"
                     type="button"
                   >
-                    <svg
-                      aria-hidden="true"
-                      className="h-3.5 w-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                    </svg>
+                    <Pencil aria-hidden className="h-3.5 w-3.5" />
                   </button>
                 ) : null}
                 <button
@@ -93,20 +88,7 @@ export function LoggedEntryCard<T extends EditableEntry>({
                   title="Remove"
                   type="button"
                 >
-                  <svg
-                    aria-hidden="true"
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M3 6h18" />
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                  </svg>
+                  <Trash2 aria-hidden className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>

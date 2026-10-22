@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { moodForMessage, type FrankieMood } from "@frankie-fit/brand-core";
 import { LoggedEntryCard } from "@/components/chat/logged-entry-card";
+import { FrankieAvatar } from "@/components/frankie/frankie-avatar";
+import { FrankieThinking } from "@/components/frankie/frankie-thinking";
+import { BiscuitAwardChip } from "@/components/frankie-day/biscuit-award-chip";
+import type { BiscuitAward } from "@/lib/frankie-day";
 import {
   formatActivityDetail,
   formatActivityTitle,
@@ -32,6 +37,9 @@ type ChatTranscriptMessage = {
 
 type ChatTranscriptProps = {
   assistantCardClass: string;
+  biscuitAwards?: Record<string, BiscuitAward>;
+  assistantName?: string;
+  showFrankie?: boolean;
   introMessage: string;
   followupMessage: string;
   isThinking?: boolean;
@@ -175,8 +183,37 @@ function AnimatedStatusText({
   );
 }
 
+// Frankie's art only shows for the default coach; personas get a plain initial badge.
+function AssistantRow({
+  assistantName,
+  children,
+  mood,
+  showFrankie
+}: {
+  assistantName: string;
+  children: ReactNode;
+  mood: FrankieMood;
+  showFrankie: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-2.5">
+      {showFrankie ? (
+        <FrankieAvatar className="mt-0.5" mood={mood} size={38} />
+      ) : (
+        <span className="mt-0.5 flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full bg-surface-contrast text-sm font-semibold text-muted-strong">
+          {assistantName.slice(0, 1)}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
 export function ChatTranscript({
   assistantCardClass,
+  assistantName = "Frankie",
+  biscuitAwards = {},
+  showFrankie = true,
   introMessage,
   followupMessage,
   isThinking = false,
@@ -213,7 +250,7 @@ export function ChatTranscript({
                 ? "You"
                 : message.role === "system"
                   ? "System"
-                  : "Frankie";
+                  : assistantName;
               const payload = getStructuredPayload(message);
               const loggedActivities = payload?.activitiesLogged ?? [];
               const loggedDietEntries = payload?.dietLogged ?? [];
@@ -223,12 +260,12 @@ export function ChatTranscript({
                 : [];
               const workoutDraft = getWorkoutDraftPayload(message);
 
-              return (
-                <article className={isUser ? userCardClass : assistantCardClass} key={message.id}>
+              const card = (
+                <article className={isUser ? userCardClass : assistantCardClass} key={isUser ? message.id : undefined}>
                   <p
                     className={
                       isUser
-                        ? "mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-white/72"
+                        ? "mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-accent-foreground/75"
                         : "mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]"
                     }
                   >
@@ -294,50 +331,69 @@ export function ChatTranscript({
                   {workoutDraft ? (
                     <WorkoutDraftCard messageId={message.id} onSaved={onWorkoutDraftSaved} workoutDraft={workoutDraft} />
                   ) : null}
+                  {biscuitAwards[message.id] ? (
+                    <BiscuitAwardChip
+                      award={biscuitAwards[message.id]}
+                      isLatest={message.id === messages.at(-1)?.id}
+                    />
+                  ) : null}
                 </article>
+              );
+
+              return isUser ? (
+                card
+              ) : (
+                <AssistantRow
+                  assistantName={assistantName}
+                  key={message.id}
+                  mood={moodForMessage(message)}
+                  showFrankie={showFrankie}
+                >
+                  {card}
+                </AssistantRow>
               );
             })}
 
             {pendingMessage ? (
               <article className={userCardClass}>
-                <p className="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-white/72">
+                <p className="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-accent-foreground/75">
                   You
                 </p>
                 <p className="leading-6">{pendingMessage}</p>
                 <AnimatedStatusText
-                  className="pt-2 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-white/70"
+                  className="pt-2 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-accent-foreground/70"
                   label="Sending"
                 />
               </article>
             ) : null}
 
             {isThinking ? (
-              <article className={assistantCardClass}>
-                <p className="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                  Frankie
-                </p>
-                <AnimatedStatusText
-                  className="leading-6 text-[var(--foreground)]"
-                  label="Thinking"
-                />
-              </article>
+              showFrankie ? (
+                <FrankieThinking className="py-1" />
+              ) : (
+                <AssistantRow assistantName={assistantName} mood="focused" showFrankie={false}>
+                  <article className={assistantCardClass}>
+                    <p className="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                      {assistantName}
+                    </p>
+                    <AnimatedStatusText className="leading-6 text-[var(--foreground)]" label="Thinking" />
+                  </article>
+                </AssistantRow>
+              )
             ) : null}
           </>
         ) : (
           <>
-            <article className={assistantCardClass}>
-              <p className="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                Frankie
-              </p>
-              <p className="leading-6">{introMessage}</p>
-            </article>
-
-            <article className={assistantCardClass}>
-              <p className="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                Frankie
-              </p>
-              <p className="leading-6">{followupMessage}</p>
-            </article>
+            {[introMessage, followupMessage].map((text, index) => (
+              <AssistantRow assistantName={assistantName} key={index} mood="happy" showFrankie={showFrankie}>
+                <article className={assistantCardClass}>
+                  <p className="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                    {assistantName}
+                  </p>
+                  <p className="leading-6">{text}</p>
+                </article>
+              </AssistantRow>
+            ))}
           </>
         )}
       </div>

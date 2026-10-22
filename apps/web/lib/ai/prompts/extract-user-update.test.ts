@@ -23,3 +23,13 @@ describe("buildExtractUserUpdatePrompt", () => {
     expect(prompt.trim().endsWith("Return JSON that exactly matches the provided schema.")).toBe(true);
   });
 });
+
+describe("buildExtractUserUpdatePrompt already-logged rules", () => {
+  it("only adds the reference rules when there is already-logged context", () => {
+    expect(buildExtractUserUpdatePrompt()).not.toContain("Already logged:");
+    const prompt = buildExtractUserUpdatePrompt({ hasAlreadyLoggedContext: true });
+    expect(prompt).toContain("Already logged:");
+    expect(prompt).toContain("do not extract it again");
+    expect(prompt).toContain("Never extract anything from that list itself.");
+  });
+});

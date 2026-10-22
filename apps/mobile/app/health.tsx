@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 
 import { PrimaryButton, Screen, ScreenTitle, ScrollCard } from '@/components/frankie-ui';
-import { colors } from '@/constants/frankie-theme';
+import { createThemedStyles, useTheme } from '@/lib/theme';
 import {
   AppleHealthPreview,
   AppleHealthRuntimeStatus,
@@ -22,6 +22,7 @@ import {
 } from '@/lib/apple-health';
 
 function StatusPill({ tone, children }: { tone?: 'success' | 'warning'; children: React.ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={[styles.pill, tone === 'success' && styles.pillSuccess, tone === 'warning' && styles.pillWarning]}>
       <Text style={styles.pillText}>{children}</Text>
@@ -47,6 +48,8 @@ function formatHeartRate(workout: AppleHealthPreview['workouts'][number]) {
 }
 
 export default function AppleHealthScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -131,9 +134,9 @@ export default function AppleHealthScreen() {
     <Screen padded={false}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefreshing} tintColor={colors.accentStrong} onRefresh={handleRefresh} />}>
+        refreshControl={<RefreshControl refreshing={isRefreshing} tintColor={colors.brand} onRefresh={handleRefresh} />}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons color={colors.accentStrong} name="chevron-back" size={20} />
+          <Ionicons color={colors.brand} name="chevron-back" size={20} />
           <Text style={styles.backButtonText}>Profile</Text>
         </Pressable>
 
@@ -158,7 +161,7 @@ export default function AppleHealthScreen() {
           <Text style={styles.kicker}>Device status</Text>
           {isChecking ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator color={colors.accentStrong} />
+              <ActivityIndicator color={colors.brand} />
               <Text style={styles.bodyText}>Checking HealthKit availability...</Text>
             </View>
           ) : (
@@ -227,7 +230,7 @@ export default function AppleHealthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => ({
   content: {
     gap: 18,
     paddingBottom: 28,
@@ -241,25 +244,25 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   backButtonText: {
-    color: colors.accentStrong,
+    color: colors.accent,
     fontSize: 15,
     fontWeight: '800',
   },
   heroCard: {
-    backgroundColor: colors.panelStrong,
+    backgroundColor: colors.surfaceElevated,
   },
   errorCard: {
     borderColor: colors.danger,
   },
   kicker: {
-    color: colors.accentStrong,
+    color: colors.accent,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0,
     textTransform: 'uppercase',
   },
   cardTitle: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 20,
     fontWeight: '800',
     lineHeight: 26,
@@ -270,7 +273,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   noteText: {
-    color: colors.accentStrong,
+    color: colors.accent,
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 20,
@@ -284,7 +287,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 999,
-    backgroundColor: colors.backgroundSoft,
+    backgroundColor: colors.surfaceStrong,
     paddingHorizontal: 11,
     paddingVertical: 7,
   },
@@ -295,7 +298,7 @@ const styles = StyleSheet.create({
     borderColor: colors.danger,
   },
   pillText: {
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 13,
     fontWeight: '800',
   },
@@ -310,7 +313,7 @@ const styles = StyleSheet.create({
   workoutRow: {
     gap: 8,
     borderRadius: 14,
-    backgroundColor: colors.backgroundSoft,
+    backgroundColor: colors.surfaceStrong,
     padding: 14,
   },
   rowHeader: {
@@ -321,12 +324,12 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     flex: 1,
-    color: colors.text,
+    color: colors.foreground,
     fontSize: 15,
     fontWeight: '800',
   },
   rowDate: {
-    color: colors.subtle,
+    color: colors.muted,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -335,4 +338,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-});
+}));

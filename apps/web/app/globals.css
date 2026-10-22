@@ -1,22 +1,38 @@
 @import "tailwindcss";
+@import "./brand-tokens.css";
 
-:root {
-  color-scheme: dark;
-  --background: #172554;
-  --foreground: #eff6ff;
-  --surface: color-mix(in srgb, #172554 74%, black 26%);
-  --surface-strong: color-mix(in srgb, #1e3a8a 62%, black 38%);
-  --surface-elevated: color-mix(in srgb, #1d4ed8 28%, #172554 72%);
-  --surface-contrast: color-mix(in srgb, #2563eb 54%, #172554 46%);
-  --border: rgba(191, 219, 254, 0.12);
-  --border-strong: rgba(219, 234, 254, 0.22);
-  --muted: #bfdbfe;
-  --muted-strong: #dbeafe;
-  --brand: #3b82f6;
-  --brand-strong: #2563eb;
-  --accent: #93c5fd;
-  --shadow-soft: 0 18px 60px rgba(8, 15, 41, 0.34);
-  --shadow-card: 0 10px 32px rgba(8, 15, 41, 0.26);
+/* Set on <html> by the sidebar collapse button (and restored before paint from localStorage). */
+@custom-variant sidebar-collapsed (html[data-sidebar="collapsed"] &);
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-contrast: var(--surface-contrast);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-frankie: var(--frankie);
+  --color-frankie-soft: var(--frankie-soft);
+  --color-celebrate: var(--celebrate);
+  --color-celebrate-foreground: var(--celebrate-foreground);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-pillar-exercise: var(--pillar-exercise);
+  --color-pillar-diet: var(--pillar-diet);
+  --color-pillar-wellness: var(--pillar-wellness);
+  --color-pillar-lifestyle: var(--pillar-lifestyle);
+  --font-sans: var(--font-inter), "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-frankie: var(--font-caveat-brush), "Comic Sans MS", cursive;
 }
 
 * {
@@ -31,11 +47,12 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at top, rgba(59, 130, 246, 0.24), transparent 30%),
-    radial-gradient(circle at 80% 10%, rgba(147, 197, 253, 0.12), transparent 22%),
-    linear-gradient(180deg, #172554 0%, #0f1b4d 52%, #0a1435 100%);
+    radial-gradient(circle at top, color-mix(in srgb, var(--accent) 12%, transparent), transparent 32%),
+    radial-gradient(circle at 85% 8%, color-mix(in srgb, var(--frankie) 10%, transparent), transparent 24%),
+    var(--background);
+  background-attachment: fixed;
   color: var(--foreground);
-  font-family: Inter, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.875rem;
   line-height: 1.5;
 }
@@ -60,13 +77,13 @@ textarea::placeholder {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--brand) 68%, black 32%);
-  color: white;
+  background: var(--brand);
+  color: var(--brand-foreground);
 }
 
 .grain {
   background-image:
-    radial-gradient(circle at 1px 1px, rgba(237, 242, 238, 0.045) 1px, transparent 0);
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 0);
   background-size: 20px 20px;
 }
 
@@ -86,7 +103,7 @@ textarea::placeholder {
     border-radius: 0.9rem;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 26%),
-      linear-gradient(180deg, color-mix(in srgb, var(--surface-contrast) 72%, black 28%) 0%, var(--surface-strong) 100%);
+      linear-gradient(180deg, var(--surface-elevated) 0%, var(--surface-strong) 100%);
     box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(18px);
   }
@@ -103,7 +120,7 @@ textarea::placeholder {
   .ff-card-soft {
     border: 1px solid var(--border);
     border-radius: 0.7rem;
-    background: color-mix(in srgb, var(--surface-strong) 86%, black 14%);
+    background: var(--surface-strong);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
@@ -191,7 +208,7 @@ textarea::placeholder {
   }
 
   .ff-markdown code {
-    background: color-mix(in srgb, var(--surface-strong) 80%, black 20%);
+    background: var(--surface-contrast);
     border-radius: 0.3rem;
     padding: 0.1em 0.35em;
     font-size: 0.85em;
@@ -202,7 +219,7 @@ textarea::placeholder {
     align-items: center;
     border: 1px solid var(--border);
     border-radius: 9999px;
-    background: color-mix(in srgb, var(--surface-strong) 82%, black 18%);
+    background: var(--surface-strong);
     padding: 0.3rem 0.65rem;
     font-size: 0.72rem;
     color: var(--muted-strong);
@@ -210,7 +227,7 @@ textarea::placeholder {
 
   .ff-scroll {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--surface-contrast) 72%, white 28%) transparent;
+    scrollbar-color: var(--border-strong) transparent;
   }
 
   .ff-scroll::-webkit-scrollbar {
@@ -224,7 +241,7 @@ textarea::placeholder {
   .ff-scroll::-webkit-scrollbar-thumb {
     border: 2px solid transparent;
     border-radius: 9999px;
-    background: color-mix(in srgb, var(--surface-contrast) 78%, white 22%);
+    background: var(--border-strong);
     background-clip: padding-box;
   }
 
@@ -234,7 +251,7 @@ textarea::placeholder {
     width: 100%;
     border: 1px solid var(--border);
     border-radius: 0.6rem;
-    background: color-mix(in srgb, var(--surface-strong) 82%, black 18%);
+    background: var(--surface-strong);
     color: var(--foreground);
     padding: 0.6rem 0.75rem;
     font-size: 0.85rem;
@@ -266,11 +283,11 @@ textarea::placeholder {
   .ff-select:focus,
   .ff-textarea:focus,
   .ff-textarea:focus-within {
-    border-color: color-mix(in srgb, var(--brand) 68%, white 32%);
+    border-color: var(--accent);
     box-shadow:
-      0 0 0 4px rgba(59, 130, 246, 0.16),
+      0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent),
       inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    background: color-mix(in srgb, var(--surface-contrast) 76%, black 24%);
+    background: var(--surface);
   }
 
   .ff-button-primary {
@@ -280,10 +297,10 @@ textarea::placeholder {
     cursor: pointer;
     border: 0;
     border-radius: 0.55rem;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 86%, white 14%) 0%, var(--brand) 100%);
-    color: white;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 88%, white 12%) 0%, var(--brand) 100%);
+    color: var(--brand-foreground);
     font-weight: 600;
-    box-shadow: 0 16px 32px rgba(29, 78, 216, 0.34);
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--brand) 28%, transparent);
     transition:
       transform 160ms ease,
       box-shadow 160ms ease,
@@ -293,7 +310,7 @@ textarea::placeholder {
   .ff-button-primary:hover {
     transform: translateY(-1px);
     filter: saturate(1.06);
-    box-shadow: 0 18px 36px rgba(29, 78, 216, 0.42);
+    box-shadow: 0 16px 32px color-mix(in srgb, var(--brand) 36%, transparent);
   }
 
   .ff-button-secondary {
@@ -303,7 +320,7 @@ textarea::placeholder {
     cursor: pointer;
     border: 1px solid var(--border);
     border-radius: 0.55rem;
-    background: color-mix(in srgb, var(--surface-strong) 84%, black 16%);
+    background: var(--surface-strong);
     color: var(--foreground);
     font-weight: 600;
     transition:
@@ -320,8 +337,8 @@ textarea::placeholder {
 
   .ff-button-secondary:hover {
     transform: translateY(-1px);
-    border-color: color-mix(in srgb, var(--brand) 55%, white 45%);
-    background: color-mix(in srgb, var(--surface-contrast) 78%, black 22%);
+    border-color: var(--border-strong);
+    background: var(--surface-contrast);
   }
 
   .ff-section {
@@ -382,7 +399,7 @@ textarea::placeholder {
     max-width: 82%;
     border: 1px solid var(--border);
     border-radius: 1.1rem;
-    background: color-mix(in srgb, var(--surface-strong) 86%, black 14%);
+    background: var(--surface-strong);
     padding: 0.75rem 1rem;
     font-size: 0.85rem;
     line-height: 1.6;
@@ -391,8 +408,8 @@ textarea::placeholder {
   }
 
   .ff-chat-bubble[data-speaker="frankie"] {
-    border-color: color-mix(in srgb, var(--brand) 45%, var(--border) 55%);
-    background: color-mix(in srgb, var(--brand) 16%, var(--surface-strong) 84%);
+    border-color: var(--border);
+    background: var(--surface);
     color: var(--foreground);
   }
 }
@@ -404,5 +421,87 @@ textarea::placeholder {
 
   100% {
     background-position: -200% 0;
+  }
+}
+
+@keyframes ff-pop {
+  0% {
+    transform: scale(0.82) rotate(-4deg);
+  }
+
+  60% {
+    transform: scale(1.08) rotate(2deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes ff-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+
+  25% {
+    transform: rotate(-6deg);
+  }
+
+  75% {
+    transform: rotate(6deg);
+  }
+}
+
+@keyframes ff-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--ff-burst-x, 0px)), -150px) scale(1.1) rotate(18deg);
+  }
+}
+
+@keyframes ff-section-arrive {
+  0% {
+    background-color: color-mix(in srgb, var(--brand) 9%, transparent);
+  }
+
+  100% {
+    background-color: transparent;
+  }
+}
+
+@layer utilities {
+  .ff-section-arrive {
+    animation: ff-section-arrive 1400ms ease-out 350ms both;
+    border-radius: 0.75rem;
+  }
+
+  .ff-burst {
+    animation: ff-burst 1100ms ease-out both;
+  }
+
+  .ff-pop {
+    animation: ff-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .ff-wiggle {
+    animation: ff-wiggle 520ms ease-in-out 2;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ff-pop,
+    .ff-wiggle,
+    .ff-burst {
+      animation: none;
+    }
   }
 }

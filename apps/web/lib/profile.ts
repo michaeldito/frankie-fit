@@ -34,6 +34,7 @@ const profileSelect = `
   avoidances,
   coaching_style,
   coach_persona,
+  frankie_nudge_level,
   preferred_checkin_style,
   safety_acknowledged,
   onboarding_completed,
@@ -69,6 +70,7 @@ export type AppProfile = {
   avoidances: string[];
   coaching_style: string | null;
   coach_persona: string | null;
+  frankie_nudge_level: "off" | "polite" | "whiny";
   preferred_checkin_style: string | null;
   safety_acknowledged: boolean;
   onboarding_completed: boolean;

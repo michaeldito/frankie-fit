@@ -53,7 +53,7 @@ export function ProgramEnrollForm({ programSlug, startDate }: ProgramEnrollFormP
       >
         {saving ? "Saving…" : startDate ? "Update start date" : "Start program"}
       </button>
-      {error ? <p className="w-full text-sm text-red-400">{error}</p> : null}
+      {error ? <p className="w-full text-sm text-danger">{error}</p> : null}
     </div>
   );
 }

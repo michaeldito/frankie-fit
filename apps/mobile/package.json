@@ -13,7 +13,10 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@expo-google-fonts/caveat-brush": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
+    "@frankie-fit/brand-core": "workspace:*",
+    "@frankie-fit/companion-core": "workspace:*",
     "@frankie-fit/dashboard-core": "workspace:*",
     "@frankie-fit/profile-core": "workspace:*",
     "@frankie-fit/workout-core": "workspace:*",

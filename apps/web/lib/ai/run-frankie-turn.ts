@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { loadAlreadyLoggedEntries } from "@/lib/ai/context/already-logged";
 import type { AppProfile } from "@/lib/profile";
 import type { Database, Json } from "@/types/database";
 import {
@@ -186,16 +187,17 @@ export async function runFrankieTurn(input: {
   }
 
   const startedAt = Date.now();
-  const latestCoachSummary = await getLatestCoachSummary({
-    supabase: input.supabase,
-    userId: input.userId
-  });
+  const [latestCoachSummary, alreadyLogged] = await Promise.all([
+    getLatestCoachSummary({ supabase: input.supabase, userId: input.userId }),
+    loadAlreadyLoggedEntries({ supabase: input.supabase, userId: input.userId })
+  ]);
   const reply = await orchestrateFrankieReply({
     profile: input.profile,
     message: input.message,
     recentMessages: input.recentMessages,
     pendingClarification: input.pendingClarification,
-    latestCoachSummary
+    latestCoachSummary,
+    alreadyLogged
   });
   const persistedLogIds: PersistedLogIds = {
     activityLogIds: [],

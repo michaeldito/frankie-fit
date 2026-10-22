@@ -42,3 +42,130 @@ export function findNextBlank(blanks: BracketBlank[], fromIndex: number): Bracke
 export function findPreviousBlank(blanks: BracketBlank[], beforeIndex: number): BracketBlank | undefined {
   return [...blanks].reverse().find((blank) => blank.end <= beforeIndex);
 }
+
+export type QuickStartSegment =
+  | { kind: "text"; text: string }
+  | { kind: "input"; id: number; placeholder: string; numeric: boolean }
+  | { kind: "choice"; id: number; options: string[] };
+
+// Infers a friendlier placeholder and keyboard for a "[fill in]" blank from the words around it.
+function describeFreeBlank(before: string, after: string): { placeholder: string; numeric: boolean } {
+  if (/^\s*minutes\b/i.test(after)) return { placeholder: "30", numeric: true };
+  if (/\bI did\s*$/i.test(before)) return { placeholder: "what you did", numeric: false };
+  if (/\bI ate\s*$/i.test(before)) return { placeholder: "what you ate", numeric: false };
+  if (/\bfeel\s*$/i.test(before)) return { placeholder: "how you felt", numeric: false };
+  return { placeholder: "fill in", numeric: false };
+}
+
+function choiceOptions(label: string): string[] | null {
+  const range = /^(\d+)-(\d+)$/.exec(label);
+  if (range) {
+    const [low, high] = [Number(range[1]), Number(range[2])];
+    return high > low && high - low <= 10
+      ? Array.from({ length: high - low + 1 }, (_value, index) => String(low + index))
+      : null;
+  }
+  return label.includes("/") ? label.split("/").map((option) => option.trim()).filter(Boolean) : null;
+}
+
+/**
+ * Splits a quick-start template into text, free-text blanks, and tap-to-pick choices so touch
+ * clients can render a fill-in form instead of relying on Tab to jump between "[fill in]"s.
+ */
+export function parseQuickStartTemplate(template: string): QuickStartSegment[] {
+  const segments: QuickStartSegment[] = [];
+  let cursor = 0;
+  let id = 0;
+
+  for (const blank of findBracketBlanks(template)) {
+    if (blank.start > cursor) {
+      segments.push({ kind: "text", text: template.slice(cursor, blank.start) });
+    }
+
+    const label = template.slice(blank.start + 1, blank.end - 1).trim();
+    const options = choiceOptions(label);
+
+    if (options) {
+      segments.push({ kind: "choice", id, options });
+    } else {
+      segments.push({
+        kind: "input",
+        id,
+        ...describeFreeBlank(template.slice(0, blank.start), template.slice(blank.end))
+      });
+    }
+
+    id += 1;
+    cursor = blank.end;
+  }
+
+  if (cursor < template.length) {
+    segments.push({ kind: "text", text: template.slice(cursor) });
+  }
+
+  return segments;
+}
+
+/** Joins the filled-in template back into a sentence; null until every blank has a value. */
+export function composeQuickStart(segments: QuickStartSegment[], values: Record<number, string>): string | null {
+  let message = "";
+
+  for (const segment of segments) {
+    if (segment.kind === "text") {
+      message += segment.text;
+      continue;
+    }
+
+    const value = values[segment.id]?.trim();
+    if (!value) return null;
+    message += value;
+  }
+
+  return message;
+}
+
+export function mealForHour(hourPacific: number): "breakfast" | "lunch" | "dinner" | "snack" {
+  if (hourPacific >= 5 && hourPacific < 11) return "breakfast";
+  if (hourPacific >= 11 && hourPacific < 15) return "lunch";
+  if (hourPacific >= 17 && hourPacific < 21) return "dinner";
+  return "snack";
+}
+
+/** Pre-picks the likely meal from the time of day; every other blank starts empty. */
+export function defaultQuickStartValues(segments: QuickStartSegment[], hourPacific: number): Record<number, string> {
+  const meal = mealForHour(hourPacific);
+  const values: Record<number, string> = {};
+
+  for (const segment of segments) {
+    if (segment.kind === "choice" && segment.options.includes(meal)) {
+      values[segment.id] = meal;
+    }
+  }
+
+  return values;
+}
+
+export type QuickStartRatingRow = { id: number; label: string; options: string[] };
+
+/**
+ * Templates that are only "label: [choice]" pairs (the wellness check-in) read better as a list of
+ * labeled rows than as a wrapped sentence. Returns null for any template with free-text blanks.
+ */
+export function toRatingRows(segments: QuickStartSegment[]): { rows: QuickStartRatingRow[] } | null {
+  if (segments.some((segment) => segment.kind === "input")) return null;
+
+  const rows: QuickStartRatingRow[] = [];
+
+  for (const [index, segment] of segments.entries()) {
+    if (segment.kind !== "choice") continue;
+
+    const before = segments[index - 1];
+    const match = before?.kind === "text" ? /(?:^|[,—-])\s*([^,—:-]+?)\s*:\s*$/.exec(before.text) : null;
+    if (!match) return null;
+
+    const label = match[1].trim();
+    rows.push({ id: segment.id, label: label.charAt(0).toUpperCase() + label.slice(1), options: segment.options });
+  }
+
+  return rows.length > 0 ? { rows } : null;
+}
