@@ -11,10 +11,10 @@ export function SidebarFrankieCard({ fallbackLine }: { fallbackLine: string }) {
   const line = reaction?.line ?? day?.line ?? fallbackLine;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-surface px-3 pb-0 pt-3">
+    <div className="relative rounded-2xl border border-border bg-surface px-3 pb-0 pt-3">
       <button
         aria-label="Open Frankie's Day"
-        className="block w-full cursor-pointer text-left disabled:cursor-default"
+        className="block w-full cursor-pointer overflow-hidden text-left disabled:cursor-default"
         disabled={!day}
         onClick={openSheet}
         type="button"
@@ -31,7 +31,7 @@ export function SidebarFrankieCard({ fallbackLine }: { fallbackLine: string }) {
       </button>
       {day ? (
         <div className="-mx-3 flex items-center justify-between gap-2 border-t border-border px-3 py-2">
-          <NeedsStrip size="sm" />
+          <NeedsStrip size="sm" tooltipAlign="start" />
           <BiscuitJar />
         </div>
       ) : null}

@@ -21,9 +21,9 @@ export function FrankieDayBar() {
         <span className="truncate font-frankie text-lg leading-tight text-frankie">{reaction?.line ?? day.line}</span>
       </button>
       <div className="hidden sm:block">
-        <NeedsStrip size="sm" />
+        <NeedsStrip size="sm" tooltipAlign="end" />
       </div>
-      <BiscuitJar />
+      <BiscuitJar tooltipAlign="end" />
     </div>
   );
 }

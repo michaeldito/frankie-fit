@@ -16,7 +16,7 @@ type FrankieSaysProps = {
 export function FrankieSays({ line, mood = "happy", kicker = "Frankie says", children, className = "" }: FrankieSaysProps) {
   return (
     <section
-      className={`relative flex items-center gap-4 overflow-hidden rounded-[1rem] border border-frankie/25 bg-frankie-soft p-4 sm:p-5 ${className}`}
+      className={`relative flex items-center gap-4 rounded-[1rem] border border-frankie/25 bg-frankie-soft p-4 sm:p-5 ${className}`}
     >
       <Image
         alt=""
