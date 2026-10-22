@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 
 type ProfileSection = { id: string; label: string };
 
@@ -36,6 +36,27 @@ export function ProfileSectionNav({ sections }: { sections: readonly ProfileSect
 
   const activeIndex = Math.max(0, sections.findIndex((section) => section.id === activeId));
 
+  // Glide to the section instead of jumping, then give it a brief soft highlight so the eye lands
+  // on it. Reduced-motion users get the instant jump without the glow.
+  function goTo(event: MouseEvent<HTMLAnchorElement>, id: string) {
+    const target = document.getElementById(id);
+    const scroller = target?.closest(".ff-scroll");
+    if (!target || !scroller) return;
+
+    event.preventDefault();
+    setActiveId(id);
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const top = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 8;
+    scroller.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+    window.history.replaceState(null, "", `#${id}`);
+
+    if (!reduceMotion) {
+      target.classList.remove("ff-section-arrive");
+      void target.offsetWidth;
+      target.classList.add("ff-section-arrive");
+    }
+  }
+
   return (
     <nav aria-label="Profile sections" className="sticky top-2">
       <ol className="relative space-y-1">
@@ -50,7 +71,7 @@ export function ProfileSectionNav({ sections }: { sections: readonly ProfileSect
                   state === "current" ? "font-semibold text-foreground" : "text-muted hover:text-foreground"
                 }`}
                 href={`#${section.id}`}
-                onClick={() => setActiveId(section.id)}
+                onClick={(event) => goTo(event, section.id)}
               >
                 <span
                   className={`relative z-10 flex h-[1.9rem] w-[1.9rem] flex-none items-center justify-center rounded-full border text-xs font-semibold tabular-nums transition ${
