@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import { useEffect, useState } from "react";
 
-type NotificationItem = {
+export type NotificationItem = {
   id: string;
   type: string;
   title: string;
@@ -13,7 +13,7 @@ type NotificationItem = {
   created_at: string;
 };
 
-function formatNotificationTime(createdAt: string) {
+export function formatNotificationTime(createdAt: string) {
   const date = new Date(createdAt);
 
   return date.toLocaleString(undefined, {
@@ -29,11 +29,11 @@ function formatNotificationTime(createdAt: string) {
 export function NotificationsList({
   unreadCount,
   onUnreadCountChange,
-  onNavigate
+  onOpen
 }: {
   unreadCount: number;
   onUnreadCountChange: (updater: (current: number) => number) => void;
-  onNavigate: () => void;
+  onOpen: (notification: NotificationItem) => void;
 }) {
   const [notifications, setNotifications] = useState<NotificationItem[] | null>(null);
 
@@ -100,47 +100,31 @@ export function NotificationsList({
           <p className="px-2 py-4 text-sm text-[var(--muted)]">You&apos;re all caught up.</p>
         ) : (
           notifications.map((notification) => {
-            const content = (
-              <>
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium">{notification.title}</p>
-                  {!notification.read_at ? (
-                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />
-                  ) : null}
-                </div>
-                <p className="mt-1 text-xs leading-5 text-[var(--muted)]">{notification.body}</p>
-                <p className="mt-1.5 text-[0.68rem] text-[var(--muted)]">
-                  {formatNotificationTime(notification.created_at)}
-                </p>
-              </>
-            );
-
-            const className = `block rounded-[0.6rem] px-2.5 py-2 transition hover:bg-surface-contrast ${
-              notification.read_at ? "" : "bg-accent/5"
-            }`;
-
-            return notification.action_url ? (
-              <Link
-                className={className}
-                href={notification.action_url}
+            return (
+              <button
+                className={`block w-full cursor-pointer rounded-[0.6rem] px-2.5 py-2 text-left transition hover:bg-surface-contrast ${
+                  notification.read_at ? "" : "bg-accent/5"
+                }`}
                 key={notification.id}
                 onClick={() => {
                   if (!notification.read_at) {
                     handleMarkRead(notification.id);
                   }
-                  onNavigate();
+                  onOpen(notification);
                 }}
-              >
-                {content}
-              </Link>
-            ) : (
-              <button
-                className={`w-full cursor-pointer text-left ${className}`}
-                key={notification.id}
-                onClick={() => handleMarkRead(notification.id)}
                 type="button"
               >
-                {content}
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium">{notification.title}</p>
+                  {!notification.read_at ? <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" /> : null}
+                </div>
+                {/* Rendered (not raw) markdown, clamped to a short preview; the modal shows it all. */}
+                <div className="ff-markdown mt-1 line-clamp-3 text-xs leading-5 text-[var(--muted)] [&_h1]:text-xs [&_h2]:text-xs [&_h3]:text-xs [&_li]:my-0 [&_p]:my-0 [&_ul]:my-0">
+                  <ReactMarkdown>{notification.body}</ReactMarkdown>
+                </div>
+                <p className="mt-1.5 text-[0.68rem] text-[var(--muted)]">
+                  {formatNotificationTime(notification.created_at)}
+                </p>
               </button>
             );
           })

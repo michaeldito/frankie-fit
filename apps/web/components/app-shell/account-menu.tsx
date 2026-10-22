@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { Bell, ChevronLeft, ChevronRight, LogOut, UserRound } from "lucide-react";
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { signOut } from "@/app/app/actions";
-import { NotificationsList, UnreadBadge } from "@/components/app-shell/notifications-list";
+import { NotificationModal } from "@/components/app-shell/notification-modal";
+import { NotificationsList, UnreadBadge, type NotificationItem } from "@/components/app-shell/notifications-list";
 import { ThemeToggle } from "@/components/app-shell/theme-toggle";
 import type { UserAppShellUser } from "@/components/app-shell/user-app-shell";
 
@@ -33,6 +34,8 @@ export function AccountMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [menuView, setMenuView] = useState<"main" | "notifications">("main");
+  const [openNotification, setOpenNotification] = useState<NotificationItem | null>(null);
+  const closeNotification = useCallback(() => setOpenNotification(null), []);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -99,7 +102,10 @@ export function AccountMenu({
             <div className="my-1.5 border-t border-border" />
             {open ? (
               <NotificationsList
-                onNavigate={() => setOpen(false)}
+                onOpen={(notification) => {
+              setOpen(false);
+              setOpenNotification(notification);
+            }}
                 onUnreadCountChange={setUnreadCount}
                 unreadCount={unreadCount}
               />
@@ -169,6 +175,9 @@ export function AccountMenu({
           </>
         )}
       </div>
+      {openNotification ? (
+        <NotificationModal notification={openNotification} onClose={closeNotification} />
+      ) : null}
     </div>
   );
 }
