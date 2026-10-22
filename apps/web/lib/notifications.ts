@@ -359,7 +359,8 @@ export async function evaluateDailySummaryNotifications() {
       type: "daily_summary",
       title,
       body,
-      action_url: actionUrl
+      action_url: actionUrl,
+      metadata_json: { summaryId: summary.id }
     });
 
     if (insertError) {
@@ -423,7 +424,8 @@ export async function evaluateWeeklySummaryNotifications() {
       type: "weekly_summary",
       title,
       body,
-      action_url: actionUrl
+      action_url: actionUrl,
+      metadata_json: { summaryId: summary.id }
     });
 
     if (insertError) {
@@ -547,4 +549,41 @@ export async function evaluateFrankieNudges(now: Date = new Date()) {
   }
 
   return { evaluatedCount: profiles?.length ?? 0, sentCount };
+}
+
+const SUMMARY_TYPE_BY_NOTIFICATION: Record<string, "daily" | "weekly" | undefined> = {
+  daily_summary: "daily",
+  weekly_summary: "weekly"
+};
+
+// Summary notifications only store a truncated preview; this finds the full coach summary they came
+// from, by the id recorded at send time or, for older notifications, the latest summary of that kind
+// written before the notification.
+export async function getNotificationDetail(supabase: SupabaseServerClient, userId: string, notificationId: string) {
+  const { data: notification, error } = await supabase
+    .from("notifications")
+    .select("id, type, title, body, action_url, metadata_json, read_at, created_at")
+    .eq("user_id", userId)
+    .eq("id", notificationId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!notification) return null;
+
+  const summaryType = SUMMARY_TYPE_BY_NOTIFICATION[notification.type];
+  if (!summaryType) return { notification, fullBody: notification.body };
+
+  const summaryId = (notification.metadata_json as { summaryId?: unknown } | null)?.summaryId;
+  const query = supabase.from("coach_summaries").select("summary_text").eq("user_id", userId);
+  const { data: summary } =
+    typeof summaryId === "string"
+      ? await query.eq("id", summaryId).maybeSingle()
+      : await query
+          .eq("summary_type", summaryType)
+          .lte("created_at", new Date(new Date(notification.created_at).getTime() + 5 * 60_000).toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+  return { notification, fullBody: summary?.summary_text ?? notification.body };
 }

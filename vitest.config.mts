@@ -39,6 +39,7 @@ export default defineConfig({
         "apps/web/lib/admin.ts",
         "apps/web/lib/chat.ts",
         "apps/web/lib/frankie-day.ts",
+        "apps/web/lib/notification-actions.ts",
         "apps/web/lib/notifications.ts",
         "apps/web/lib/rate-limit.ts",
         "apps/web/lib/sidebar-preference.ts",

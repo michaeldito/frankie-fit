@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getNotificationDetail,
   planFrankieNudge,
   getWeeklySummaryPeriod,
   shouldSendCheckinReminder,
@@ -135,5 +136,66 @@ describe("planFrankieNudge", () => {
   it("respects the off switch and the daily cap", () => {
     expect(planFrankieNudge({ ...base, level: "off" })).toBeNull();
     expect(planFrankieNudge({ ...base, sentToday: [{ need: null }, { need: null }] })).toBeNull();
+  });
+});
+
+describe("getNotificationDetail", () => {
+  function fakeSupabase(rows: { notification: unknown; summary: unknown }) {
+    const calls: string[] = [];
+    const chain = (table: string) => {
+      const builder = {
+        select: () => builder,
+        eq: (column: string, value: unknown) => {
+          calls.push(`${table}.${column}=${String(value)}`);
+          return builder;
+        },
+        lte: () => builder,
+        order: () => builder,
+        limit: () => builder,
+        maybeSingle: async () => ({ data: table === "notifications" ? rows.notification : rows.summary, error: null })
+      };
+      return builder;
+    };
+    return { client: { from: chain } as never, calls };
+  }
+
+  const base = {
+    id: "n1",
+    title: "Your weekly summary from Frankie",
+    body: "## Week\\n- trimmed…",
+    action_url: "/app/chat",
+    read_at: null,
+    created_at: "2026-10-20T04:00:00Z"
+  };
+
+  it("returns the full summary by the id recorded at send time", async () => {
+    const { client, calls } = fakeSupabase({
+      notification: { ...base, type: "weekly_summary", metadata_json: { summaryId: "s1" } },
+      summary: { summary_text: "## Week\\n- the whole thing" }
+    });
+    const detail = await getNotificationDetail(client, "u1", "n1");
+    expect(detail?.fullBody).toBe("## Week\\n- the whole thing");
+    expect(calls).toContain("coach_summaries.id=s1");
+  });
+
+  it("falls back to the latest summary of that kind for older notifications", async () => {
+    const { client, calls } = fakeSupabase({
+      notification: { ...base, type: "daily_summary", metadata_json: {} },
+      summary: { summary_text: "full daily" }
+    });
+    expect((await getNotificationDetail(client, "u1", "n1"))?.fullBody).toBe("full daily");
+    expect(calls).toContain("coach_summaries.summary_type=daily");
+  });
+
+  it("uses the body as-is for other notification types or a missing summary", async () => {
+    const nudge = fakeSupabase({ notification: { ...base, type: "frankie_nudge", metadata_json: {} }, summary: null });
+    expect((await getNotificationDetail(nudge.client, "u1", "n1"))?.fullBody).toBe(base.body);
+    const missing = fakeSupabase({ notification: { ...base, type: "weekly_summary", metadata_json: {} }, summary: null });
+    expect((await getNotificationDetail(missing.client, "u1", "n1"))?.fullBody).toBe(base.body);
+  });
+
+  it("returns null for someone else's or a missing notification", async () => {
+    const { client } = fakeSupabase({ notification: null, summary: null });
+    await expect(getNotificationDetail(client, "u1", "nope")).resolves.toBeNull();
   });
 });
