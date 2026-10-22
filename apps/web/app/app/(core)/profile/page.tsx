@@ -465,15 +465,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               />
             </label>
 
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Diet restrictions or allergies</span>
-              <textarea
-                className="ff-textarea min-h-24"
-                defaultValue={(context.profile?.diet_restrictions ?? []).join(", ")}
-                name="dietRestrictions"
-                placeholder="Comma or line-separated is fine"
-              />
-            </label>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
@@ -539,6 +530,16 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               At most two a day, never before 8am or after 9pm.
             </span>
           </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Diet restrictions or allergies</span>
+            <textarea
+              className="ff-textarea min-h-24"
+              defaultValue={(context.profile?.diet_restrictions ?? []).join(", ")}
+              name="dietRestrictions"
+              placeholder="Comma or line-separated is fine"
+            />
+          </label>
         </Section>
 
         <Section
@@ -546,37 +547,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           label="Coaching"
           question="What kind of coaching works best for you now?"
         >
-          <div className="grid gap-5 lg:grid-cols-3">
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Injuries or limitations</span>
-              <textarea
-                className="ff-textarea min-h-24"
-                defaultValue={(context.profile?.injuries_limitations ?? []).join(", ")}
-                name="injuriesLimitations"
-                placeholder="Knee pain, shoulder mobility, low back tightness..."
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Health considerations</span>
-              <textarea
-                className="ff-textarea min-h-24"
-                defaultValue={(context.profile?.health_considerations ?? []).join(", ")}
-                name="healthConsiderations"
-                placeholder="Anything Frankie should know before making suggestions"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Avoidances</span>
-              <textarea
-                className="ff-textarea min-h-24"
-                defaultValue={(context.profile?.avoidances ?? []).join(", ")}
-                name="avoidances"
-                placeholder="Exercises, coaching language, food guidance, or patterns to avoid"
-              />
-            </label>
-          </div>
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="block space-y-2">
@@ -627,6 +597,36 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               </select>
             </label>
           </div>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Injuries or limitations</span>
+            <textarea
+              className="ff-textarea min-h-24"
+              defaultValue={(context.profile?.injuries_limitations ?? []).join(", ")}
+              name="injuriesLimitations"
+              placeholder="Knee pain, shoulder mobility, low back tightness..."
+            />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Health considerations</span>
+            <textarea
+              className="ff-textarea min-h-24"
+              defaultValue={(context.profile?.health_considerations ?? []).join(", ")}
+              name="healthConsiderations"
+              placeholder="Anything Frankie should know before making suggestions"
+            />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Avoidances</span>
+            <textarea
+              className="ff-textarea min-h-24"
+              defaultValue={(context.profile?.avoidances ?? []).join(", ")}
+              name="avoidances"
+              placeholder="Exercises, coaching language, food guidance, or patterns to avoid"
+            />
+          </label>
         </Section>
         </form>
           </div>
