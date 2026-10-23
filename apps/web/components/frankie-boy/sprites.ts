@@ -17,7 +17,10 @@ export const PALETTE: Record<string, string> = {
   j: "#3A3F5C", // human pants
   y: "#E3B23C", // biscuit
   g: "#C9E05A", // tennis ball
-  G: "#8DA43A" // tennis ball seam
+  G: "#8DA43A", // tennis ball seam
+  o: "#D98B3A", // roast chicken skin
+  O: "#A8602A", // roast chicken shade
+  L: "#F0B266" // roast chicken shine
 };
 
 // Frankie, side view facing right: long dachshund body, floppy ear, short legs.
@@ -141,5 +144,10 @@ export const HUMAN_SPRITES: Record<"idle" | "walk" | "sit", readonly SpriteGrid[
 export const ITEM_SPRITES: Record<"biscuit" | "ball", SpriteGrid> = {
   biscuit: ["..kkkk..", ".kyyyyk.", "kyykkyyk", "kyyyyyyk", ".kyyyyk.", "..kkkk.."],
   ball: [".kkkk.", "kggGgk", "kgGggk", "kggGgk", ".kkkk."]
+};
+
+// A whole roast chicken with a drumstick out the side; chopping turns it into the little slices.
+export const FOOD_SPRITES: Record<"chicken", SpriteGrid> = {
+  chicken: ["..oooo.....", ".oLLooo....", "oooooooo.cc", "oooooooOOc.", "OoooooOO...", ".OOOOOO...."]
 };
 
