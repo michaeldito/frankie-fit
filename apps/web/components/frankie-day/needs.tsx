@@ -57,8 +57,7 @@ export function BiscuitJar({
   );
 }
 
-// Tapping a need Frankie wants (and the user can afford) redeems it on the spot; anything else
-// opens the sheet so the user can see why.
+// Tapping a need opens the Frankie Boy straight into that scene (a finished one opens the menu).
 export function NeedsStrip({
   size = "md",
   tooltipAlign = "center"
@@ -66,7 +65,7 @@ export function NeedsStrip({
   size?: "xs" | "sm" | "md";
   tooltipAlign?: TooltipAlign;
 }) {
-  const { day, redeem, redeeming, openSheet } = useFrankieDay();
+  const { day, openSheet } = useFrankieDay();
 
   if (!day) return null;
 
@@ -93,10 +92,9 @@ export function NeedsStrip({
                 : ready
                   ? "border-frankie bg-frankie-soft hover:-translate-y-px"
                   : "border-border bg-surface-strong"
-            } ${redeeming === need ? "opacity-50" : ""}`}
-            disabled={redeeming !== null}
+            }`}
             key={need}
-            onClick={() => (ready ? void redeem(need) : openSheet())}
+            onClick={() => (filled ? openSheet() : openSheet(need))}
             type="button"
           >
             <HoverLabel align={tooltipAlign} text={label} />

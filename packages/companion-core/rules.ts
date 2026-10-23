@@ -31,7 +31,7 @@ export const FRANKIE_ACTIONS: Record<FrankieNeed, FrankieAction> = {
   },
   walk: {
     cost: 1,
-    label: "Take Frankie for a walk",
+    label: "Take Frankie for a run",
     needLabel: "Walked",
     moodBefore: "waiting",
     moodAfter: "running",

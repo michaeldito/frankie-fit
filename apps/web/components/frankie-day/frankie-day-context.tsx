@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { FRANKIE_ACTIONS, type FrankieNeed } from "@frankie-fit/companion-core";
+import { FRANKIE_ACTIONS, isFrankieNeed, type FrankieNeed } from "@frankie-fit/companion-core";
 import type { FrankieMood } from "@frankie-fit/brand-core";
 import type { FrankieDayPayload } from "@/lib/frankie-day";
 
@@ -13,8 +13,10 @@ type FrankieDayContextValue = {
   day: FrankieDayPayload | null;
   reaction: FrankieReaction | null;
   sheetOpen: boolean;
+  // When opened from a specific action button, the Frankie Boy jumps straight into that scene.
+  launchNeed: FrankieNeed | null;
   redeeming: FrankieNeed | null;
-  openSheet: () => void;
+  openSheet: (need?: unknown) => void;
   closeSheet: () => void;
   refresh: () => Promise<void>;
   redeem: (need: FrankieNeed) => Promise<RedeemError | null>;
@@ -35,6 +37,7 @@ export function FrankieDayProvider({ children, enabled }: { children: ReactNode;
   const [day, setDay] = useState<FrankieDayPayload | null>(null);
   const [reaction, setReaction] = useState<FrankieReaction | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [launchNeed, setLaunchNeed] = useState<FrankieNeed | null>(null);
   const [redeeming, setRedeeming] = useState<FrankieNeed | null>(null);
 
   const refresh = useCallback(async () => {
@@ -47,6 +50,14 @@ export function FrankieDayProvider({ children, enabled }: { children: ReactNode;
   }, [enabled]);
 
   useEffect(() => {
+    // Nudge notifications deep-link here with ?frankie=open. Checked even when the ledger can't
+    // load, so the Frankie Boy still opens (its redeems will just be refused).
+    if (new URLSearchParams(window.location.search).get("frankie") === "open") {
+      queueMicrotask(() => setSheetOpen(true));
+    }
+  }, []);
+
+  useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
 
@@ -54,10 +65,6 @@ export function FrankieDayProvider({ children, enabled }: { children: ReactNode;
       .then((loaded) => {
         if (cancelled) return;
         setDay(loaded);
-        // Nudge notifications deep-link here with ?frankie=open.
-        if (loaded && new URLSearchParams(window.location.search).get("frankie") === "open") {
-          setSheetOpen(true);
-        }
       })
       .catch(() => undefined);
 
@@ -109,14 +116,22 @@ export function FrankieDayProvider({ children, enabled }: { children: ReactNode;
       day,
       reaction,
       sheetOpen,
+      launchNeed,
       redeeming,
-      openSheet: () => setSheetOpen(true),
-      closeSheet: () => setSheetOpen(false),
+      // Accepts a need, or anything else (e.g. a click event) to just open the menu.
+      openSheet: (need?: unknown) => {
+        setLaunchNeed(isFrankieNeed(need) ? need : null);
+        setSheetOpen(true);
+      },
+      closeSheet: () => {
+        setSheetOpen(false);
+        setLaunchNeed(null);
+      },
       refresh,
       redeem,
       bellyRub
     }),
-    [day, reaction, sheetOpen, redeeming, refresh, redeem, bellyRub]
+    [day, reaction, sheetOpen, launchNeed, redeeming, refresh, redeem, bellyRub]
   );
 
   return <FrankieDayContext.Provider value={value}>{children}</FrankieDayContext.Provider>;

@@ -34,6 +34,7 @@ export default defineConfig({
         "apps/web/components/admin/coaching-memory-grid.tsx",
         "apps/web/components/chat/logged-entry-format.ts",
         "apps/web/components/chat/quick-start.ts",
+        "apps/web/components/frankie-boy/engine.ts",
         "apps/web/lib/admin-eval-runner.ts",
         "apps/web/lib/admin-evals-data.ts",
         "apps/web/lib/admin.ts",
