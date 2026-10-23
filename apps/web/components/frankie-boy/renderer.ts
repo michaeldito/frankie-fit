@@ -1,4 +1,4 @@
-import { MAP_WIDTH, SCREEN_WIDTH, type Actor, type Effect, type World } from "@/components/frankie-boy/engine";
+import { MAP_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH, type Actor, type Anim, type Effect, type World } from "@/components/frankie-boy/engine";
 import { BACKYARD, INTERIOR, PLAYFIELD_HEIGHT } from "@/components/frankie-boy/maps";
 import { FOOD_SPRITES, FRANKIE_SPRITES, HUMAN_SPRITES, ITEM_SPRITES, PALETTE, type SpriteGrid } from "@/components/frankie-boy/sprites";
 
@@ -49,6 +49,14 @@ const C = {
   roast: "#A8602A"
 };
 
+const HUMAN_ANIMS: Partial<Record<Anim, keyof typeof HUMAN_SPRITES>> = {
+  walk: "walk",
+  run: "walk",
+  sit: "sit",
+  pet: "pet",
+  sitPet: "sitPet"
+};
+
 const spriteCache = new Map<string, HTMLCanvasElement>();
 
 function bake(grid: SpriteGrid, mirror: boolean): HTMLCanvasElement {
@@ -83,10 +91,10 @@ function hash(x: number, y: number) {
   return ((x * 73856093) ^ (y * 19349663)) >>> 0;
 }
 
-function drawGrass(ctx: CanvasRenderingContext2D, width: number) {
-  rect(ctx, 0, 0, width, PLAYFIELD_HEIGHT, C.grass);
+function drawGrass(ctx: CanvasRenderingContext2D, width: number, top = 0) {
+  rect(ctx, 0, top, width, SCREEN_HEIGHT - top, C.grass);
   for (let x = 0; x < width; x += 4) {
-    for (let y = 0; y < PLAYFIELD_HEIGHT; y += 4) {
+    for (let y = top; y < SCREEN_HEIGHT; y += 4) {
       const h = hash(x, y) % 11;
       if (h === 0) rect(ctx, x + 1, y + 1, 1, 2, C.grassDark);
       if (h === 1) rect(ctx, x + 2, y, 1, 1, C.grassLight);
@@ -172,6 +180,47 @@ function drawBackyard(ctx: CanvasRenderingContext2D) {
   drawTree(ctx, BACKYARD.tree.x, BACKYARD.tree.y);
 }
 
+function drawFrontOfHouse(ctx: CanvasRenderingContext2D, tick: number) {
+  const front = INTERIOR.front;
+  drawGrass(ctx, SCREEN_WIDTH, front.wallBottom);
+
+  // Roof eave, cut where the room's floor ends.
+  rect(ctx, 0, PLAYFIELD_HEIGHT, SCREEN_WIDTH, front.eaveBottom - PLAYFIELD_HEIGHT, C.roof);
+  for (let x = 0; x < SCREEN_WIDTH; x += 6) rect(ctx, x, front.eaveBottom - 2, 4, 1, C.roofDark);
+  rect(ctx, 0, PLAYFIELD_HEIGHT, SCREEN_WIDTH, 1, C.roofDark);
+
+  rect(ctx, 0, front.eaveBottom, SCREEN_WIDTH, front.wallBottom - front.eaveBottom, C.wall);
+  for (let y = front.eaveBottom + 5; y < front.wallBottom; y += 5) rect(ctx, 0, y, SCREEN_WIDTH, 1, C.wallShade);
+
+  for (const wx of front.windows) {
+    rect(ctx, wx, front.eaveBottom + 3, 16, 10, C.wood);
+    rect(ctx, wx + 1, front.eaveBottom + 4, 14, 8, C.window);
+    rect(ctx, wx + 2, front.eaveBottom + 5, 4, 2, C.windowShine);
+    rect(ctx, wx + 7, front.eaveBottom + 4, 1, 8, C.wood);
+  }
+
+  const door = front.door;
+  rect(ctx, door.x, front.eaveBottom + 1, door.width, front.wallBottom - front.eaveBottom - 1, C.wood);
+  rect(ctx, door.x + 2, front.eaveBottom + 3, door.width - 4, 5, C.woodLight);
+  rect(ctx, door.x + door.width - 4, front.eaveBottom + 9, 2, 2, C.sun);
+
+  // Porch lights either side of the door, with a soft flicker of glow.
+  for (const lx of front.lights) {
+    rect(ctx, lx - 2, front.eaveBottom + 1, 6, 6, Math.floor(tick / 20) % 5 === 0 ? "rgba(255,209,102,0.22)" : "rgba(255,209,102,0.32)");
+    rect(ctx, lx, front.eaveBottom + 2, 2, 3, C.sun);
+    rect(ctx, lx, front.eaveBottom + 5, 2, 1, C.ink);
+  }
+
+  // Stone path from the door out to the street.
+  for (let y = front.wallBottom; y < SCREEN_HEIGHT; y += 5) {
+    rect(ctx, door.x + 2, y + 1, 12, 4, C.stone);
+    rect(ctx, door.x + 2, y + 4, 12, 1, C.stoneDark);
+  }
+
+  for (const fx of front.flowers) drawFlowers(ctx, fx, front.wallBottom + 4);
+  for (const sx of front.shrubs) drawShrub(ctx, sx, front.wallBottom - 8);
+}
+
 function drawBowl(ctx: CanvasRenderingContext2D, x: number, y: number, fill: string, full: boolean) {
   rect(ctx, x, y + 2, 10, 4, C.bowl);
   rect(ctx, x + 1, y + 1, 8, 1, C.bowl);
@@ -196,8 +245,8 @@ function drawSink(ctx: CanvasRenderingContext2D, world: World, tick: number) {
 
 function drawInterior(ctx: CanvasRenderingContext2D, world: World, tick: number) {
   // Floorboards and back wall.
-  rect(ctx, 0, 0, SCREEN_WIDTH, PLAYFIELD_HEIGHT, C.floor);
-  for (let y = INTERIOR.wallBottom + 6; y < PLAYFIELD_HEIGHT; y += 8) rect(ctx, 0, y, SCREEN_WIDTH, 1, C.floorLine);
+  rect(ctx, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, C.floor);
+  for (let y = INTERIOR.wallBottom + 6; y < SCREEN_HEIGHT; y += 8) rect(ctx, 0, y, SCREEN_WIDTH, 1, C.floorLine);
   rect(ctx, 0, 0, SCREEN_WIDTH, INTERIOR.wallBottom, C.wall);
   rect(ctx, 0, INTERIOR.wallBottom - 2, SCREEN_WIDTH, 2, C.wallShade);
   rect(ctx, INTERIOR.window.x, 4, INTERIOR.window.width, 12, C.wood);
@@ -265,8 +314,10 @@ function drawInterior(ctx: CanvasRenderingContext2D, world: World, tick: number)
   rect(ctx, INTERIOR.plant.x, INTERIOR.plant.y, 12, 9, C.leaf);
   rect(ctx, INTERIOR.plant.x + 3, INTERIOR.plant.y - 3, 6, 4, C.leafLight);
 
-  // Doormat by the front door at the bottom.
+  // Doormat inside the front door.
   rect(ctx, INTERIOR.mat.x, PLAYFIELD_HEIGHT - 6, INTERIOR.mat.width, 6, C.wood);
+
+  drawFrontOfHouse(ctx, tick);
 }
 
 function frameOf<T>(frames: readonly T[], tick: number, rate: number) {
@@ -280,12 +331,12 @@ function drawActor(ctx: CanvasRenderingContext2D, id: string, actor: Actor, tick
   let bob = 0;
 
   if (id === "frankie") {
-    const frames = FRANKIE_SPRITES[actor.anim === "sit" ? "idle" : actor.anim];
+    const frames = FRANKIE_SPRITES[actor.anim === "sit" || actor.anim === "pet" || actor.anim === "sitPet" ? "idle" : actor.anim];
     grid = frameOf(frames, tick, actor.anim === "run" ? 3 : 6);
     if (actor.anim === "idle" && Math.floor(tick / 20) % 4 === 0) bob = -1;
   } else if (id === "human") {
-    const frames = actor.anim === "walk" || actor.anim === "run" ? HUMAN_SPRITES.walk : actor.anim === "sit" ? HUMAN_SPRITES.sit : HUMAN_SPRITES.idle;
-    grid = frameOf(frames, tick, 7);
+    const frames = HUMAN_SPRITES[HUMAN_ANIMS[actor.anim] ?? "idle"];
+    grid = frameOf(frames, tick, actor.anim === "pet" || actor.anim === "sitPet" ? 5 : 7);
     if (actor.anim === "walk") bob = Math.floor(tick / 7) % 2 ? -1 : 0;
   } else {
     grid = ITEM_SPRITES[id as keyof typeof ITEM_SPRITES];
@@ -348,19 +399,18 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: World, tick: num
     ctx.restore();
   }
 
-  // Back to front by feet position so whoever is lower on screen draws on top.
+  // Back to front by feet position so whoever is lower on screen draws on top, except a petting
+  // human, whose hand has to land on Frankie rather than disappear behind him.
+  const depth = (actor: Actor) => (actor.anim === "pet" || actor.anim === "sitPet" ? Infinity : actor.y);
   const order = (["human", "frankie", "ball", "biscuit"] as const)
     .map((id) => [id, world.actors[id]] as const)
-    .sort(([, a], [, b]) => a.y + 16 - (b.y + 16));
+    .sort(([, a], [, b]) => depth(a) - depth(b));
   for (const [id, actor] of order) drawActor(ctx, id, actor, tick, world.cameraX);
   if (world.map === "interior" && world.props.waterAt === "hands") {
     const human = world.actors.human;
     drawBowl(ctx, human.x + 3, human.y + 9, C.water, world.props.water === "full");
   }
   for (const effect of world.effects) drawEffect(ctx, effect, world.cameraX);
-
-  // Under the text box.
-  rect(ctx, 0, PLAYFIELD_HEIGHT, SCREEN_WIDTH, 144 - PLAYFIELD_HEIGHT, "#F8F6EF");
 }
 
 export function hitTestActor(world: World, id: "frankie", point: { x: number; y: number }) {

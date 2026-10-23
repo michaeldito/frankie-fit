@@ -6,7 +6,7 @@ import { BACKYARD, INTERIOR } from "@/components/frankie-boy/maps";
 // it's actually spent (the redeem step). Backing out before then costs nothing.
 function biscuitToss(human: Point, frankie: Point): Step[] {
   return [
-    { kind: "prompt", text: "A: toss Frankie a biscuit" },
+    { kind: "prompt", text: "Toss Frankie a biscuit" },
     { kind: "set", actor: "biscuit", patch: { x: human.x + 6, y: human.y + 4, visible: true } },
     { kind: "move", actor: "biscuit", to: { x: frankie.x + 12, y: frankie.y + 2 }, speed: 3, arc: 12 },
     { kind: "set", actor: "biscuit", patch: { visible: false } },
@@ -16,11 +16,15 @@ function biscuitToss(human: Point, frankie: Point): Step[] {
   ];
 }
 
-// Replays are free: a pat instead of a biscuit, and nothing is redeemed.
+// Replays are free: a pat instead of a biscuit, and nothing is redeemed. Frankie trots up to the
+// human's hand first, so the petting arm lands on his head.
 const freePat: Step[] = [
-  { kind: "prompt", text: "Again? A: give Frankie a pat" },
+  { kind: "prompt", text: "Again? Give Frankie a pat" },
+  { kind: "move", actor: "frankie", to: { x: INTERIOR.entry.frankie.x - 6, y: INTERIOR.entry.frankie.y }, speed: 1 },
+  { kind: "set", actor: "human", patch: { anim: "pet" } },
   { kind: "effect", effect: "hearts", at: "frankie" },
-  { kind: "wait", frames: 18 }
+  { kind: "wait", frames: 30 },
+  { kind: "set", actor: "human", patch: { anim: "idle" } }
 ];
 
 const insideAtEntry: Step = {
@@ -64,37 +68,37 @@ const FETCH_SPOT: Point = { x: BACKYARD.lawn.x + 18, y: BACKYARD.lawn.y + 4 };
 const SCENE_BODIES: Record<FrankieNeed, Step[]> = {
   feed: [
     { kind: "move", actor: "human", to: INTERIOR.atCounter, speed: 1.5 },
-    { kind: "prompt", text: "A: grab food off the counter" },
+    { kind: "prompt", text: "Grab food off the counter" },
     { kind: "prop", prop: "foods", value: "taken" },
     { kind: "prop", prop: "board", value: "whole" },
-    { kind: "prompt", text: "A: chop" },
+    { kind: "prompt", text: "Chop" },
     { kind: "effect", effect: "chop", at: { x: INTERIOR.board.x + 2, y: INTERIOR.board.y - 4 }, frames: 12 },
     { kind: "prop", prop: "board", value: "chop1" },
-    { kind: "prompt", text: "A: chop" },
+    { kind: "prompt", text: "Chop" },
     { kind: "effect", effect: "chop", at: { x: INTERIOR.board.x + 2, y: INTERIOR.board.y - 4 }, frames: 12 },
     { kind: "prop", prop: "board", value: "chop2" },
-    { kind: "prompt", text: "A: chop!" },
+    { kind: "prompt", text: "Chop!" },
     { kind: "effect", effect: "chop", at: { x: INTERIOR.board.x + 2, y: INTERIOR.board.y - 4 }, frames: 12 },
     { kind: "prop", prop: "board", value: "chopped" },
-    { kind: "prompt", text: "A: fill the bowl" },
+    { kind: "prompt", text: "Fill the bowl" },
     { kind: "move", actor: "human", to: INTERIOR.atBowls, speed: 1.5 },
     { kind: "prop", prop: "board", value: "empty" },
     { kind: "prop", prop: "bowl", value: "full" },
-    { kind: "prompt", text: "A: give it to Frankie" },
+    { kind: "prompt", text: "Give it to Frankie" },
     { kind: "move", actor: "frankie", to: INTERIOR.frankieAtBowl, speed: 2, anim: "run" },
     { kind: "anim", actor: "frankie", anim: "eat", frames: 48 },
     { kind: "prop", prop: "bowl", value: "empty" },
-    { kind: "prompt", text: "A: grab the water bowl" },
+    { kind: "prompt", text: "Grab the water bowl" },
     { kind: "prop", prop: "waterAt", value: "hands" },
     { kind: "move", actor: "human", to: INTERIOR.atSink, speed: 1.5 },
-    { kind: "prompt", text: "A: turn on the sink" },
+    { kind: "prompt", text: "Turn on the sink" },
     { kind: "prop", prop: "waterAt", value: "sink" },
     { kind: "prop", prop: "sink", value: "on" },
     { kind: "wait", frames: 30 },
     { kind: "prop", prop: "water", value: "full" },
     { kind: "wait", frames: 12 },
     { kind: "prop", prop: "sink", value: "off" },
-    { kind: "prompt", text: "A: bring it to Frankie" },
+    { kind: "prompt", text: "Bring it to Frankie" },
     { kind: "prop", prop: "waterAt", value: "hands" },
     { kind: "move", actor: "human", to: INTERIOR.atBowls, speed: 1.5 },
     { kind: "prop", prop: "waterAt", value: "floor" },
@@ -105,10 +109,10 @@ const SCENE_BODIES: Record<FrankieNeed, Step[]> = {
   ],
 
   walk: [
-    { kind: "prompt", text: "A: go outside" },
+    { kind: "prompt", text: "Go outside" },
     outsideAtDoor,
     { kind: "move", actor: "human", to: { x: 48, y: 52 }, speed: 1 },
-    { kind: "prompt", text: "A: let him run" },
+    { kind: "prompt", text: "Let him run" },
     { kind: "camera", follow: "frankie" },
     ...RUN_LAPS.flatMap((point): Step[] => [
       { kind: "move", actor: "frankie", to: point, speed: 3, anim: "run" },
@@ -117,7 +121,7 @@ const SCENE_BODIES: Record<FrankieNeed, Step[]> = {
     { kind: "camera", follow: "human" },
     { kind: "wait", frames: 24 },
     { kind: "camera", follow: null, x: 0 },
-    { kind: "prompt", text: "A: head home" },
+    { kind: "prompt", text: "Head home" },
     insideAtEntry,
     reaction("walk")
   ],
@@ -127,7 +131,7 @@ const SCENE_BODIES: Record<FrankieNeed, Step[]> = {
     { kind: "move", actor: "human", to: BACKYARD.lawn, speed: 1.5 },
     { kind: "move", actor: "frankie", to: FETCH_SPOT, speed: 2 },
     ...FETCH_THROWS.flatMap((spot, index): Step[] => [
-      { kind: "prompt", text: index === 0 ? "A: throw the ball" : "A: throw it farther" },
+      { kind: "prompt", text: index === 0 ? "Throw the ball" : "Throw it farther" },
       { kind: "set", actor: "ball", patch: { x: BACKYARD.lawn.x + 10, y: BACKYARD.lawn.y + 2, visible: true, carriedBy: undefined } },
       // Following the ball tracks the throw, waits where it lands for Frankie, then rides back with him.
       { kind: "camera", follow: "ball" },
@@ -146,20 +150,25 @@ const SCENE_BODIES: Record<FrankieNeed, Step[]> = {
 
   snuggle: [
     { kind: "move", actor: "human", to: { x: INTERIOR.onCouch.x, y: 64 }, speed: 1.5 },
-    { kind: "prompt", text: "A: sit on the couch" },
+    { kind: "prompt", text: "Sit on the couch" },
     { kind: "move", actor: "human", to: INTERIOR.onCouch, speed: 1 },
     { kind: "set", actor: "human", patch: { anim: "sit" } },
     { kind: "prop", prop: "tv", value: "on" },
-    { kind: "prompt", text: "A: call Frankie up" },
+    { kind: "prompt", text: "Call Frankie up" },
     { kind: "move", actor: "frankie", to: INTERIOR.frankieOnCouch, speed: 2, arc: 10, anim: "run" },
-    { kind: "prompt", text: "A: pet him" },
+    { kind: "prompt", text: "Pet him" },
+    { kind: "set", actor: "human", patch: { anim: "sitPet" } },
     { kind: "effect", effect: "hearts", at: "frankie" },
-    { kind: "wait", frames: 20 },
-    { kind: "prompt", text: "A: pet him some more" },
+    { kind: "wait", frames: 36 },
+    { kind: "set", actor: "human", patch: { anim: "sit" } },
+    { kind: "prompt", text: "Pet him some more" },
+    { kind: "set", actor: "human", patch: { anim: "sitPet" } },
     { kind: "effect", effect: "hearts", at: "frankie" },
+    { kind: "wait", frames: 24 },
     { kind: "set", actor: "frankie", patch: { anim: "sleep" } },
     { kind: "effect", effect: "zzz", at: "frankie", frames: 90 },
     { kind: "wait", frames: 40 },
+    { kind: "set", actor: "human", patch: { anim: "sit" } },
     reaction("snuggle")
   ]
 };

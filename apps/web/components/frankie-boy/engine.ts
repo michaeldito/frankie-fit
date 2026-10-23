@@ -4,7 +4,7 @@
 
 export type MapId = "backyard" | "interior";
 export type ActorId = "human" | "frankie" | "ball" | "biscuit";
-export type Anim = "idle" | "walk" | "run" | "eat" | "sit" | "sleep";
+export type Anim = "idle" | "walk" | "run" | "eat" | "sit" | "sleep" | "pet" | "sitPet";
 export type EffectKind = "crumbs" | "chop" | "hearts" | "zzz" | "dust" | "splash";
 
 export type Point = { x: number; y: number };
