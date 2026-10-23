@@ -268,7 +268,6 @@ function FrankieBoyDevice() {
             <span className="flex items-center gap-1">
               <span className={`inline-block h-1.5 w-1.5 rounded-full ${day ? "bg-[#FF6B6B]" : "bg-[#7A6656]"}`} /> BATTERY
             </span>
-            <span>DOT MATRIX WITH STEREO WOOF</span>
           </div>
 
           <div
