@@ -16,7 +16,6 @@ import {
 } from "@/components/chat/quick-start";
 import { PERSONAS } from "@/lib/ai/prompts/personas";
 import { PILLAR_STYLES } from "@/components/frankie/pillars";
-import { FrankieDayBar } from "@/components/frankie-day/frankie-day-bar";
 import { useFrankieDay } from "@/components/frankie-day/frankie-day-context";
 import type { BiscuitAward } from "@/lib/frankie-day";
 import { PILLARS, type Pillar } from "@frankie-fit/brand-core";
@@ -406,8 +405,6 @@ export function WebChatExperience({
           </div>
         </div>
       ) : null}
-
-      {!activePersona ? <FrankieDayBar /> : null}
 
       <ChatTranscript
         assistantCardClass={assistantCardClass}
