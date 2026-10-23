@@ -132,13 +132,24 @@ const HUMAN_TOP = [
   "....kjjjjjjk...."
 ];
 
-export const HUMAN_SPRITES: Record<"idle" | "walk" | "sit", readonly SpriteGrid[]> = {
-  idle: [[...HUMAN_TOP, "....kjjkkjjk....", "....kjjkkjjk....", "....kkk..kkk...."]],
+// Petting: the right arm reaches out and strokes, the hand moving between two rows.
+const PET_ARM: readonly (readonly string[])[] = [
+  ["....krrrrrrrkkk.", "...krrrrrrrrrssk", "...ksrrrrrrrkkk.", "...ksrrrrrrsk..."],
+  ["....krrrrrrk....", "...krrrrrrrrkkk.", "...ksrrrrrrrrssk", "...ksrrrrrrkkkk."]
+];
+const HUMAN_TOP_PETTING = PET_ARM.map((arm) => [...HUMAN_TOP.slice(0, 8), ...arm, HUMAN_TOP[12]]);
+const STANDING_LEGS = ["....kjjkkjjk....", "....kjjkkjjk....", "....kkk..kkk...."];
+const SITTING_LEGS = ["...kjjjjjjjjk...", "...kkkkkkkkkk...", "................", "................"];
+
+export const HUMAN_SPRITES: Record<"idle" | "walk" | "sit" | "pet" | "sitPet", readonly SpriteGrid[]> = {
+  idle: [[...HUMAN_TOP, ...STANDING_LEGS]],
   walk: [
     [...HUMAN_TOP, "....kjjkkjjk....", "....kjjk.kkk....", "....kkk........."],
     [...HUMAN_TOP, "....kjjkkjjk....", "....kkk.kjjk....", ".........kkk...."]
   ],
-  sit: [[...HUMAN_TOP.slice(0, 12), "...kjjjjjjjjk...", "...kkkkkkkkkk...", "................", "................"]]
+  sit: [[...HUMAN_TOP.slice(0, 12), ...SITTING_LEGS]],
+  pet: HUMAN_TOP_PETTING.map((top) => [...top, ...STANDING_LEGS]),
+  sitPet: HUMAN_TOP_PETTING.map((top) => [...top.slice(0, 12), ...SITTING_LEGS])
 };
 
 export const ITEM_SPRITES: Record<"biscuit" | "ball", SpriteGrid> = {
