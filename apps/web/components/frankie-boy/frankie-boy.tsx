@@ -50,7 +50,20 @@ function wander(world: World, tick: number, target: { current: { x: number; y: n
   }
 }
 
-function TextBox({ text, prompt, revealRef }: { text: string; prompt: boolean; revealRef: { current: { done: boolean; finish: () => void } } }) {
+// Every text box that's waiting on the A button says so the same way.
+function PressA() {
+  return (
+    <span
+      aria-hidden
+      className="absolute bottom-[calc(var(--s)*3px)] right-[calc(var(--s)*5px)] flex animate-pulse items-center gap-[calc(var(--s)*2px)]"
+    >
+      <span className="text-[calc(var(--s)*5.5px)]">Press</span>
+      <span>Ⓐ</span>
+    </span>
+  );
+}
+
+function TextBox({ text, revealRef }: { text: string; revealRef: { current: { done: boolean; finish: () => void } } }) {
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
@@ -70,11 +83,7 @@ function TextBox({ text, prompt, revealRef }: { text: string; prompt: boolean; r
   return (
     <div className="relative h-full border-[calc(var(--s)*2px)] border-[#3B2416] bg-[#F8F6EF] px-[calc(var(--s)*6px)] py-[calc(var(--s)*5px)] text-[#3B2416]">
       <p aria-hidden className="leading-[1.55]">{text.slice(0, shown)}</p>
-      {shown >= text.length ? (
-        <span aria-hidden className="absolute bottom-[calc(var(--s)*3px)] right-[calc(var(--s)*5px)] animate-pulse">
-          {prompt ? "Ⓐ" : "▼"}
-        </span>
-      ) : null}
+      {shown >= text.length ? <PressA /> : null}
     </div>
   );
 }
@@ -93,7 +102,7 @@ function FrankieBoyDevice() {
   const [menuIndex, setMenuIndex] = useState(() =>
     Math.max(0, FRANKIE_NEEDS.indexOf(launchNeed ?? day?.mostPressingNeed ?? "feed"))
   );
-  const [sceneText, setSceneText] = useState<{ text: string; prompt: boolean } | null>(null);
+  const [sceneText, setSceneText] = useState<string | null>(null);
   const [helpPage, setHelpPage] = useState(0);
   const [pressed, setPressed] = useState<"a" | "b" | null>(null);
 
@@ -167,10 +176,10 @@ function FrankieBoyDevice() {
           endScene();
           return;
         }
-        const key = `${world.text ?? ""}|${world.prompt}`;
-        if (key !== lastText) {
-          lastText = key;
-          setSceneText(world.text ? { text: world.text, prompt: world.prompt } : null);
+        const text = world.text ?? "";
+        if (text !== lastText) {
+          lastText = text;
+          setSceneText(world.text);
         }
       } else {
         world = idleWorld.current;
@@ -248,12 +257,7 @@ function FrankieBoyDevice() {
   }
 
   const greeting = day?.line ?? "Hey. You came back. Obviously.";
-  const textBox =
-    mode.kind === "greeting"
-      ? { text: greeting, prompt: false }
-      : mode.kind === "scene"
-        ? sceneText
-        : null;
+  const textBox = mode.kind === "greeting" ? greeting : mode.kind === "scene" ? sceneText : null;
 
   return (
     <div
@@ -304,12 +308,14 @@ function FrankieBoyDevice() {
 
             <div className="absolute inset-x-0 bottom-0 h-[calc(var(--s)*40px)]">
               {mode.kind === "menu" ? (
-                <div className="grid h-full grid-cols-2 gap-x-[calc(var(--s)*4px)] border-[calc(var(--s)*2px)] border-[#3B2416] bg-[#F8F6EF] px-[calc(var(--s)*5px)] py-[calc(var(--s)*4px)] text-[#3B2416]">
+                // One grid for both rows so labels and costs line up in columns: cursor, label, and
+                // cost on each side, with the slack in the middle.
+                <div className="grid h-full grid-cols-[auto_auto_auto_1fr_auto_auto_auto] content-center gap-x-[calc(var(--s)*2px)] gap-y-[calc(var(--s)*6px)] border-[calc(var(--s)*2px)] border-[#3B2416] bg-[#F8F6EF] px-[calc(var(--s)*4px)] text-[#3B2416]">
                   {FRANKIE_NEEDS.map((need, index) => {
                     const done = day?.needs[need] === "filled";
                     return (
                       <button
-                        className="flex cursor-pointer items-center gap-[calc(var(--s)*2px)] text-left"
+                        className={`col-span-3 grid cursor-pointer grid-cols-subgrid items-center text-left ${index % 2 ? "col-start-5" : "col-start-1"}`}
                         key={need}
                         onClick={(event) => {
                           event.stopPropagation();
@@ -321,25 +327,26 @@ function FrankieBoyDevice() {
                       >
                         <span className="w-[calc(var(--s)*6px)]">{menuIndex === index ? "▶" : ""}</span>
                         <span>{ACTION_LABELS[need]}</span>
-                        <span className="ml-auto pr-[calc(var(--s)*2px)]">{done ? "FREE" : "1🦴"}</span>
+                        <span className="justify-self-end text-[calc(var(--s)*5.5px)]">{done ? "FREE" : "1🦴"}</span>
                       </button>
                     );
                   })}
                 </div>
               ) : mode.kind === "help" ? (
-                <div className="h-full border-[calc(var(--s)*2px)] border-[#3B2416] bg-[#F8F6EF] px-[calc(var(--s)*5px)] py-[calc(var(--s)*3px)] leading-[1.45] text-[#3B2416]">
+                <div className="relative h-full border-[calc(var(--s)*2px)] border-[#3B2416] bg-[#F8F6EF] px-[calc(var(--s)*5px)] py-[calc(var(--s)*3px)] leading-[1.45] text-[#3B2416]">
                   <p>{HOW_BISCUITS_WORK[helpPage].heading.toUpperCase()} ({helpPage + 1}/{HOW_BISCUITS_WORK.length})</p>
                   <p className="text-[calc(var(--s)*5.5px)]">{HOW_BISCUITS_WORK[helpPage].points.slice(0, 2).join(" ")}</p>
+                  <PressA />
                 </div>
               ) : textBox ? (
-                <TextBox key={textBox.text} prompt={textBox.prompt} revealRef={revealRef} text={textBox.text} />
+                <TextBox key={textBox} revealRef={revealRef} text={textBox} />
               ) : null}
             </div>
 
             <p aria-live="polite" className="sr-only">
               {mode.kind === "menu"
                 ? `Choose an action: ${FRANKIE_NEEDS.map((need) => ACTION_LABELS[need]).join(", ")}. Selected ${ACTION_LABELS[FRANKIE_NEEDS[menuIndex]]}.`
-                : textBox?.text ?? ""}
+                : textBox ?? ""}
             </p>
           </div>
         </div>
