@@ -105,7 +105,8 @@ const SCENE_BODIES: Record<FrankieNeed, Step[]> = {
     { kind: "effect", effect: "splash", at: { x: INTERIOR.water.x, y: INTERIOR.water.y - 6 }, frames: 18 },
     { kind: "move", actor: "frankie", to: INTERIOR.frankieAtWater, speed: 1 },
     { kind: "anim", actor: "frankie", anim: "eat", frames: 36 },
-    reaction("feed")
+    // The scene ends on the water bowl, so the biscuit line doesn't fit here.
+    { kind: "say", text: "Wow, thirsty boy." }
   ],
 
   walk: [
