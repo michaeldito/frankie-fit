@@ -57,7 +57,7 @@ export function BiscuitJar({
   );
 }
 
-// Tapping a need opens the Frankie Boy straight into that scene (a finished one opens the menu).
+// Tapping a need opens the Frankie Boy straight into that scene; a finished one replays for free.
 export function NeedsStrip({
   size = "md",
   tooltipAlign = "center"
@@ -78,7 +78,7 @@ export function NeedsStrip({
         const filled = day.needs[need] === "filled";
         const ready = day.canAfford[need];
         const label = filled
-          ? `${FRANKIE_ACTIONS[need].needLabel} today ✓`
+          ? `${FRANKIE_ACTIONS[need].needLabel} today ✓ · play again`
           : ready
             ? `${FRANKIE_ACTIONS[need].label} · ${FRANKIE_ACTIONS[need].cost} 🦴`
             : `${FRANKIE_ACTIONS[need].label} · log something to earn a biscuit`;
@@ -94,7 +94,7 @@ export function NeedsStrip({
                   : "border-border bg-surface-strong"
             }`}
             key={need}
-            onClick={() => (filled ? openSheet() : openSheet(need))}
+            onClick={() => openSheet(need)}
             type="button"
           >
             <HoverLabel align={tooltipAlign} text={label} />

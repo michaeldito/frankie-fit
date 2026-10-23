@@ -1,6 +1,6 @@
 import { MAP_WIDTH, SCREEN_WIDTH, type Actor, type Effect, type World } from "@/components/frankie-boy/engine";
 import { BACKYARD, INTERIOR, PLAYFIELD_HEIGHT } from "@/components/frankie-boy/maps";
-import { FRANKIE_SPRITES, HUMAN_SPRITES, ITEM_SPRITES, PALETTE, type SpriteGrid } from "@/components/frankie-boy/sprites";
+import { FOOD_SPRITES, FRANKIE_SPRITES, HUMAN_SPRITES, ITEM_SPRITES, PALETTE, type SpriteGrid } from "@/components/frankie-boy/sprites";
 
 // Game Boy Color–style colors pulled from the Frankie Fit palette.
 const C = {
@@ -43,7 +43,10 @@ const C = {
   water: "#7CC3FF",
   board: "#C99A62",
   carrot: "#F08A3C",
-  chicken: "#F3D9B1"
+  chicken: "#F3D9B1",
+  steel: "#A9B2BC",
+  steelDark: "#6F7882",
+  roast: "#A8602A"
 };
 
 const spriteCache = new Map<string, HTMLCanvasElement>();
@@ -169,6 +172,28 @@ function drawBackyard(ctx: CanvasRenderingContext2D) {
   drawTree(ctx, BACKYARD.tree.x, BACKYARD.tree.y);
 }
 
+function drawBowl(ctx: CanvasRenderingContext2D, x: number, y: number, fill: string, full: boolean) {
+  rect(ctx, x, y + 2, 10, 4, C.bowl);
+  rect(ctx, x + 1, y + 1, 8, 1, C.bowl);
+  rect(ctx, x + 2, y + 1, 6, 1, full ? fill : "#262A40");
+}
+
+// Basin under the window with a faucet; the stream runs while the sink is on.
+function drawSink(ctx: CanvasRenderingContext2D, world: World, tick: number) {
+  const { x, y } = INTERIOR.sink;
+  rect(ctx, x, y, 12, 6, C.steel);
+  rect(ctx, x + 1, y + 1, 10, 3, C.steelDark);
+  rect(ctx, x + 9, y - 8, 2, 8, C.steelDark);
+  rect(ctx, x + 4, y - 8, 7, 2, C.steelDark);
+  // The bowl sits in the basin with its rim above the sink's front lip.
+  if (world.props.waterAt === "sink") drawBowl(ctx, x + 1, y - 3, C.water, world.props.water === "full");
+  rect(ctx, x, y + 4, 12, 2, C.steel);
+  if (world.props.sink === "on") {
+    rect(ctx, x + 5, y - 6, 1, 4, C.water);
+    rect(ctx, x + 5, y - 6 + (tick % 4), 1, 1, C.windowShine);
+  }
+}
+
 function drawInterior(ctx: CanvasRenderingContext2D, world: World, tick: number) {
   // Floorboards and back wall.
   rect(ctx, 0, 0, SCREEN_WIDTH, PLAYFIELD_HEIGHT, C.floor);
@@ -191,31 +216,30 @@ function drawInterior(ctx: CanvasRenderingContext2D, world: World, tick: number)
     rect(ctx, INTERIOR.board.x, INTERIOR.board.y, 20, 7, C.board);
     const pieces = board === "chop1" ? 2 : board === "chop2" ? 4 : board === "chopped" ? 7 : board === "whole" ? 0 : -1;
     if (pieces === 0) {
-      rect(ctx, INTERIOR.board.x + 3, INTERIOR.board.y + 2, 6, 3, C.carrot);
-      rect(ctx, INTERIOR.board.x + 11, INTERIOR.board.y + 2, 5, 3, C.chicken);
+      rect(ctx, INTERIOR.board.x + 1, INTERIOR.board.y + 3, 6, 3, C.carrot);
+      ctx.drawImage(bake(FOOD_SPRITES.chicken, false), INTERIOR.board.x + 9, INTERIOR.board.y);
     }
     for (let i = 0; i < pieces; i += 1) {
-      rect(ctx, INTERIOR.board.x + 2 + i * 2.4, INTERIOR.board.y + 2 + (i % 2), 2, 2, i % 2 ? C.chicken : C.carrot);
+      const x = INTERIOR.board.x + 2 + i * 2.4;
+      const y = INTERIOR.board.y + 2 + (i % 2);
+      rect(ctx, x, y, 2, 2, i % 2 ? C.chicken : C.carrot);
+      // Chicken slices keep a strip of roasted skin on top.
+      if (i % 2) rect(ctx, x, y, 2, 1, C.roast);
     }
   }
+  drawSink(ctx, world, tick);
   if (world.props.foods !== "taken") {
     rect(ctx, INTERIOR.foods[0].x, INTERIOR.foods[0].y - 6, 7, 8, C.wood);
     rect(ctx, INTERIOR.foods[0].x + 1, INTERIOR.foods[0].y - 4, 5, 2, C.sun);
     rect(ctx, INTERIOR.foods[1].x, INTERIOR.foods[1].y, 8, 2, C.carrot);
     rect(ctx, INTERIOR.foods[1].x + 7, INTERIOR.foods[1].y - 1, 2, 2, C.leafLight);
-    rect(ctx, INTERIOR.foods[2].x, INTERIOR.foods[2].y - 1, 6, 3, C.chicken);
-    rect(ctx, INTERIOR.foods[2].x + 5, INTERIOR.foods[2].y, 3, 1, C.counter);
+    ctx.drawImage(bake(FOOD_SPRITES.chicken, false), INTERIOR.foods[2].x, INTERIOR.foods[2].y - 3);
   }
 
-  // Bowls.
-  for (const [spot, fill, full] of [
-    [INTERIOR.bowl, C.food, world.props.bowl === "full"],
-    [INTERIOR.water, C.water, world.props.water === "full"]
-  ] as const) {
-    rect(ctx, spot.x, spot.y + 2, 10, 4, C.bowl);
-    rect(ctx, spot.x + 1, spot.y + 1, 8, 1, C.bowl);
-    rect(ctx, spot.x + 2, spot.y + 1, 6, 1, full ? fill : "#262A40");
-  }
+  // Bowls. The water bowl leaves the floor while it's carried to the sink and back.
+  drawBowl(ctx, INTERIOR.bowl.x, INTERIOR.bowl.y, C.food, world.props.bowl === "full");
+  const waterAt = world.props.waterAt ?? "floor";
+  if (waterAt === "floor") drawBowl(ctx, INTERIOR.water.x, INTERIOR.water.y, C.water, world.props.water === "full");
 
   // Living room: rug, couch, TV, plant.
   const rug = INTERIOR.rug;
@@ -329,6 +353,10 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: World, tick: num
     .map((id) => [id, world.actors[id]] as const)
     .sort(([, a], [, b]) => a.y + 16 - (b.y + 16));
   for (const [id, actor] of order) drawActor(ctx, id, actor, tick, world.cameraX);
+  if (world.map === "interior" && world.props.waterAt === "hands") {
+    const human = world.actors.human;
+    drawBowl(ctx, human.x + 3, human.y + 9, C.water, world.props.water === "full");
+  }
   for (const effect of world.effects) drawEffect(ctx, effect, world.cameraX);
 
   // Under the text box.

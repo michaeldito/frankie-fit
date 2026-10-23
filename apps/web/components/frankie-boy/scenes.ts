@@ -2,8 +2,8 @@ import { FRANKIE_ACTIONS, type FrankieNeed } from "@frankie-fit/companion-core";
 import type { Point, Step } from "@/components/frankie-boy/engine";
 import { BACKYARD, INTERIOR } from "@/components/frankie-boy/maps";
 
-// Every scene starts the same way: you toss Frankie a biscuit, he crunches it, and that's the
-// moment it's actually spent (the redeem step). Backing out before then costs nothing.
+// The day's first play of a scene starts with a biscuit toss: he crunches it, and that's the moment
+// it's actually spent (the redeem step). Backing out before then costs nothing.
 function biscuitToss(human: Point, frankie: Point): Step[] {
   return [
     { kind: "prompt", text: "A: toss Frankie a biscuit" },
@@ -15,6 +15,13 @@ function biscuitToss(human: Point, frankie: Point): Step[] {
     { kind: "redeem" }
   ];
 }
+
+// Replays are free: a pat instead of a biscuit, and nothing is redeemed.
+const freePat: Step[] = [
+  { kind: "prompt", text: "Again? A: give Frankie a pat" },
+  { kind: "effect", effect: "hearts", at: "frankie" },
+  { kind: "wait", frames: 18 }
+];
 
 const insideAtEntry: Step = {
   kind: "map",
@@ -44,16 +51,18 @@ const RUN_LAPS: Point[] = [
   { x: 66, y: 56 }
 ];
 
+// Each throw goes farther down the yard, clear of the tree and shrubs.
 const FETCH_THROWS: Point[] = [
-  { x: 210, y: 78 },
-  { x: 160, y: 60 },
-  { x: 250, y: 88 }
+  { x: 230, y: 76 },
+  { x: 340, y: 60 },
+  { x: 430, y: 72 }
 ];
 
-export const SCENES: Record<FrankieNeed, Step[]> = {
+const FETCH_SPOT: Point = { x: BACKYARD.lawn.x + 18, y: BACKYARD.lawn.y + 4 };
+
+// Everything after the opening; buildScene adds the biscuit toss or the free pat in front.
+const SCENE_BODIES: Record<FrankieNeed, Step[]> = {
   feed: [
-    insideAtEntry,
-    ...biscuitToss(INTERIOR.entry.human, INTERIOR.entry.frankie),
     { kind: "move", actor: "human", to: INTERIOR.atCounter, speed: 1.5 },
     { kind: "prompt", text: "A: grab food off the counter" },
     { kind: "prop", prop: "foods", value: "taken" },
@@ -75,8 +84,20 @@ export const SCENES: Record<FrankieNeed, Step[]> = {
     { kind: "move", actor: "frankie", to: INTERIOR.frankieAtBowl, speed: 2, anim: "run" },
     { kind: "anim", actor: "frankie", anim: "eat", frames: 48 },
     { kind: "prop", prop: "bowl", value: "empty" },
-    { kind: "prompt", text: "A: refresh the water" },
+    { kind: "prompt", text: "A: grab the water bowl" },
+    { kind: "prop", prop: "waterAt", value: "hands" },
+    { kind: "move", actor: "human", to: INTERIOR.atSink, speed: 1.5 },
+    { kind: "prompt", text: "A: turn on the sink" },
+    { kind: "prop", prop: "waterAt", value: "sink" },
+    { kind: "prop", prop: "sink", value: "on" },
+    { kind: "wait", frames: 30 },
     { kind: "prop", prop: "water", value: "full" },
+    { kind: "wait", frames: 12 },
+    { kind: "prop", prop: "sink", value: "off" },
+    { kind: "prompt", text: "A: bring it to Frankie" },
+    { kind: "prop", prop: "waterAt", value: "hands" },
+    { kind: "move", actor: "human", to: INTERIOR.atBowls, speed: 1.5 },
+    { kind: "prop", prop: "waterAt", value: "floor" },
     { kind: "effect", effect: "splash", at: { x: INTERIOR.water.x, y: INTERIOR.water.y - 6 }, frames: 18 },
     { kind: "move", actor: "frankie", to: INTERIOR.frankieAtWater, speed: 1 },
     { kind: "anim", actor: "frankie", anim: "eat", frames: 36 },
@@ -84,8 +105,6 @@ export const SCENES: Record<FrankieNeed, Step[]> = {
   ],
 
   walk: [
-    insideAtEntry,
-    ...biscuitToss(INTERIOR.entry.human, INTERIOR.entry.frankie),
     { kind: "prompt", text: "A: go outside" },
     outsideAtDoor,
     { kind: "move", actor: "human", to: { x: 48, y: 52 }, speed: 1 },
@@ -104,28 +123,28 @@ export const SCENES: Record<FrankieNeed, Step[]> = {
   ],
 
   play: [
-    insideAtEntry,
-    ...biscuitToss(INTERIOR.entry.human, INTERIOR.entry.frankie),
     outsideAtDoor,
     { kind: "move", actor: "human", to: BACKYARD.lawn, speed: 1.5 },
-    { kind: "move", actor: "frankie", to: { x: BACKYARD.lawn.x + 18, y: BACKYARD.lawn.y + 4 }, speed: 2 },
+    { kind: "move", actor: "frankie", to: FETCH_SPOT, speed: 2 },
     ...FETCH_THROWS.flatMap((spot, index): Step[] => [
-      { kind: "prompt", text: index === 0 ? "A: throw the ball" : "A: throw it again" },
+      { kind: "prompt", text: index === 0 ? "A: throw the ball" : "A: throw it farther" },
       { kind: "set", actor: "ball", patch: { x: BACKYARD.lawn.x + 10, y: BACKYARD.lawn.y + 2, visible: true, carriedBy: undefined } },
-      { kind: "move", actor: "ball", to: spot, speed: 3, arc: 26 },
-      { kind: "move", actor: "frankie", to: { x: spot.x - 8, y: spot.y - 4 }, speed: 3, anim: "run" },
+      // Following the ball tracks the throw, waits where it lands for Frankie, then rides back with him.
+      { kind: "camera", follow: "ball" },
+      { kind: "move", actor: "ball", to: spot, speed: 4, arc: 30 },
+      { kind: "move", actor: "frankie", to: { x: spot.x - 8, y: spot.y - 4 }, speed: 4, anim: "run" },
+      { kind: "effect", effect: "dust", at: "frankie", frames: 10 },
       { kind: "set", actor: "ball", patch: { carriedBy: "frankie" } },
-      { kind: "move", actor: "frankie", to: { x: BACKYARD.lawn.x + 18, y: BACKYARD.lawn.y + 4 }, speed: 2.5, anim: "run" },
+      { kind: "move", actor: "frankie", to: FETCH_SPOT, speed: 3, anim: "run" },
       { kind: "set", actor: "ball", patch: { carriedBy: undefined, x: BACKYARD.lawn.x + 20, y: BACKYARD.lawn.y + 12 } }
     ]),
+    { kind: "camera", follow: "human" },
     { kind: "set", actor: "ball", patch: { visible: false } },
     { kind: "effect", effect: "hearts", at: "frankie" },
     reaction("play")
   ],
 
   snuggle: [
-    insideAtEntry,
-    ...biscuitToss(INTERIOR.entry.human, INTERIOR.entry.frankie),
     { kind: "move", actor: "human", to: { x: INTERIOR.onCouch.x, y: 64 }, speed: 1.5 },
     { kind: "prompt", text: "A: sit on the couch" },
     { kind: "move", actor: "human", to: INTERIOR.onCouch, speed: 1 },
@@ -144,3 +163,8 @@ export const SCENES: Record<FrankieNeed, Step[]> = {
     reaction("snuggle")
   ]
 };
+
+export function buildScene(need: FrankieNeed, { replay = false }: { replay?: boolean } = {}): Step[] {
+  const opening = replay ? freePat : biscuitToss(INTERIOR.entry.human, INTERIOR.entry.frankie);
+  return [insideAtEntry, ...opening, ...SCENE_BODIES[need]];
+}

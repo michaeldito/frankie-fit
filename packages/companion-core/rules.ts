@@ -82,7 +82,7 @@ export const HOW_BISCUITS_WORK: { heading: string; points: string[] }[] = [
     heading: "Spend",
     points: [
       `Feed, walk, play, and snuggle cost ${FRANKIE_ACTIONS.feed.cost} 🦴 each`,
-      "Each one can be done once a day; do all four for a Good Boy Day 👑",
+      "Each costs a biscuit once a day, then replays free on the Frankie Boy; do all four for a Good Boy Day 👑",
       "Belly rubs are always free. Tap Frankie"
     ]
   },
