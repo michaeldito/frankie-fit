@@ -39,6 +39,7 @@ export const INTERIOR = {
   window: { x: 52, width: 24 },
   counter: { x: 4, width: 74, top: 14, front: 22, bottom: 36 },
   board: { x: 46, y: 14 },
+  sink: { x: 66, y: 15 },
   foods: [
     { x: 10, y: 12, kind: "kibble" },
     { x: 22, y: 13, kind: "carrot" },
@@ -54,6 +55,7 @@ export const INTERIOR = {
   // Standing spots
   entry: { human: { x: 70, y: 82 }, frankie: { x: 88, y: 86 } } satisfies Record<string, Point>,
   atCounter: { x: 34, y: 34 } satisfies Point,
+  atSink: { x: 64, y: 34 } satisfies Point,
   atBowls: { x: 12, y: 66 } satisfies Point,
   // Placed so his mouth (rows 10–11 of the eat sprite) lands on the bowl's rim, not the floor below
   // it: he walks up facing left to the food, then steps right to the water.

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { FRANKIE_NEEDS } from "@frankie-fit/companion-core";
-import { MAP_WIDTH, SceneRunner, createWorld, refusalLine, stepWorld, type Step } from "./engine";
-import { SCENES } from "./scenes";
-import { FRANKIE_SPRITES, HUMAN_SPRITES, ITEM_SPRITES, PALETTE } from "./sprites";
+import { MAP_WIDTH, SCREEN_WIDTH, SceneRunner, createWorld, refusalLine, stepWorld, type Step } from "./engine";
+import { buildScene } from "./scenes";
+import { FOOD_SPRITES, FRANKIE_SPRITES, HUMAN_SPRITES, ITEM_SPRITES, PALETTE } from "./sprites";
 
 function runUntilBlocked(runner: SceneRunner, maxFrames = 2000) {
   for (let i = 0; i < maxFrames && runner.status === "playing"; i += 1) runner.tick();
@@ -110,27 +110,61 @@ describe("SceneRunner", () => {
 });
 
 describe("scenes", () => {
-  it.each(FRANKIE_NEEDS)("%s spends the biscuit once, after the toss, and finishes", (need) => {
-    const steps: readonly Step[] = SCENES[need];
-    const redeems = steps.filter((step) => step.kind === "redeem");
-    expect(redeems).toHaveLength(1);
-
+  // Plays a scene to the end, pressing A at every prompt and approving every redeem.
+  function playThrough(steps: readonly Step[], onFrame: (runner: SceneRunner) => void = () => {}) {
     const runner = new SceneRunner(steps);
     let redeemed = 0;
     for (let i = 0; i < 20000 && runner.status !== "done"; i += 1) {
       runner.tick();
+      onFrame(runner);
       if (runner.status === "waitingForA") runner.pressA();
       if (runner.status === "redeeming") {
         redeemed += 1;
         runner.resolveRedeem(null);
       }
     }
+    return { runner, redeemed };
+  }
+
+  it.each(FRANKIE_NEEDS)("%s spends the biscuit once, after the toss, and finishes", (need) => {
+    const steps = buildScene(need);
+    expect(steps.filter((step) => step.kind === "redeem")).toHaveLength(1);
+
+    const { runner, redeemed } = playThrough(steps);
     expect(runner.status).toBe("done");
     expect(redeemed).toBe(1);
   });
 
-  it("feed always refreshes the water", () => {
-    expect(SCENES.feed.some((step) => step.kind === "prop" && step.prop === "water" && step.value === "full")).toBe(true);
+  it.each(FRANKIE_NEEDS)("%s replays for free: no biscuit toss, nothing redeemed", (need) => {
+    const steps = buildScene(need, { replay: true });
+    expect(steps.some((step) => step.kind === "redeem")).toBe(false);
+    expect(steps.some((step) => step.kind === "set" && step.actor === "biscuit")).toBe(false);
+
+    const { runner, redeemed } = playThrough(steps);
+    expect(runner.status).toBe("done");
+    expect(redeemed).toBe(0);
+  });
+
+  it("fetch pans the yard so the ball never leaves the screen", () => {
+    let farthest = 0;
+    const { runner } = playThrough(buildScene("play", { replay: true }), ({ world }) => {
+      const ball = world.actors.ball;
+      if (world.map !== "backyard" || !ball.visible) return;
+      farthest = Math.max(farthest, ball.x);
+      expect(ball.x - world.cameraX).toBeGreaterThanOrEqual(0);
+      expect(ball.x - world.cameraX).toBeLessThan(SCREEN_WIDTH);
+    });
+    expect(runner.status).toBe("done");
+    expect(farthest).toBeGreaterThan(SCREEN_WIDTH * 2);
+  });
+
+  it("feed carries the water bowl to the sink, fills it there, and brings it back", () => {
+    let filledAt: { waterAt?: string; sink?: string } | null = null;
+    const { runner } = playThrough(buildScene("feed", { replay: true }), ({ world }) => {
+      if (!filledAt && world.props.water === "full") filledAt = { waterAt: world.props.waterAt, sink: world.props.sink };
+    });
+    expect(filledAt).toEqual({ waterAt: "sink", sink: "on" });
+    expect(runner.world.props).toMatchObject({ water: "full", waterAt: "floor", sink: "off" });
   });
 });
 
@@ -138,7 +172,8 @@ describe("sprites", () => {
   const all = [
     ...Object.values(FRANKIE_SPRITES).flat(),
     ...Object.values(HUMAN_SPRITES).flat(),
-    ...Object.values(ITEM_SPRITES)
+    ...Object.values(ITEM_SPRITES),
+    ...Object.values(FOOD_SPRITES)
   ];
 
   it("are rectangular and only use palette colors", () => {

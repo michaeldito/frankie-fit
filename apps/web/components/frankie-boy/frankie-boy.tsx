@@ -5,7 +5,7 @@ import { FRANKIE_NEEDS, HOW_BISCUITS_WORK, type FrankieNeed } from "@frankie-fit
 import { SceneRunner, SCREEN_HEIGHT, SCREEN_WIDTH, createWorld, stepWorld, type World } from "@/components/frankie-boy/engine";
 import { BACKYARD } from "@/components/frankie-boy/maps";
 import { drawWorld, hitTestActor } from "@/components/frankie-boy/renderer";
-import { SCENES } from "@/components/frankie-boy/scenes";
+import { buildScene } from "@/components/frankie-boy/scenes";
 import { useFrankieDay } from "@/components/frankie-day/frankie-day-context";
 
 const ACTION_LABELS: Record<FrankieNeed, string> = {
@@ -80,7 +80,12 @@ function TextBox({ text, prompt, revealRef }: { text: string; prompt: boolean; r
 }
 
 function FrankieBoyDevice() {
-  const { day, closeSheet, redeem, bellyRub, launchNeed } = useFrankieDay();
+  const { day, closeSheet, redeem, refresh, bellyRub, launchNeed } = useFrankieDay();
+  // A need already filled today replays for free; only the day's first play spends a biscuit.
+  const sceneFor = useCallback(
+    (need: FrankieNeed) => buildScene(need, { replay: day?.needs[need] === "filled" }),
+    [day]
+  );
   const [scale, setScale] = useState(computeScale);
   // Opened from a specific action button: start in that scene. Otherwise greet, with the menu
   // cursor on whatever Frankie wants most.
@@ -94,7 +99,7 @@ function FrankieBoyDevice() {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const idleWorld = useRef<World>(createIdleWorld());
-  const runnerRef = useRef<SceneRunner | null>(launchNeed ? new SceneRunner(SCENES[launchNeed]) : null);
+  const runnerRef = useRef<SceneRunner | null>(launchNeed ? new SceneRunner(sceneFor(launchNeed)) : null);
   const redeemPending = useRef(false);
   const wanderTarget = useRef({ x: 96, y: 70 });
   const revealRef = useRef({ done: true, finish: () => {} });
@@ -111,11 +116,11 @@ function FrankieBoyDevice() {
   }, []);
 
   const startScene = useCallback((need: FrankieNeed) => {
-    runnerRef.current = new SceneRunner(SCENES[need]);
+    runnerRef.current = new SceneRunner(sceneFor(need));
     redeemPending.current = false;
     setSceneText(null);
     setMode({ kind: "scene", need });
-  }, []);
+  }, [sceneFor]);
 
   const endScene = useCallback(() => {
     runnerRef.current = null;
@@ -148,7 +153,15 @@ function FrankieBoyDevice() {
         world = runner.world;
         if (runner.status === "redeeming" && !redeemPending.current) {
           redeemPending.current = true;
-          void redeem(current.need).then((error) => runner.resolveRedeem(error));
+          void redeem(current.need).then((error) => {
+            // Filled in another tab since this one loaded: play on as a free replay.
+            if (error === "already_filled") {
+              void refresh();
+              runner.resolveRedeem(null);
+            } else {
+              runner.resolveRedeem(error);
+            }
+          });
         }
         if (runner.status === "done") {
           endScene();
@@ -170,7 +183,7 @@ function FrankieBoyDevice() {
 
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [endScene, redeem]);
+  }, [endScene, redeem, refresh]);
 
   const pressA = useCallback(() => {
     if (!revealRef.current.done) {
@@ -307,8 +320,8 @@ function FrankieBoyDevice() {
                         type="button"
                       >
                         <span className="w-[calc(var(--s)*6px)]">{menuIndex === index ? "▶" : ""}</span>
-                        <span className={done ? "opacity-50" : ""}>{ACTION_LABELS[need]}</span>
-                        <span className="ml-auto pr-[calc(var(--s)*2px)]">{done ? "✓" : "1🦴"}</span>
+                        <span>{ACTION_LABELS[need]}</span>
+                        <span className="ml-auto pr-[calc(var(--s)*2px)]">{done ? "FREE" : "1🦴"}</span>
                       </button>
                     );
                   })}
